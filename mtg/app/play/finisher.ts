@@ -906,18 +906,33 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
 
     // ── the slash: it follows the path the tip of the blade takes through the swing (worked out with the same skeleton the picture is moved by) ──
     const K0b: Placement = { s, ox: 0, oy: 0, px, py, flip };
-    const T_SW0 = T_SWING_AT;
-    const T_SWD = T_SWING;
-    const pts: [number, number][] = [];
+    // The blade's path from the start of the swing to the end of the follow-through; the slash begins where the tip FIRST HITS the opponent's mat (the moment of
+    // contact) and follows the tip from there, so nothing is drawn before the blade gets there.
+    const T_PATH0 = T_SWING_AT;
+    const T_PATH1 = T_HIT + T_FOLLOW;
+    const NS = 80;
+    const all: [number, number][] = [];
     const tipOut = new Float32Array(4);
     const tipC = { ca: 1, sa: 0, cb: 1, sb: 0, cy: 1, sy: 0 };
-    for (let i = 0; i <= 40; i++) {
-      const tp = timeline(T_SW0 + T_SWD * (i / 40));
+    for (let i = 0; i <= NS; i++) {
+      const tp = timeline(T_PATH0 + (T_PATH1 - T_PATH0) * (i / NS));
       Object.assign(tipC, trigOf(tp));
       viaHands(TIP.x, TIP.y, tp, tipC, tmp2);
       put(tmp2[0], tmp2[1], tp, K0b, tipOut, 0);
-      pts.push([tipOut[0], tipOut[1]]);
+      all.push([tipOut[0], tipOut[1]]);
     }
+    let i0 = all.findIndex(([x, y]) => x >= l.left && x <= l.left + l.width && y >= l.top && y <= l.top + l.height);
+    if (i0 < 0) {
+      // (the tip never enters the mat: it is where it comes closest to the middle of it)
+      let best = Infinity;
+      all.forEach(([x, y], i) => {
+        const d = Math.hypot(x - (l.left + l.width / 2), y - (l.top + l.height / 2));
+        if (d < best) [best, i0] = [d, i];
+      });
+    }
+    i0 = Math.max(0, Math.min(i0, NS - 8));
+    const T_C = T_PATH0 + (T_PATH1 - T_PATH0) * (i0 / NS); // the moment of first contact
+    const pts = all.slice(i0);
     let plen = 0;
     for (let i = 1; i < pts.length; i++) plen += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
     const bands = await slashBands();
@@ -936,9 +951,9 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     arcBox.w = Math.min(vw, Math.ceil(ax1 + thick)) - arcBox.left;
     arcBox.h = Math.min(vh, Math.ceil(ay1 + thick)) - arcBox.top;
     const arcR = bands ? makeArcRenderer(stage, bands, { pts, thick }, arcBox) : null;
-    // where the slash is at its top (the blow's flash, shards and ring come from there)
-    const cx = pts[20][0];
-    const cy = pts[20][1];
+    // where the blade first hits (the blow's flash, shards and ring come from there)
+    const cx = pts[0][0];
+    const cy = pts[0][1];
 
     const veil = el(stage, { left: `${l.left}px`, top: `${l.top}px`, width: `${l.width}px`, height: `${l.height}px`, borderRadius: "14px", background: "radial-gradient(ellipse at 50% 50%, rgba(88,28,135,.0), rgba(20,0,40,.8))", opacity: "0" });
     const flash = el(stage, { inset: "-40px", background: "radial-gradient(ellipse at 50% 55%, #fff 0%, #e9d5ff 35%, rgba(168,85,247,.6) 80%)", opacity: "0" });
@@ -1067,7 +1082,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     let warmed = 0;
     let lastReal = performance.now();
     let late = 0; // how many screen refreshes in a row came late
-    const T_STOP = Math.max(T_END, T_HIT + T_RIFT + 60);
+    const T_STOP = Math.max(T_END, T_C + T_RIFT + 60);
     await new Promise<void>((resolve) => {
       const frame = () => {
         // If the computer cannot keep up, the decorations go first (the souls, the shards, the ghost copies of the scythe), then it is drawn with fewer pixels.
@@ -1104,12 +1119,12 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
         // the sounds of the blow are made a moment BEFORE it (while the Reaper holds its breath) and set to start at it: making sounds takes the browser a little while
         if (t >= T_SWING_AT - 140) {
           once("blowsound", () => {
-            const d = Math.max(0, (T_HIT - t) / rate / 1000);
+            const d = Math.max(0, (T_C - t) / rate / 1000);
             playSound("die", d);
             playSound("clash", d + 0.04);
           });
         }
-        if (t >= T_HIT) {
+        if (t >= T_C) {
           once("hit", () => {
             blow();
             hold = lite ? 70 : 115;
@@ -1118,10 +1133,10 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
         if (t >= T_HIT + T_FOLLOW) once("leave", () => fire("leave"));
         // the slash is drawn in along its arc as the blade goes round it, stays while the rift is open, and goes
         if (arcR) {
-          const reveal = t >= T_HIT ? 1.1 : clamp01((t - T_SW0) / T_SWD) * 1.06;
-          const fade = 1 - smooth(T_HIT + T_RIFT * 0.62, T_HIT + T_RIFT, t);
-          const darkIn = smooth(T_HIT, T_HIT + 160, t) * fade;
-          arcR.draw(reveal, t >= T_SW0 ? fade : 0, darkIn, t < T_HIT + 120 ? 1 : 0);
+          const reveal = clamp01((t - T_C) / (T_PATH1 - T_C)) * 1.06;
+          const fade = 1 - smooth(T_C + T_RIFT * 0.62, T_C + T_RIFT, t);
+          const darkIn = smooth(T_PATH1 - 120, T_PATH1 + 40, t) * fade;
+          arcR.draw(reveal, t >= T_C ? fade : 0, darkIn, t < T_PATH1 ? 1 : 0);
         }
         if (renderer) {
           poseScythe(grids.scythe, p, verts.scythe, K);
