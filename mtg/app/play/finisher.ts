@@ -1220,7 +1220,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     const cx = pts[0][0];
     const cy = pts[0][1];
     // the opponent's mat burns in the slash's own purple flames, from where the blade hit, and chars under them
-    const T_BURN = 5200;
+    const T_BURN = 4000;
     const matFire = makeFlameField(stage, l, [Math.max(l.left, Math.min(l.left + l.width, cx)), Math.max(l.top, Math.min(l.top + l.height, cy))], vw, vh, lite);
     const heat = el(stage, { left: `${l.left - 20}px`, top: `${l.top - l.height * 0.35}px`, width: `${l.width + 40}px`, height: `${l.height * 1.5}px`, background: "radial-gradient(ellipse at 50% 85%, rgba(236,72,220,.55), rgba(124,58,237,.22) 45%, transparent 72%)", opacity: "0" });
     const char = el(stage, { left: `${l.left}px`, top: `${l.top}px`, width: `${l.width}px`, height: `${l.height}px`, borderRadius: "14px", background: "radial-gradient(ellipse at 50% 80%, rgba(120,20,160,.35), rgba(30,0,50,.78))", opacity: "0" });
@@ -1414,13 +1414,15 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
             window.setTimeout(() => (e.style.opacity = "0"), 90); // (drawn once, then left alone)
           }
         }
-        if (t >= T_RISE + T_WIND - 60) once("charge", () => playSound("charge"));
+        once("rise", () => playSound("reaperRise"));
+        if (t >= T_RISE + 120) once("charge", () => playSound("reaperCharge"));
+        if (t >= T_SWING_AT - 20) once("swingsound", () => playSound("reaperSwing"));
         // the sounds of the blow are made a moment BEFORE it (while the Reaper holds its breath) and set to start at it: making sounds takes the browser a little while
         if (t >= T_SWING_AT - 140) {
           once("blowsound", () => {
             const d = Math.max(0, (T_C - t) / rate / 1000);
-            playSound("die", d);
-            playSound("clash", d + 0.04);
+            playSound("riftTear", d);
+            playSound("riftFire", d + 0.1);
           });
         }
         if (t >= T_C) {

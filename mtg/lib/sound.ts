@@ -61,7 +61,12 @@ export type Sound =
   | "turn"
   | "notify"
   | "win"
-  | "lose";
+  | "lose"
+  | "reaperRise"
+  | "reaperCharge"
+  | "reaperSwing"
+  | "riftTear"
+  | "riftFire";
 
 // Every sound is synthesized with the Web Audio API: no files to load, and it works offline.
 interface Out {
@@ -156,6 +161,7 @@ function noise(a: Out, { freq, to, filter = "bandpass", q = 1, at = 0, dur = 0.1
   const t = a.ctx.currentTime + at;
   const src = a.ctx.createBufferSource();
   src.buffer = noiseBuffer(a.ctx);
+  src.loop = true; // (the noise is one second long: the long sounds, like the fire, go round it)
   const f = a.ctx.createBiquadFilter();
   f.type = filter;
   f.Q.value = q;
@@ -241,6 +247,48 @@ const RECIPES: Record<Sound, (a: Out, at: number) => void> = {
     tone(a, { freq: 1047, type: "triangle", dur: 0.9, gain: 0.2, at: at + 0.36 });
   },
   lose: (a, at) => notes(a, [392, 330, 262], 0.22, { type: "triangle", dur: 0.55, gain: 0.15 }, at),
+  // The Grim Reaper finisher. It rises: a deep swell under a breath of wind.
+  reaperRise: (a, at) => {
+    tone(a, { freq: 48, to: 96, type: "sawtooth", dur: 1.1, gain: 0.12, at });
+    tone(a, { freq: 73, to: 146, type: "triangle", dur: 1.1, gain: 0.1, at });
+    noise(a, { freq: 300, to: 1600, q: 0.7, dur: 1.0, gain: 0.16, at });
+  },
+  // It gathers itself: a rising, trembling tension.
+  reaperCharge: (a, at) => {
+    tone(a, { freq: 90, to: 360, type: "sawtooth", dur: 0.85, gain: 0.1, at });
+    tone(a, { freq: 135, to: 540, type: "square", dur: 0.85, gain: 0.04, at });
+    noise(a, { freq: 500, to: 4200, q: 1.4, dur: 0.85, gain: 0.2, at });
+    for (let i = 0; i < 6; i++) tone(a, { freq: 1400 + i * 260, to: 900 + i * 200, type: "sine", dur: 0.2, gain: 0.03, at: at + 0.15 + i * 0.11 });
+  },
+  // The swing: a heavy whoosh that falls away after it passes.
+  reaperSwing: (a, at) => {
+    noise(a, { freq: 350, to: 4200, q: 1.1, dur: 0.22, gain: 0.34, at });
+    noise(a, { freq: 4200, to: 600, q: 0.9, dur: 0.26, gain: 0.24, at: at + 0.2 });
+    tone(a, { freq: 140, to: 55, type: "sawtooth", dur: 0.42, gain: 0.12, at });
+  },
+  // The cut: a crack, a boom that shakes, and glass-like shimmer as the world tears.
+  riftTear: (a, at) => {
+    noise(a, { freq: 5200, to: 900, filter: "highpass", q: 0.7, dur: 0.18, gain: 0.4, at });
+    tone(a, { freq: 120, to: 32, type: "sine", dur: 0.9, gain: 0.5, at });
+    noise(a, { freq: 260, to: 70, filter: "lowpass", dur: 0.7, gain: 0.5, at });
+    tone(a, { freq: 78, to: 40, type: "sawtooth", dur: 0.6, gain: 0.14, at });
+    for (let i = 0; i < 7; i++) tone(a, { freq: 1500 + i * 430, to: 700 + i * 210, type: "triangle", dur: 0.7, gain: 0.05, at: at + 0.03 + i * 0.045 });
+    noise(a, { freq: 2600, to: 400, q: 2, dur: 0.9, gain: 0.14, at: at + 0.12 });
+  },
+  // The fire: a low roar that swells and dies away, with crackles and pops all through it.
+  riftFire: (a, at) => {
+    const T = 4.1;
+    noise(a, { freq: 300, to: 700, filter: "lowpass", q: 0.8, dur: 1.2, gain: 1.1, at });
+    noise(a, { freq: 700, to: 200, filter: "lowpass", q: 0.8, dur: T - 0.9, gain: 0.8, at: at + 0.9 });
+    noise(a, { freq: 1500, to: 900, filter: "bandpass", q: 0.6, dur: T - 0.5, gain: 0.22, at: at + 0.3 });
+    tone(a, { freq: 62, to: 46, type: "sawtooth", dur: T, gain: 0.1, at });
+    for (let i = 0; i < 38; i++) {
+      const k = Math.random();
+      const when = at + 0.05 + k * (T - 0.5);
+      const loud = 1 - k * 0.8; // (the crackling thins out as the fire dies)
+      noise(a, { freq: 1800 + Math.random() * 4200, to: 500 + Math.random() * 900, filter: "bandpass", q: 2.5, dur: 0.03 + Math.random() * 0.07, gain: (0.25 + Math.random() * 0.35) * loud, at: when });
+    }
+  },
 };
 
 /** Makes the audio context and its noise ahead of the first sound: creating them is the slow part of a first sound (a pause of several frames in the middle of the game). */
