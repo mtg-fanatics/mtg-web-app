@@ -562,7 +562,7 @@ function timeline(t: number): Pose {
     // the swing: one heavy sweep from low on the right, up and over the top, to the left. It gathers speed and is fastest over the top, and the hands are thrown up and
     // across with it, and the weapon grows as it comes at us
     const ks = clamp01((t - T_SWING_AT) / T_SWING);
-    const e = ks < 0.5 ? 2 * ks * ks : 1 - Math.pow(-2 * ks + 2, 2) / 2;
+    const e = Math.pow(ks, 1.7); // (it gathers speed and is fastest at the end, where it hits)
     p.rot = lerp(34, -128, e);
     p.dx = lerp(46, -54, e);
     p.dy = lerp(26, -62, Math.sin(ks * Math.PI * 0.5));
@@ -570,29 +570,20 @@ function timeline(t: number): Pose {
     p.rise = lerp(0.012, -0.05, e);
     p.grip = 1;
     p.ripple = 0.35 + 0.9 * ks;
-  } else if (t < T_HIT + T_FOLLOW) {
-    // the blow and the follow-through: it overshoots a little and holds
-    const k = clamp01((t - T_HIT) / T_FOLLOW);
-    const e = smooth(0, 1, k);
-    p.rot = lerp(-128, -138, e);
-    p.dx = lerp(-54, -62, e);
-    p.dy = lerp(-62, -56, e);
-    p.scale = lerp(1.2, 1.16, k);
-    p.rise = -0.05;
-    p.grip = 1;
-    p.shudder = 1 - k * 0.3;
-    p.flash = (1 - k) * 0.3;
   } else {
-    // it lets go: the weapon drifts, turns back and sinks away
+    // the blow and the follow-through: the blade does not stop; it glides on and slows smoothly, the weapon drifting with it as it lets go and fades
+    const u = t - T_HIT;
+    const o = 1 - Math.exp(-u / 120); // 0 at the blow, towards 1: the speed dies away smoothly
     const k = clamp01((t - T_HIT - T_FOLLOW) / T_SINK);
-    p.rot = lerp(-138, -150, smooth(0, 1, k));
-    p.dx = lerp(-62, -70, smooth(0, 1, k));
-    p.dy = lerp(-56, -20, smooth(0, 0.7, k)) + 80 * smooth(0.4, 1, k);
-    p.scale = lerp(1.16, 1.06, smooth(0, 0.6, k));
-    p.rise = lerp(-0.05, 0, smooth(0, 0.5, k)) + 0.5 * smooth(0.5, 1, k);
-    p.grip = lerp(1, 0.4, smooth(0, 0.55, k));
-    p.shudder = (1 - smooth(0, 0.6, k)) * 0.7;
-    p.alpha = 1 - smooth(0.2, 0.8, k);
+    p.rot = -128 - 34 * o;
+    p.dx = -54 - 26 * o;
+    p.dy = -62 + 16 * o + 60 * smooth(0.3, 1, k);
+    p.scale = lerp(1.2, 1.1, o);
+    p.rise = lerp(-0.05, -0.02, o) + 0.5 * smooth(0.5, 1, k);
+    p.grip = 1;
+    p.shudder = Math.max(0, 1 - u / 700);
+    p.flash = Math.max(0, 0.3 * (1 - u / T_FOLLOW));
+    p.alpha = 1 - smooth(0.12, 0.7, k);
   }
   return p;
 }
@@ -855,6 +846,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     queued[when] = [];
   };
   let raf = 0;
+  const promoted: HTMLElement[] = []; // elements made graphics layers of their own ahead of the blow (given back at the end)
 
   try {
     // ── where the Reaper stands: it is as wide as the winner's mat and may stand taller than it (it is a presence, not a token) ──
@@ -1002,6 +994,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
         })
         .sort((a, b) => Math.hypot(a.vx, a.vy) - Math.hypot(b.vx, b.vy))
         .slice(0, lite ? 4 : 8);
+      for (const { c } of cards) promoted.push(c);
       for (const { c, vx, vy } of cards) {
         const d = Math.hypot(vx, vy) || 1;
         const amp = Math.min(30, 10 + 2600 / (d + 60));
@@ -1020,7 +1013,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     const barTop = el(stage, { left: "-40px", top: "0", width: "calc(100% + 80px)", height: `${barH}px`, background: "#000", transform: "translateY(-100%)" });
     const barBottom = el(stage, { left: "-40px", bottom: "0", width: "calc(100% + 80px)", height: `${barH}px`, background: "#000", transform: "translateY(100%)" });
 
-    // the blow lands: everything stops for a moment (the heaviest frames of the whole thing), then the world reacts
+    // the blow lands: the world reacts (the picture is never stopped: the blade goes straight through)
     const blow = () => {
       go(flash, [{ opacity: 0.9 }, { opacity: 0 }], { duration: 380, easing: "ease-out" });
       go(ring, [{ opacity: 1, transform: "scale(.05)" }, { opacity: 0, transform: "scale(1)" }], { duration: 650, easing: "cubic-bezier(.1,.7,.2,1)" });
@@ -1040,6 +1033,10 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     };
 
     later("intro", () => {
+      // the mat and the cards that are about to be moved by the blow become graphics layers NOW (while the Reaper is still rising), not at the blow, which is when the
+      // browser would otherwise have to draw them again from scratch (that was the hitch at the moment of contact)
+      if (matEl) promoted.push(matEl);
+      for (const e of promoted) e.style.willChange = "transform";
       go(dim, [{ opacity: 0 }, { opacity: 1 }], { duration: 650, easing: "ease-out" });
       go(aura, [{ opacity: 0 }, { opacity: 1 }], { duration: 500, easing: "ease-out" });
       go(barTop, [{ transform: "translateY(-100%)" }, { transform: "translateY(0)" }], { duration: 450, easing: "cubic-bezier(.2,.8,.2,1)" });
@@ -1076,7 +1073,6 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     };
     let clock = 0;
     let last = performance.now();
-    let hold = 0; // (milliseconds the whole thing is frozen for, at the moment of the blow)
     // (when each big layer is drawn for the first time, in timeline milliseconds)
     const warm: [number, HTMLElement | null][] = [[250, ring], [450, veil], [650, flash]];
     let warmed = 0;
@@ -1099,12 +1095,8 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
           }
         }
         const now = performance.now();
-        let dt = now - last;
+        const dt = now - last;
         last = now;
-        if (hold > 0) {
-          hold -= dt;
-          dt = 0;
-        }
         clock += dt * rate;
         const t = clock;
         const p = timeline(t);
@@ -1127,7 +1119,6 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
         if (t >= T_C) {
           once("hit", () => {
             blow();
-            hold = lite ? 70 : 115;
           });
         }
         if (t >= T_HIT + T_FOLLOW) once("leave", () => fire("leave"));
@@ -1167,6 +1158,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     arcR?.dispose();
   } finally {
     cancelAnimationFrame(raf);
+    for (const e of promoted) e.style.willChange = "";
     for (const a of run) {
       try {
         a.cancel();
