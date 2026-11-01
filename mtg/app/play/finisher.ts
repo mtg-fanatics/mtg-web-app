@@ -1005,10 +1005,11 @@ interface FlameField {
 function makeFlameField(parent: HTMLElement, mat: Rect, origin: [number, number], vw: number, vh: number, lite: boolean): FlameField | null {
   // (room above the mat for the flames to rise into)
   const head = mat.height * 0.95;
-  const left = Math.max(0, Math.floor(mat.left - 70));
-  const top = Math.max(0, Math.floor(mat.top - head));
-  const w = Math.min(vw, Math.ceil(mat.left + mat.width + 70)) - left;
-  const h = Math.min(vh, Math.ceil(mat.top + mat.height + 6)) - top;
+  void head;
+  const left = 0; // (as big as the screen: the flames are never cut off by the edge of a box)
+  const top = 0;
+  const w = vw;
+  const h = vh;
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(w);
   canvas.height = Math.round(h);
@@ -1100,7 +1101,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
   const flip = above ? 1 : -1;
   const matEl = loser ? document.querySelector<HTMLElement>(`[data-mat="${loser}"]`) : null;
 
-  const root = el(document.body, { inset: "0", zIndex: "9990", overflow: "hidden", willChange: "auto" });
+  const root = el(document.body, { position: "fixed", inset: "0", zIndex: "9990", overflow: "hidden", willChange: "auto" }); // (fixed: it floats over the whole screen, over everything, wherever the page is scrolled)
   // everything the finisher draws is on one stage, so the blow can shake all of it at once (shaking the page itself would redraw the whole table)
   const stage = el(root, { inset: "0" });
   const run: Animation[] = [];
@@ -1212,9 +1213,11 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
       ay1 = Math.max(ay1, y);
     }
     // (room all round for the flames, which rise above the slash and would be cut off at the edge of a tight box)
-    const arcBox = { left: Math.max(0, Math.floor(ax0 - thick * 0.7)), top: Math.max(0, Math.floor(ay0 - thick * 1.4)), w: 0, h: 0 };
-    arcBox.w = Math.min(vw, Math.ceil(ax1 + thick * 0.7)) - arcBox.left;
-    arcBox.h = Math.min(vh, Math.ceil(ay1 + thick * 1.1)) - arcBox.top;
+    void ax0;
+    void ax1;
+    void ay0;
+    void ay1;
+    const arcBox = { left: 0, top: 0, w: vw, h: vh }; // (the whole screen: the slash and its flames are never cut off)
     const arcR = bands ? makeArcRenderer(stage, bands, { pts, thick }, arcBox) : null;
     // where the blade first hits (the blow's flash, shards and ring come from there)
     const cx = pts[0][0];
@@ -1222,10 +1225,10 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     // the opponent's mat burns in the slash's own purple flames, from where the blade hit, and chars under them
     const T_BURN = 4000;
     const matFire = makeFlameField(stage, l, [Math.max(l.left, Math.min(l.left + l.width, cx)), Math.max(l.top, Math.min(l.top + l.height, cy))], vw, vh, lite);
-    const heat = el(stage, { left: `${l.left - 20}px`, top: `${l.top - l.height * 0.35}px`, width: `${l.width + 40}px`, height: `${l.height * 1.5}px`, background: "radial-gradient(ellipse at 50% 85%, rgba(236,72,220,.55), rgba(124,58,237,.22) 45%, transparent 72%)", opacity: "0" });
-    const char = el(stage, { left: `${l.left}px`, top: `${l.top}px`, width: `${l.width}px`, height: `${l.height}px`, borderRadius: "14px", background: "radial-gradient(ellipse at 50% 80%, rgba(120,20,160,.35), rgba(30,0,50,.78))", opacity: "0" });
+    const heat = el(stage, { left: `${l.left - l.width * 0.2}px`, top: `${l.top - l.height * 0.7}px`, width: `${l.width * 1.4}px`, height: `${l.height * 2.2}px`, background: "radial-gradient(closest-side at 50% 68%, rgba(236,72,220,.55), rgba(124,58,237,.22) 50%, rgba(124,58,237,0) 100%)", opacity: "0" });
+    const char = el(stage, { left: `${l.left - l.width * 0.15}px`, top: `${l.top - l.height * 0.3}px`, width: `${l.width * 1.3}px`, height: `${l.height * 1.6}px`, background: "radial-gradient(closest-side at 50% 58%, rgba(40,0,64,.78) 45%, rgba(40,0,64,0) 100%)", opacity: "0" });
 
-    const veil = el(stage, { left: `${l.left}px`, top: `${l.top}px`, width: `${l.width}px`, height: `${l.height}px`, borderRadius: "14px", background: "radial-gradient(ellipse at 50% 50%, rgba(88,28,135,.0), rgba(20,0,40,.8))", opacity: "0" });
+    const veil = el(stage, { left: `${l.left - l.width * 0.15}px`, top: `${l.top - l.height * 0.3}px`, width: `${l.width * 1.3}px`, height: `${l.height * 1.6}px`, background: "radial-gradient(closest-side at 50% 58%, rgba(88,28,135,0) 20%, rgba(40,0,70,.75) 70%, rgba(20,0,40,0) 100%)", opacity: "0" });
     const flash = el(stage, { inset: "-40px", background: "radial-gradient(ellipse at 50% 55%, #fff 0%, #e9d5ff 35%, rgba(168,85,247,.6) 80%)", opacity: "0" });
     // the shock ring is made at its full size and grows from nothing (so it is drawn once, not again at every size)
     const RING = 640;
