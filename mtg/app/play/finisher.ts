@@ -518,8 +518,8 @@ async function makeRenderer(parent: HTMLElement, images: string[], indices: Uint
 // ───────────────────────────── the timeline ─────────────────────────────
 
 const T_RISE = 560; // the hands come up out of the mat
-const T_WIND = 560; // the scythe is drawn back
-const T_HOLD = 170; // a held breath
+const T_WIND = 520; // the scythe is drawn back (it keeps moving until the swing: there is no held pose)
+const T_HOLD = 0;
 const T_SWING = 190; // the swing itself
 const T_FOLLOW = 260; // the follow-through
 const T_SINK = 1150; // the scythe drops back and the hands sink away
@@ -542,9 +542,11 @@ function timeline(t: number): Pose {
     p.ripple = 0.8 * (1 - k) + 0.15;
   } else if (t < T_RISE + T_WIND) {
     // the wind-up: the hands draw the scythe back and low to the right, the blade dipping, and it gathers
-    const k = smooth(0, 1, (t - T_RISE) / T_WIND);
-    p.rot = 34 * k;
-    p.dx = 46 * k;
+    const kk = clamp01((t - T_RISE) / T_WIND);
+    const k = 0.45 * smooth(0, 1, kk) + 0.55 * kk; // (eased at the start only: it is still moving when the swing begins)
+    const trem = Math.sin(t * 0.16) * 1.4 * smooth(0.55, 1, kk);
+    p.rot = 34 * k + trem;
+    p.dx = 46 * k + trem;
     p.dy = 26 * k;
     p.scale = 1 + 0.05 * k;
     p.rise = 0.012 * k;
