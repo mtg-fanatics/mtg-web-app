@@ -664,9 +664,10 @@ const ARC_VERT = `
   attribute vec2 a_uv;
   uniform vec2 u_view;
   uniform float u_thick;
+  uniform float u_shift;
   varying vec2 v_uv;
   void main() {
-    vec2 p = a_pos + a_norm * (a_uv.y - 0.5) * u_thick;
+    vec2 p = a_pos + a_norm * ((a_uv.y - 0.5) * u_thick + u_shift);
     gl_Position = vec4(p.x / u_view.x * 2.0 - 1.0, 1.0 - p.y / u_view.y * 2.0, 0.0, 1.0);
     v_uv = a_uv;
   }`;
@@ -677,17 +678,114 @@ const ARC_FRAG = `
   uniform float u_alpha;
   uniform float u_reveal;
   uniform float u_head;
+  uniform float u_time;
+  uniform float u_warp;
+  uniform float u_add;
+  uniform float u_mode;   // 0: the lightning picture, 1: the rift (a cut that opens on another world)
+  uniform vec3 u_tint;
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   void main() {
-    vec4 c = texture2D(u_tex, v_uv);
     // it is drawn in from its first end, with a white-hot head that goes in front
     float shown = smoothstep(u_reveal, u_reveal - 0.05, v_uv.x);
-    float head = smoothstep(0.1, 0.0, abs(v_uv.x - u_reveal + 0.02)) * u_head;
-    c.rgb = min(c.rgb + c.a * vec3(1.0, 0.82, 1.0) * head, c.a);
-    gl_FragColor = c * shown * u_alpha;
+    if (u_mode > 0.5) {
+      // the rift: a lens-shaped cut, pointed at both ends; its edge is white-hot, and inside it is another world: a purple and blue void full of slowly turning cloud and stars
+      float d = abs(v_uv.y - 0.5) * 2.0;
+      float w = pow(max(sin(3.14159 * clamp(v_uv.x, 0.0, 1.0)), 0.0), 0.8);
+      float inside = smoothstep(w, w - 0.1, d);
+      float rim = smoothstep(w - 0.16, w - 0.01, d) * inside;
+      float t = u_time * 0.0006;
+      vec2 q = vec2(v_uv.x * 7.0 + t * 3.0, v_uv.y * 3.0);
+      float n = 0.5 + 0.5 * sin(q.x * 2.0 + sin(q.y * 3.0 + t * 7.0) * 1.6) * sin(q.y * 4.0 - q.x + t * 5.0);
+      vec3 col = mix(vec3(0.03, 0.0, 0.09), vec3(0.28, 0.05, 0.55), n * (1.0 - d * 0.6));
+      col += vec3(0.0, 0.18, 0.5) * pow(n, 3.0) * (1.0 - d);
+      vec2 g = floor(vec2(v_uv.x * 260.0, v_uv.y * 70.0));
+      float star = step(0.985, hash(g)) * (0.55 + 0.45 * sin(u_time * 0.01 + hash(g + 3.0) * 30.0));
+      col += star * vec3(0.9, 0.85, 1.0);
+      col += rim * vec3(1.0, 0.72, 1.0) * 1.5;
+      float a = inside * shown * u_alpha;
+      gl_FragColor = vec4(min(col, vec3(1.0)) * a, a);
+      return;
+    }
+    // the lightning crawls along the slash (the picture is waved a little, and it flickers)
+    vec2 uv = v_uv;
+    uv.y += sin(uv.x * 34.0 + u_time * 0.05) * u_warp * 0.014 + sin(uv.x * 71.0 - u_time * 0.09) * u_warp * 0.007;
+    vec4 c = texture2D(u_tex, uv);
+    float flick = 1.0 + 0.24 * sin(u_time * 0.07 + v_uv.x * 19.0) + 0.14 * sin(u_time * 0.13 - v_uv.x * 43.0);
+    float head = smoothstep(0.12, 0.0, abs(v_uv.x - u_reveal + 0.025)) * u_head;
+    c.rgb = min(c.rgb * u_tint * flick + c.a * vec3(1.0, 0.85, 1.0) * head * 1.4, c.a * 1.6);
+    // both ends fade into points (so the picture never ends in a hard edge)
+    float ends = smoothstep(0.0, 0.14, v_uv.x) * smoothstep(1.0, 0.86, v_uv.x);
+    float k = shown * u_alpha * ends;
+    gl_FragColor = u_add > 0.5 ? vec4(c.rgb * k, 0.0) : c * k;
   }`;
 
+// the flames: soft teardrops of fire, as points
+const FLAME_VERT = `
+  attribute vec4 a_f;     // x, y, size, life
+  uniform vec2 u_view;
+  varying float v_life;
+  varying float v_seed;
+  void main() {
+    gl_Position = vec4(a_f.x / u_view.x * 2.0 - 1.0, 1.0 - a_f.y / u_view.y * 2.0, 0.0, 1.0);
+    gl_PointSize = a_f.z;
+    v_life = a_f.w;
+    v_seed = fract(a_f.x * 0.0137 + a_f.y * 0.0071);   // (each flame has its own shape and its own flicker)
+  }`;
+// A flame with texture: a tongue that narrows to a flickering tip, its edge torn ragged by moving noise, bands of heat running up it, and a white-hot core that
+// cools through pink and magenta to violet. All of it is a few sines, so it is cheap to draw even hundreds of times over.
+const FLAME_FRAG = `
+  precision mediump float;
+  varying float v_life;
+  varying float v_seed;
+  uniform float u_alpha;
+  uniform float u_time;
+  void main() {
+    vec2 p = gl_PointCoord * 2.0 - 1.0;
+    float h = 0.5 - 0.5 * p.y;                        // 0 at the foot, 1 at the tip
+    float t = u_time * 0.011 + v_seed * 40.0;
+    // the tongue sways and licks, more towards its tip
+    float sway = sin(p.y * 4.5 - t * 1.7) * 0.2 * h + sin(p.y * 9.0 + t * 2.6) * 0.07 * h;
+    float x = p.x + sway;
+    float width = mix(0.82, 0.07, pow(h, 0.8));
+    float body = 1.0 - abs(x) / width;
+    // ragged edge and bands of heat running up the flame
+    float n1 = sin(p.y * 13.0 - t * 3.1 + x * 5.0) * 0.5 + 0.5;
+    float n2 = sin(p.y * 27.0 - t * 5.3 - x * 9.0 + v_seed * 20.0) * 0.5 + 0.5;
+    float tex = 0.6 * n1 + 0.4 * n2;
+    body -= (0.22 + 0.2 * h) * tex;
+    body = clamp(body * 1.5, 0.0, 1.0);
+    float foot = smoothstep(1.0, 0.7, p.y);          // (it fades out under its foot)
+    float edge = 1.0 - smoothstep(0.55, 1.0, max(abs(p.x), abs(p.y)));   // (and before the edge of its square, so that nothing is cut off)
+    float a = body * foot * edge * (0.5 + 0.6 * tex);
+    float core = pow(clamp(body, 0.0, 1.0), 3.0) * (1.0 - h * 0.6);
+    // colour by age and by heat: white-hot at the core, pink, magenta, violet, blue at the edge of the dying flame
+    vec3 hot = mix(vec3(1.0, 0.95, 1.0), vec3(1.0, 0.4, 0.95), smoothstep(0.0, 0.4, v_life));
+    vec3 col = mix(hot, vec3(0.5, 0.12, 1.0), smoothstep(0.25, 0.85, v_life));
+    col = mix(col, vec3(1.0, 0.8, 1.0), core * 0.5);
+    col = mix(col, vec3(0.3, 0.2, 1.0), (1.0 - body) * 0.55 * smoothstep(0.2, 0.7, v_life));
+    float fade = (1.0 - smoothstep(0.55, 1.0, v_life)) * smoothstep(0.0, 0.07, v_life);
+    gl_FragColor = vec4(col * a * fade * u_alpha * 0.85, 0.0);
+  }`;
+
+/** What the slash looks like at an instant. */
+interface SlashFrame {
+  /** How far the slash is drawn in (0 to about 1), how bright it is, how much of the dark between worlds shows, and the white-hot head. */
+  reveal: number;
+  light: number;
+  dark: number;
+  head: number;
+  /** The time in milliseconds (the lightning crawls with it), how far the rift is open (0 to 1), the colour split's width in pixels, the glow's strength, and the echo cut's strength. */
+  time: number;
+  open: number;
+  chroma: number;
+  bloom: number;
+  echo: number;
+  /** How strong the flames along the slash are. */
+  flame: number;
+}
+
 interface ArcRenderer {
-  draw: (reveal: number, light: number, dark: number, head: number) => void;
+  draw: (f: SlashFrame) => void;
   scaleTo: (k: number) => void;
   dispose: () => void;
 }
@@ -718,12 +816,15 @@ function makeArcRenderer(
   gl.attachShader(prog, compile(gl.VERTEX_SHADER, ARC_VERT));
   gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, ARC_FRAG));
   gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    return null;
+  }
   gl.useProgram(prog);
   // the band: along the blade's path, two vertices each (its two sides)
   const N = geo.pts.length - 1;
   const data = new Float32Array((N + 1) * 2 * 6);
   const idx = new Uint16Array(N * 6);
+  const nrm: [number, number][] = [];
   let mx = 0;
   let my = 0;
   for (const [x, y] of geo.pts) {
@@ -746,6 +847,7 @@ function makeArcRenderer(
       nx = -nx;
       ny = -ny;
     }
+    nrm.push([nx, ny]);
     for (let side = 0; side < 2; side++) data.set([x - box.left, y - box.top, nx, ny, i / N, side], (i * 2 + side) * 6);
     if (i < N) idx.set([i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2], i * 6);
   }
@@ -765,6 +867,12 @@ function makeArcRenderer(
   const uAlpha = gl.getUniformLocation(prog, "u_alpha");
   const uReveal = gl.getUniformLocation(prog, "u_reveal");
   const uHead = gl.getUniformLocation(prog, "u_head");
+  const uShift = gl.getUniformLocation(prog, "u_shift");
+  const uTime = gl.getUniformLocation(prog, "u_time");
+  const uWarp = gl.getUniformLocation(prog, "u_warp");
+  const uAdd = gl.getUniformLocation(prog, "u_add");
+  const uTint = gl.getUniformLocation(prog, "u_tint");
+  const uMode = gl.getUniformLocation(prog, "u_mode");
   const makeTex = (c: HTMLCanvasElement) => {
     const t = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, t);
@@ -777,11 +885,75 @@ function makeArcRenderer(
     return t;
   };
   const texLight = makeTex(bands.light);
-  const texDark = makeTex(bands.dark);
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.clearColor(0, 0, 0, 0);
+  // the flames: their own little program, and a few particles that live along the cut
+  const fprog = gl.createProgram()!;
+  gl.attachShader(fprog, compile(gl.VERTEX_SHADER, FLAME_VERT));
+  gl.attachShader(fprog, compile(gl.FRAGMENT_SHADER, FLAME_FRAG));
+  gl.linkProgram(fprog);
+  const flamesOk = !!gl.getProgramParameter(fprog, gl.LINK_STATUS);
+  const fbuf = gl.createBuffer();
+  const NF = flamesOk ? Math.min(150, Math.max(50, Math.round(geo.pts.length * 2.4))) : 0;
+  const part = Array.from({ length: NF }, (_, i) => ({
+    u: (i + Math.random()) / Math.max(1, NF),
+    side: Math.random() * 2 - 1,
+    off: 0.25 + Math.random() * 0.75,
+    rise: 0.5 + Math.random() * 1.1,
+    sway: Math.random() * 2 - 1,
+    speed: 0.7 + Math.random() * 0.9,
+    phase0: Math.random(),
+    size: 0.6 + Math.random() * 0.9,
+  }));
+  const fdata = new Float32Array(NF * 4);
+  const drawFlames = (f: SlashFrame) => {
+    if (!flamesOk || f.flame <= 0.003) return;
+    const ratio = canvas.width / box.w;
+    let n = 0;
+    for (const q of part) {
+      if (q.u > f.reveal || q.u < 0.1) continue; // (the flames start where the cut has got to)
+      const cyc = (f.time * 0.0011 * q.speed + q.phase0) % 1; // 0 at the birth of this flame, 1 at its end
+      const fi = q.u * (geo.pts.length - 1);
+      const i0 = Math.floor(fi);
+      const i1 = Math.min(geo.pts.length - 1, i0 + 1);
+      const fr = fi - i0;
+      const [ax, ay] = geo.pts[i0];
+      const [bx, by] = geo.pts[i1];
+      const [nx0, ny0] = nrm[i0];
+      const rw = geo.thick * (0.06 + 0.3 * f.open) * 0.5; // (half the width of the rift)
+      const rise = geo.thick * 0.9 * q.rise * cyc;
+      const x = ax + (bx - ax) * fr - box.left + nx0 * q.side * rw * q.off + Math.sin(cyc * 7 + q.sway * 5) * geo.thick * 0.07 * q.sway;
+      const y = ay + (by - ay) * fr - box.top + ny0 * q.side * rw * q.off - rise;
+      const sz = geo.thick * 0.42 * q.size * (0.55 + 0.9 * Math.sin(Math.PI * Math.min(1, cyc * 1.15))) * (0.15 + 0.85 * Math.min(1, (q.u - 0.1) / 0.4));
+      fdata[n * 4] = x;
+      fdata[n * 4 + 1] = y;
+      fdata[n * 4 + 2] = Math.max(4, Math.min(120, sz * ratio));
+      fdata[n * 4 + 3] = cyc;
+      n++;
+    }
+    if (n === 0) return;
+    gl.useProgram(fprog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, fbuf);
+    gl.bufferData(gl.ARRAY_BUFFER, fdata.subarray(0, n * 4), gl.DYNAMIC_DRAW);
+    const loc = gl.getAttribLocation(fprog, "a_f");
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 4, gl.FLOAT, false, 16, 0);
+    gl.uniform2f(gl.getUniformLocation(fprog, "u_view"), box.w, box.h);
+    gl.uniform1f(gl.getUniformLocation(fprog, "u_alpha"), f.flame);
+    gl.uniform1f(gl.getUniformLocation(fprog, "u_time"), f.time);
+    gl.drawArrays(gl.POINTS, 0, n);
+    gl.useProgram(prog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    // (the flame program's attribute shares an index with one of the band's: the band's three are set up again)
+    for (const [name, size, off] of [["a_pos", 2, 0], ["a_norm", 2, 8], ["a_uv", 2, 16]] as const) {
+      const bl = gl.getAttribLocation(prog, name);
+      gl.enableVertexAttribArray(bl);
+      gl.vertexAttribPointer(bl, size, gl.FLOAT, false, 24, off);
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+  };
   parent.appendChild(canvas);
   return {
     scaleTo(k) {
@@ -789,24 +961,122 @@ function makeArcRenderer(
       canvas.height = Math.max(32, Math.round(box.h * k));
       gl.viewport(0, 0, canvas.width, canvas.height);
     },
-    draw(reveal, light, dark, head) {
+    draw(f) {
       gl.clear(gl.COLOR_BUFFER_BIT);
-      if (dark > 0.003) {
-        gl.bindTexture(gl.TEXTURE_2D, texDark);
-        gl.uniform1f(uThick, geo.thick * 1.28);
-        gl.uniform1f(uAlpha, dark);
-        gl.uniform1f(uReveal, 1.2);
-        gl.uniform1f(uHead, 0);
-        gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0);
-      }
-      if (light > 0.003) {
-        gl.bindTexture(gl.TEXTURE_2D, texLight);
-        gl.uniform1f(uThick, geo.thick);
-        gl.uniform1f(uAlpha, light);
+      const pass = (tex: WebGLTexture | null, thick: number, shift: number, alpha: number, reveal: number, head: number, warp: number, add: boolean, tint: [number, number, number]) => {
+        if (alpha <= 0.003) return;
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.uniform1f(uThick, thick);
+        gl.uniform1f(uShift, shift);
+        gl.uniform1f(uAlpha, alpha);
         gl.uniform1f(uReveal, reveal);
         gl.uniform1f(uHead, head);
+        gl.uniform1f(uTime, f.time);
+        gl.uniform1f(uWarp, warp);
+        gl.uniform1f(uAdd, add ? 1 : 0);
+        gl.uniform3f(uTint, tint[0], tint[1], tint[2]);
         gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0);
+      };
+      const T = geo.thick;
+      gl.uniform1f(uMode, 1);
+      // 1. the rift: a cut that tears open (pointed at both ends) on another world, its edge white-hot
+      pass(texLight, T * (0.06 + 0.3 * f.open), 0, f.dark, f.reveal - 0.04, 0, 0, false, [1, 1, 1]);
+      gl.uniform1f(uMode, 0);
+      // 2. the glow round the cut (light that adds to what is behind it)
+      pass(texLight, T * 0.8, 0, 0.3 * f.bloom, f.reveal, 0, 1.4, true, [1, 0.4, 1]);
+      // 3. the lightning of the slash, thinner now: it is the energy along the lips of the cut
+      pass(texLight, T * 0.4, 0, 0.75 * f.light, f.reveal, f.head, 1, false, [1, 1, 1]);
+      // 4. the flames that burn and rise all along the cut
+      drawFlames(f);
+    },
+    dispose() {
+      canvas.remove();
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
+    },
+  };
+}
+
+/** The mat on fire: the same flames as the slash's, burning all over a rectangle (the opponent's mat), catching from the point the blade hit and spreading out from it. */
+interface FlameField {
+  draw: (ms: number, strength: number) => void;
+  scaleTo: (k: number) => void;
+  dispose: () => void;
+}
+function makeFlameField(parent: HTMLElement, mat: Rect, origin: [number, number], vw: number, vh: number, lite: boolean): FlameField | null {
+  // (room above the mat for the flames to rise into)
+  const head = mat.height * 0.95;
+  const left = Math.max(0, Math.floor(mat.left - 70));
+  const top = Math.max(0, Math.floor(mat.top - head));
+  const w = Math.min(vw, Math.ceil(mat.left + mat.width + 70)) - left;
+  const h = Math.min(vh, Math.ceil(mat.top + mat.height + 6)) - top;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(w);
+  canvas.height = Math.round(h);
+  Object.assign(canvas.style, { position: "absolute", left: `${left}px`, top: `${top}px`, width: `${w}px`, height: `${h}px`, pointerEvents: "none" });
+  const gl = canvas.getContext("webgl", { premultipliedAlpha: true, alpha: true, antialias: false });
+  if (!gl) return null;
+  const compile = (type: number, src: string) => {
+    const sh = gl.createShader(type)!;
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    return sh;
+  };
+  const prog = gl.createProgram()!;
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, FLAME_VERT));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FLAME_FRAG));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+  gl.useProgram(prog);
+  const N = lite ? 80 : 140;
+  const far = Math.hypot(Math.max(origin[0] - mat.left, mat.left + mat.width - origin[0]), Math.max(origin[1] - mat.top, mat.top + mat.height - origin[1])) || 1;
+  const part = Array.from({ length: N }, () => {
+    const x = mat.left + Math.random() * mat.width;
+    const y = mat.top + mat.height * (0.15 + Math.random() * 0.85);
+    return { x, y, ignite: (Math.hypot(x - origin[0], y - origin[1]) / far) * 0.55, speed: 0.55 + Math.random() * 0.8, phase0: Math.random(), size: 0.6 + Math.random() * 0.9, sway: Math.random() * 2 - 1, rise: 0.7 + Math.random() * 1.1 };
+  });
+  const data = new Float32Array(N * 4);
+  const buf = gl.createBuffer();
+  const loc = gl.getAttribLocation(prog, "a_f");
+  gl.enableVertexAttribArray(loc);
+  gl.uniform2f(gl.getUniformLocation(prog, "u_view"), w, h);
+  const uAlpha = gl.getUniformLocation(prog, "u_alpha");
+  const uTime = gl.getUniformLocation(prog, "u_time");
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.clearColor(0, 0, 0, 0);
+  parent.appendChild(canvas);
+  return {
+    scaleTo(k) {
+      canvas.width = Math.max(32, Math.round(w * k));
+      canvas.height = Math.max(32, Math.round(h * k));
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    },
+    draw(ms, strength) {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      if (strength <= 0.003) return;
+      const ratio = canvas.width / w;
+      let n = 0;
+      for (const q of part) {
+        // (the flames catch one by one, nearest the blow first)
+        const burn = Math.max(0, Math.min(1, (ms / 900 - q.ignite) * 3));
+        if (burn <= 0) continue;
+        const cyc = (ms * 0.0011 * q.speed + q.phase0) % 1;
+        const rise = mat.height * 0.55 * q.rise * cyc;
+        const sz = mat.height * 0.5 * q.size * (0.55 + 0.9 * Math.sin(Math.PI * Math.min(1, cyc * 1.15))) * burn;
+        data[n * 4] = q.x - left + Math.sin(cyc * 7 + q.sway * 5) * mat.height * 0.05 * q.sway;
+        data[n * 4 + 1] = q.y - top - rise;
+        data[n * 4 + 2] = Math.max(4, Math.min(150, sz * ratio));
+        data[n * 4 + 3] = cyc;
+        n++;
       }
+      if (n === 0) return;
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, n * 4), gl.DYNAMIC_DRAW);
+      gl.vertexAttribPointer(loc, 4, gl.FLOAT, false, 16, 0);
+      gl.uniform1f(uAlpha, strength);
+      gl.uniform1f(uTime, ms);
+      gl.drawArrays(gl.POINTS, 0, n);
     },
     dispose() {
       canvas.remove();
@@ -941,13 +1211,19 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
       ay0 = Math.min(ay0, y);
       ay1 = Math.max(ay1, y);
     }
-    const arcBox = { left: Math.max(0, Math.floor(ax0 - thick)), top: Math.max(0, Math.floor(ay0 - thick)), w: 0, h: 0 };
-    arcBox.w = Math.min(vw, Math.ceil(ax1 + thick)) - arcBox.left;
-    arcBox.h = Math.min(vh, Math.ceil(ay1 + thick)) - arcBox.top;
+    // (room all round for the flames, which rise above the slash and would be cut off at the edge of a tight box)
+    const arcBox = { left: Math.max(0, Math.floor(ax0 - thick * 0.7)), top: Math.max(0, Math.floor(ay0 - thick * 1.4)), w: 0, h: 0 };
+    arcBox.w = Math.min(vw, Math.ceil(ax1 + thick * 0.7)) - arcBox.left;
+    arcBox.h = Math.min(vh, Math.ceil(ay1 + thick * 1.1)) - arcBox.top;
     const arcR = bands ? makeArcRenderer(stage, bands, { pts, thick }, arcBox) : null;
     // where the blade first hits (the blow's flash, shards and ring come from there)
     const cx = pts[0][0];
     const cy = pts[0][1];
+    // the opponent's mat burns in the slash's own purple flames, from where the blade hit, and chars under them
+    const T_BURN = 5200;
+    const matFire = makeFlameField(stage, l, [Math.max(l.left, Math.min(l.left + l.width, cx)), Math.max(l.top, Math.min(l.top + l.height, cy))], vw, vh, lite);
+    const heat = el(stage, { left: `${l.left - 20}px`, top: `${l.top - l.height * 0.35}px`, width: `${l.width + 40}px`, height: `${l.height * 1.5}px`, background: "radial-gradient(ellipse at 50% 85%, rgba(236,72,220,.55), rgba(124,58,237,.22) 45%, transparent 72%)", opacity: "0" });
+    const char = el(stage, { left: `${l.left}px`, top: `${l.top}px`, width: `${l.width}px`, height: `${l.height}px`, borderRadius: "14px", background: "radial-gradient(ellipse at 50% 80%, rgba(120,20,160,.35), rgba(30,0,50,.78))", opacity: "0" });
 
     const veil = el(stage, { left: `${l.left}px`, top: `${l.top}px`, width: `${l.width}px`, height: `${l.height}px`, borderRadius: "14px", background: "radial-gradient(ellipse at 50% 50%, rgba(88,28,135,.0), rgba(20,0,40,.8))", opacity: "0" });
     const flash = el(stage, { inset: "-40px", background: "radial-gradient(ellipse at 50% 55%, #fff 0%, #e9d5ff 35%, rgba(168,85,247,.6) 80%)", opacity: "0" });
@@ -987,6 +1263,30 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
       later("hit", () => sa.play());
     }
 
+    // sparks: bright streaks thrown off the cut, one by one as the blade passes (made now, paused, and played at the contact)
+    for (let i = 0; i < (lite ? 8 : 20); i++) {
+      const f = Math.random();
+      const idx = Math.min(pts.length - 2, Math.floor(f * (pts.length - 1)));
+      const [x, y] = pts[idx];
+      const [nx0, ny0] = pts[idx + 1];
+      let tx = nx0 - x;
+      let ty = ny0 - y;
+      const tl = Math.hypot(tx, ty) || 1;
+      tx /= tl;
+      ty /= tl;
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const dist = rnd(50, 190);
+      const ox = -ty * side * dist + tx * rnd(-30, 60);
+      const oy = tx * side * dist + ty * rnd(-30, 60) + rnd(10, 50);
+      const len = rnd(10, 26);
+      const ang = (Math.atan2(oy, ox) * 180) / Math.PI;
+      const spark = el(stage, { left: `${x - len / 2}px`, top: `${y - 1.5}px`, width: `${len}px`, height: "3px", borderRadius: "2px", background: "linear-gradient(90deg, rgba(255,255,255,0), #fff 60%, #f0abfc)", boxShadow: "0 0 8px 2px rgba(217,70,239,.9)", opacity: "0" });
+      const sa = spark.animate([{ opacity: 0, transform: `translate(0,0) rotate(${ang}deg) scaleX(.4)` }, { opacity: 1, transform: `translate(${ox * 0.35}px,${oy * 0.35}px) rotate(${ang}deg) scaleX(1.4)`, offset: 0.2 }, { opacity: 0, transform: `translate(${ox}px,${oy}px) rotate(${ang}deg) scaleX(.5)` }], { duration: rnd(450, 900), delay: f * (T_PATH1 - T_C), easing: "cubic-bezier(.1,.7,.3,1)", fill: "both" });
+      sa.pause();
+      run.push(sa);
+      later("hit", () => sa.play());
+    }
+
     // the cards nearest the tear on the loser's mat are dragged towards it and let go (their places are measured now, before anything moves)
     if (matEl) {
       const cards = Array.from(matEl.querySelectorAll<HTMLElement>("[data-card-iid]"))
@@ -1019,6 +1319,8 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     const blow = () => {
       go(flash, [{ opacity: 0.9 }, { opacity: 0 }], { duration: 380, easing: "ease-out" });
       go(ring, [{ opacity: 1, transform: "scale(.05)" }, { opacity: 0, transform: "scale(1)" }], { duration: 650, easing: "cubic-bezier(.1,.7,.2,1)" });
+      go(heat, [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 0.85, offset: 0.8 }, { opacity: 0 }], { duration: T_BURN + 300, easing: "ease-in-out" });
+      go(char, [{ opacity: 0 }, { opacity: 0.95, offset: 0.12 }, { opacity: 0.85, offset: 0.8 }, { opacity: 0 }], { duration: T_BURN + 300, easing: "ease-in-out" });
       go(veil, [{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 0.85, offset: 0.7 }, { opacity: 0 }], { duration: T_RIFT, easing: "ease-in-out" });
       // the blow shakes the stage
       const shake: Keyframe[] = [];
@@ -1060,8 +1362,10 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
       renderer.draw(2, 3, verts.arms[1], 0, 0, [1, 1, 1]);
       renderer.draw(3, 4, verts.fist, 0, 0, [1, 1, 1]);
     }
-    arcR?.draw(0, 0.5, 0.5, 0); // (the slash's pictures are sent to the graphics chip now, not at the blow)
-    arcR?.draw(0, 0, 0, 0);
+    matFire?.draw(900, 0.4);
+    matFire?.draw(0, 0);
+    arcR?.draw({ reveal: 1, light: 0.5, dark: 0.5, head: 0, time: 0, open: 1, chroma: 4, bloom: 0.5, echo: 0.5, flame: 0.5 }); // (the slash's pictures are sent to the graphics chip now, not at the blow)
+    arcR?.draw({ reveal: 0, light: 0, dark: 0, head: 0, time: 0, open: 0, chroma: 0, bloom: 0, echo: 0, flame: 0 });
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     fire("intro");
     const rate = 1000 / scaled(1000); // the speed setting
@@ -1080,7 +1384,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     let warmed = 0;
     let lastReal = performance.now();
     let late = 0; // how many screen refreshes in a row came late
-    const T_STOP = Math.max(T_END, T_C + T_RIFT + 60);
+    const T_STOP = Math.max(T_END, T_C + T_BURN + 120);
     await new Promise<void>((resolve) => {
       const frame = () => {
         // If the computer cannot keep up, the decorations go first (the souls, the shards, the ghost copies of the scythe), then it is drawn with fewer pixels.
@@ -1094,6 +1398,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
             for (const m of motes) m.cancel();
             renderer?.scaleTo(0.7);
             arcR?.scaleTo(0.7);
+            matFire?.scaleTo(0.7);
           }
         }
         const now = performance.now();
@@ -1125,11 +1430,19 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
         }
         if (t >= T_HIT + T_FOLLOW) once("leave", () => fire("leave"));
         // the slash is drawn in along its arc as the blade goes round it, stays while the rift is open, and goes
+        if (matFire) {
+          const km = t - T_C;
+          matFire.draw(Math.max(0, km), km < 0 ? 0 : smooth(0, 200, km) * (1 - smooth(T_BURN - 1400, T_BURN, km)));
+        }
         if (arcR) {
-          const reveal = clamp01((t - T_C) / (T_PATH1 - T_C)) * 1.06;
-          const fade = 1 - smooth(T_C + T_RIFT * 0.62, T_C + T_RIFT, t);
-          const darkIn = smooth(T_PATH1 - 120, T_PATH1 + 40, t) * fade;
-          arcR.draw(reveal, t >= T_C ? fade : 0, darkIn, t < T_PATH1 ? 1 : 0);
+          const kc = t - T_C;
+          const reveal = clamp01(kc / (T_PATH1 - T_C)) * 1.06;
+          const fade = kc < 0 ? 0 : 1 - smooth(T_RIFT * 0.62, T_RIFT, kc);
+          const open = smooth(0, 150, kc) * (1 - 0.94 * smooth(T_RIFT * 0.5, T_RIFT, kc)); // the rift tears open at once and then slowly closes
+          const chroma = Math.max(0, 15 * (1 - smooth(0, 520, kc))) * (kc < 0 ? 0 : 1);
+          const bloom = kc < 0 ? 0 : fade * (1 - 0.6 * smooth(0, 700, kc)) * (0.85 + 0.15 * Math.sin(t * 0.05));
+          const echo = kc < 0 ? 0 : fade * smooth(40, 200, kc);
+          arcR.draw({ reveal, light: fade, dark: fade, head: kc < 0 || t >= T_PATH1 ? 0 : 1, time: t, open, chroma, bloom, echo, flame: fade });
         }
         if (renderer) {
           poseScythe(grids.scythe, p, verts.scythe, K);
@@ -1158,6 +1471,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     for (const a of run) if (a.playState !== "finished") a.finish();
     renderer?.dispose();
     arcR?.dispose();
+    matFire?.dispose();
   } finally {
     cancelAnimationFrame(raf);
     for (const e of promoted) e.style.willChange = "";
