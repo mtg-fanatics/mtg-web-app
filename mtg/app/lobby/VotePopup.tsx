@@ -6,6 +6,7 @@ import { holdWallpaper } from "../LiveWallpaper";
 import { CoinDisplay } from "../play/CoinFlip";
 import LookPicker from "../play/LookPicker";
 import { myLook, randomLook } from "@/lib/playmat";
+import { playFinisher, warmFinisher } from "../play/finisher";
 import { listPlayableDecks } from "@/lib/decks";
 import type { DeckChoice } from "@/lib/decks";
 import DeckPicker from "../decks/DeckPicker";
@@ -75,6 +76,18 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
   // The table: the card sleeve and playmat this player wants. The server shows them to both players (and to anyone watching).
   const [sleeve, setSleeve] = useState(() => myLook.read("sleeve"));
   const [mat, setMat] = useState(() => myLook.read("mat"));
+  const [previewing, setPreviewing] = useState(false);
+  useEffect(() => warmFinisher(), []);
+  // the finishing move is shown once, on the table behind this window, so the player sees what happens to the loser
+  async function preview() {
+    if (previewing) return;
+    setPreviewing(true);
+    try {
+      await playFinisher(null, null);
+    } finally {
+      setPreviewing(false);
+    }
+  }
   const [botLook] = useState(() => randomLook()); // against the computer, the host also dresses its table
   const vsBotRoom = room.players.some((p) => p.bot);
   useEffect(() => {
@@ -165,6 +178,13 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
           onSleeve={(v) => (setSleeve(v), myLook.write("sleeve", v))}
           onMat={(v) => (setMat(v), myLook.write("mat", v))}
         />
+        <div className="mt-4 border-t border-white/15 pt-4">
+          <h3 className="mb-1 text-base font-bold uppercase tracking-widest text-[#ffe29a]">Finishing move</h3>
+          <p className="mb-3 text-sm text-slate-300">The Grim Reaper slashes your opponent&apos;s mat when you win.</p>
+          <button onClick={() => void preview()} disabled={previewing} className="rounded-xl border border-white/30 bg-white/10 px-4 py-1.5 text-sm font-bold text-white hover:bg-white/20 disabled:opacity-40">
+            {previewing ? "Playing…" : "Preview"}
+          </button>
+        </div>
         <p className="mt-3 text-sm text-slate-300">{vsBotRoom ? "Your table is shown on your side of the battlefield." : "Your opponent sees your mat and sleeve on their screen, and you see theirs."}</p>
       </div>
       <button

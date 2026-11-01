@@ -46,6 +46,7 @@ import { GraveyardDialog, Pile } from "./Piles";
 import ShuffleStage from "./ShuffleStage";
 import { shufflePending } from "./shuffleStep";
 import { primeAudio } from "@/lib/sound";
+import { playFinisher, warmFinisher } from "./finisher";
 import { handDraws, hideDrawn, holdLibraryCounts, holdPiles, isPileBusy, playDeal, playDraws, playOpponentDiscards, playOpponentDraws, playToGraveyard, untilBattlefieldShown } from "./pileFx";
 import type { Draw } from "./pileFx";
 import { announcementsFrom, describeEvents, endReason, mergeAnnouncements, playerName, worthTelling } from "./log";
@@ -173,9 +174,11 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   useEffect(() => applyPerfClass(), []); // (cheaper effects and result screen on a weak computer)
   const won = !!game?.winner;
   const [endShown, setEndShown] = useState(false); // the result screen waits for the last life points to count down
+  const [finisherDone, setFinisherDone] = useState(false); // ...and for the winner's finishing move
+  const [liveSeen, setLiveSeen] = useState(false); // this screen saw the game being played (not a finished game opened afterwards: no finisher then)
   useEffect(() => {
     if (!won) {
-      const off = setTimeout(() => setEndShown(false), 0);
+      const off = setTimeout(() => (setEndShown(false), setFinisherDone(false), setLiveSeen(true)), 0);
       return () => clearTimeout(off);
     }
     // Every attacker has to finish its attack, and the life total has to finish counting (below zero too): only then does the result come up.
@@ -265,6 +268,20 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   const [abilityFocus, setAbilityFocus] = useState<string | null>(null); // a battlefield card clicked to see only its abilities
   const [viewingYard, setViewingYard] = useState<{ owner: PlayerId; zone: "graveyard" | "exile" } | null>(null); // whose graveyard or exile is open
   const [endNote, setEndNote] = useState<string | null>(null); // how the game ended, for the win popup
+  // The finishing move: the Grim Reaper slashes the loser's mat once the last blow has landed, and the result comes up after it.
+  const finisherWinner = game?.winner === "p1" || game?.winner === "p2" ? game.winner : null;
+  const finisherOn = !!finisherWinner && liveSeen && !(endNote ?? "").includes("resigned");
+  const resultReady = endShown && (!finisherOn || finisherDone);
+  const finisherPlayed = useRef(false);
+  useEffect(() => warmFinisher(), []);
+  useEffect(() => {
+    if (!endShown || !finisherOn || !finisherWinner || finisherDone || finisherPlayed.current) return;
+    finisherPlayed.current = true;
+    void playFinisher(finisherWinner, OPPONENT[finisherWinner]).finally(() => setTimeout(() => setFinisherDone(true), 300));
+  }, [endShown, finisherOn, finisherWinner, finisherDone]);
+  useEffect(() => {
+    if (!won) finisherPlayed.current = false;
+  }, [won]);
   useEffect(() => {
     const id = window.setTimeout(primeAudio, 1200); // (the first sound of the match must not be the one that builds the audio)
     return () => window.clearTimeout(id);
@@ -1242,10 +1259,10 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
         <PassReminder state={state} after={state.phase === "main2" && onlyLandsLeft ? REMIND_DONE_MS : REMIND_IDLE_MS} opponent={playerName(other)} onEndTurn={endTurn} />
       )}
 
-      {state.winner && endShown && online && !watching && net.reveal && seenReveal !== net.reveal && (
+      {state.winner && resultReady && online && !watching && net.reveal && seenReveal !== net.reveal && (
         <LibraryReveal reveal={net.reveal} onContinue={() => setSeenReveal(net.reveal)} />
       )}
-      {state.winner && endShown && !(online && !watching && net.reveal && seenReveal !== net.reveal) && <VictoryDialog
+      {state.winner && resultReady && !(online && !watching && net.reveal && seenReveal !== net.reveal) && <VictoryDialog
           winner={state.winner}
           reason={endNote ?? (online ? net.snapshot?.endReason ?? null : null)}
           series={
