@@ -355,6 +355,12 @@ export function primeAudio(): void {
   if (a) noiseBuffer(a.ctx);
 }
 
+/** Builds the finisher's reverb room ahead of time (making it takes a few milliseconds, which would otherwise be taken in the middle of the finisher). */
+export function primeFinisherAudio(): void {
+  const a = audio();
+  if (a) reverbFor(a);
+}
+
 /** Plays `sound`, `at` seconds from now. Does nothing when sound is off or the browser has no audio. */
 export function playSound(sound: Sound, at = 0): void {
   const a = audio();

@@ -1,6 +1,6 @@
 import type { PlayerId } from "@mtg/engine";
 import { animationsEnabled, scaled } from "@/lib/motion";
-import { playSound } from "@/lib/sound";
+import { playSound, primeFinisherAudio } from "@/lib/sound";
 import { liteMode } from "./perfTier";
 
 /**
@@ -62,47 +62,23 @@ let warmed = false;
 export function warmFinisher(): void {
   if (warmed || typeof window === "undefined") return;
   warmed = true;
-  for (const src of [REAPER, SLASH, "/finisher-animation/grim-reaper/cloak.webp", "/finisher-animation/grim-reaper/scythe.webp", "/finisher-animation/grim-reaper/armL.webp", "/finisher-animation/grim-reaper/armR.webp", FIST_L]) {
-    const img = new Image();
-    img.decoding = "async";
-    img.src = src;
-  }
+  // The pictures are fetched, decoded and kept (so playing does not wait for them or decode them), and the slash's pictures are made, all in idle moments a few seconds
+  // after the match starts, and not in the middle of the finisher: that start-up work was what dropped frames.
+  const idle = (fn: () => void, ms: number) => window.setTimeout(() => ("requestIdleCallback" in window ? (window as unknown as { requestIdleCallback: (f: () => void) => void }).requestIdleCallback(fn) : fn()), ms);
+  for (const [i, src] of [SCYTHE, FIST_L, SLASH].entries()) idle(() => void loadImage(src), 400 + i * 300);
+  idle(() => void slashBands(), 1800);
+  idle(() => warmShaders(), 2400);
+  idle(() => primeFinisherAudio(), 3000);
 }
 
 // ───────────────────────────── the rig ─────────────────────────────
 //
-// The Reaper is made of FOUR separate pictures cut from the artist's one (the cloak with its sleeves, the scythe with the fists that hold it, and the two
-// forearms), and each moves as what it is:
-//   the cloak stays and ripples,
-//   the scythe and the fists are ONE rigid piece, turned about the middle of the fists and carried by the lunge (the fingers clench a little),
-//   each forearm is a strip that follows a CURVE from the sleeve to the wrist: its two ends (the wrist joint, and the bones going into the sleeve) keep their
-//   shape, and only the plain middle of the bones is stretched along the curve, so an arm bends at an elbow and reaches, at the same width, instead of being smeared.
+// The Reaper is two pieces cut from the artist's picture, drawn by the graphics chip: the scythe (with the fist that holds it at the right, one rigid piece turned about
+// the middle of the hands and carried by the lunge, the fingers clenching a little) and the left fist. There is no cloak and no arms: free-floating hands can swing
+// the weapon as far as it likes without anything stretching.
 
-const CLOAK = "/finisher-animation/grim-reaper/cloak.webp";
 const SCYTHE = "/finisher-animation/grim-reaper/scythe.webp";
 const FIST_L = "/finisher-animation/grim-reaper/fistL.webp";
-
-/** A forearm: its picture (a crop of the big one: `tx`,`ty` its corner, `tw`,`th` its size), how its rows are shared (the wrist end, the plain middle, the sleeve end), and where its ends are. */
-interface Arm {
-  src: string;
-  tx: number;
-  ty: number;
-  tw: number;
-  th: number;
-  top: number;
-  mid: number;
-  bot: number;
-  /** The sleeve end (bottom) and the wrist end (top), at rest. */
-  sx: number;
-  sy: number;
-  wx: number;
-  wy: number;
-}
-const ARMS: Arm[] = [
-  { src: "/finisher-animation/grim-reaper/armL.webp", tx: 240, ty: 422, tw: 106, th: 83, top: 24, mid: 20, bot: 39, sx: 293, sy: 505, wx: 293, wy: 422 },
-  { src: "/finisher-animation/grim-reaper/armR.webp", tx: 590, ty: 334, tw: 106, th: 106, top: 22, mid: 40, bot: 44, sx: 643, sy: 440, wx: 643, wy: 334 },
-];
-const ARM_ROWS = 15; // rows of vertices along an arm (two each)
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
@@ -156,12 +132,6 @@ function gridRect(nx: number, ny: number, x0: number, y0: number, w: number, h: 
   }
   return g;
 }
-function armIndex(): Uint16Array {
-  const idx = new Uint16Array((ARM_ROWS - 1) * 6);
-  for (let i = 0; i < ARM_ROWS - 1; i++) idx.set([i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2], i * 6);
-  return idx;
-}
-
 /** What the body is doing at an instant (all set by the timeline). */
 interface Pose {
   /** How far it is below its place (a part of its height), and its size. */
@@ -199,18 +169,14 @@ interface Placement {
   flip: number;
 }
 
-/** The four pieces' vertices (x, y, u, v for each), as the graphics chip wants them. */
+/** The pieces' vertices (x, y, u, v for each), as the graphics chip wants them. */
 interface Verts {
-  cloak: Float32Array;
   scythe: Float32Array;
   fist: Float32Array;
-  arms: [Float32Array, Float32Array];
 }
-const makeVerts = (cloak: Grid, scythe: Grid, fist: Grid): Verts => ({
-  cloak: new Float32Array(cloak.px.length * 4),
+const makeVerts = (scythe: Grid, fist: Grid): Verts => ({
   scythe: new Float32Array(scythe.px.length * 4),
   fist: new Float32Array(fist.px.length * 4),
-  arms: [new Float32Array(ARM_ROWS * 8), new Float32Array(ARM_ROWS * 8)],
 });
 
 /** The body's own place and size (it grows from its lower edge and rises out of the mat), then to the screen. */
@@ -231,13 +197,6 @@ function viaHands(x: number, y: number, p: Pose, c: Trig, o: number[]): void {
   const ty = hy - BASE.y;
   o[0] = AXIS + (BASE.x + tx * c.cb - ty * c.sb - AXIS) * c.cy;
   o[1] = BASE.y + tx * c.sb + ty * c.cb - p.lift * c.sy;
-}
-/** A point of the cloak's side of the body: it twists with the body and turns with it. */
-function viaBody(x: number, y: number, c: Trig, o: number[]): void {
-  const tx = x - BASE.x;
-  const ty = y - BASE.y;
-  o[0] = AXIS + (BASE.x + tx * c.cb - ty * c.sb - AXIS) * c.cy;
-  o[1] = BASE.y + tx * c.sb + ty * c.cb;
 }
 interface Trig {
   ca: number;
@@ -289,111 +248,6 @@ function poseFist(m: Grid, p: Pose, out: Float32Array, k: Placement): void {
   }
 }
 
-/** The cloak: it twists with the body, and its lower edge ripples. */
-function poseCloak(m: Grid, p: Pose, out: Float32Array, k: Placement): void {
-  const c = trigOf(p);
-  const ph = p.t * 0.011;
-  for (let v = 0; v < m.px.length; v++) {
-    let x = m.px[v];
-    let y = m.py[v];
-    const edge = clamp01((y - 520) / 35);
-    if (edge > 0) {
-      x += (1.2 + 3.6 * p.ripple) * edge * Math.sin(y * 0.04 + x * 0.02 + ph * 1.8);
-      y += (1.0 + 3 * p.ripple) * edge * Math.sin(x * 0.03 - ph * 1.5);
-    }
-    viaBody(x + p.dx * 0.3, y + p.dy * 0.25, c, tmp2);
-    put(tmp2[0], tmp2[1], p, k, out, v * 4);
-    out[v * 4 + 2] = m.uv[v * 2];
-    out[v * 4 + 3] = m.uv[v * 2 + 1];
-  }
-}
-
-/** A forearm: a strip along a curve from the wrist (on the fist, moving with it) to the sleeve (on the cloak, leaning with it). */
-const bez = new Float32Array(33 * 2);
-const cum = new Float32Array(33);
-function poseArm(a: Arm, left: boolean, p: Pose, out: Float32Array, k: Placement): void {
-  const c = trigOf(p);
-  // the wrist goes where the fist goes; the sleeve goes where the cloak goes
-  viaHands(a.wx, a.wy, p, c, tmp2);
-  const Wx = tmp2[0];
-  const Wy = tmp2[1];
-  viaBody(a.sx + p.dx * 0.3, a.sy + p.dy * 0.25, c, tmp2);
-  const Sx = tmp2[0];
-  const Sy = tmp2[1];
-  const dist = Math.hypot(Sx - Wx, Sy - Wy);
-  const h = 0.22 * dist + 4;
-  // the elbows: the lead (right) arm stays nearly straight and reaches; the rear (left) elbow is bent and tucked in close to the body as it goes through
-  const bow = (left ? -0.3 : 0.1) * p.bend * dist;
-  // from the wrist it leaves half the way the fist's wrist points (down, turned with the fist and the body) and half the way to the sleeve (so that it never loops back
-  // on itself); it reaches the sleeve along the cloak's own up, which twists with the body
-  const ex = dist > 1 ? (Sx - Wx) / dist : 0;
-  const ey = dist > 1 ? (Sy - Wy) / dist : 1;
-  const ta = ((p.rot + p.torso) * Math.PI) / 180;
-  let dxw = -Math.sin(ta) * c.cy * 0.45 + ex * 0.55;
-  let dyw = Math.cos(ta) * 0.45 + ey * 0.55;
-  const dl = Math.hypot(dxw, dyw) || 1;
-  dxw /= dl;
-  dyw /= dl;
-  const P1x = Wx + dxw * h + bow * 0.4;
-  const P1y = Wy + dyw * h;
-  const P2x = Sx - ex * 0.5 * h + c.sb * c.cy * 0.5 * h + bow;
-  const P2y = Sy - ey * 0.5 * h - c.cb * 0.5 * h;
-  let len = 0;
-  for (let i = 0; i <= 32; i++) {
-    const t = i / 32;
-    const u = 1 - t;
-    const x = u * u * u * Wx + 3 * u * u * t * P1x + 3 * u * t * t * P2x + t * t * t * Sx;
-    const y = u * u * u * Wy + 3 * u * u * t * P1y + 3 * u * t * t * P2y + t * t * t * Sy;
-    bez[i * 2] = x;
-    bez[i * 2 + 1] = y;
-    if (i > 0) len += Math.hypot(x - bez[i * 2 - 2], y - bez[i * 2 - 1]);
-    cum[i] = len;
-  }
-  // the ends keep their shape (shrunk only if the arm is shorter than the two of them); the middle takes what is left
-  const cs = Math.min(1, (len - 2) / (a.top + a.bot));
-  const topL = a.top * cs;
-  const botL = a.bot * cs;
-  const midL = len - topL - botL;
-  let seg = 0;
-  for (let row = 0; row < ARM_ROWS; row++) {
-    let d: number;
-    let v: number;
-    if (row <= 4) {
-      d = (topL * row) / 4;
-      v = (a.top * row) / 4;
-    } else if (row <= 10) {
-      d = topL + (midL * (row - 4)) / 6;
-      v = a.top + (a.mid * (row - 4)) / 6;
-    } else {
-      d = topL + midL + (botL * (row - 10)) / 4;
-      v = a.top + a.mid + (a.bot * (row - 10)) / 4;
-    }
-    while (seg < 31 && cum[seg + 1] < d) seg++;
-    const span = Math.max(1e-6, cum[seg + 1] - cum[seg]);
-    const f = clamp01((d - cum[seg]) / span);
-    const x = bez[seg * 2] + (bez[seg * 2 + 2] - bez[seg * 2]) * f;
-    const y = bez[seg * 2 + 1] + (bez[seg * 2 + 3] - bez[seg * 2 + 1]) * f;
-    const tx = (bez[seg * 2 + 2] - bez[seg * 2]) / span;
-    const ty = (bez[seg * 2 + 3] - bez[seg * 2 + 1]) / span;
-    const nx = ty; // (the arm's own width, across the curve)
-    const ny = -tx;
-    for (let side = 0; side < 2; side++) {
-      const o = (row * 2 + side) * 4;
-      put(x + nx * (side - 0.5) * a.tw, y + ny * (side - 0.5) * a.tw, p, k, out, o);
-      out[o + 2] = side;
-      out[o + 3] = v / a.th;
-    }
-  }
-}
-
-function poseAll(g: { cloak: Grid; scythe: Grid; fist: Grid }, p: Pose, out: Verts, k: Placement): void {
-  poseCloak(g.cloak, p, out.cloak, k);
-  poseScythe(g.scythe, p, out.scythe, k);
-  poseFist(g.fist, p, out.fist, k);
-  poseArm(ARMS[0], true, p, out.arms[0], k);
-  poseArm(ARMS[1], false, p, out.arms[1], k);
-}
-
 const VERT = `
   attribute vec2 a_pos;
   attribute vec2 a_uv;
@@ -425,14 +279,21 @@ interface Renderer {
   dispose: () => void;
 }
 
+const imageCache = new Map<string, Promise<HTMLImageElement | null>>();
+/** A picture, fetched and decoded once and kept (the next time it is wanted it is there already). */
 function loadImage(src: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.decoding = "async";
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
+  let pr = imageCache.get(src);
+  if (!pr) {
+    pr = new Promise((resolve) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = () => (img.decode ? img.decode().then(() => resolve(img), () => resolve(img)) : resolve(img));
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+    imageCache.set(src, pr);
+  }
+  return pr;
 }
 
 async function makeRenderer(parent: HTMLElement, images: string[], indices: Uint16Array[], left: number, top: number, w: number, h: number, ratio: number): Promise<Renderer | null> {
@@ -597,11 +458,16 @@ const FAINT = "0.012";
 // ───────────────────────────── the slash ─────────────────────────────
 
 /** The slash's picture, laid level (the artist drew it rising to the right) and trimmed, as two pictures: the lightning and the dark between worlds. */
-async function slashBands(): Promise<{ light: HTMLCanvasElement; dark: HTMLCanvasElement } | null> {
+let bandsCache: Promise<{ light: HTMLCanvasElement; dark: HTMLCanvasElement } | null> | null = null;
+/** The slash's two pictures, made once and kept. */
+function slashBands(): Promise<{ light: HTMLCanvasElement; dark: HTMLCanvasElement } | null> {
+  bandsCache ??= makeSlashBands();
+  return bandsCache;
+}
+async function makeSlashBands(): Promise<{ light: HTMLCanvasElement; dark: HTMLCanvasElement } | null> {
   try {
-    const img = new Image();
-    img.src = SLASH;
-    await img.decode();
+    const img = await loadImage(SLASH);
+    if (!img) return null;
     const ang = Math.atan2(0.93 * SLASH_H, 0.94 * SLASH_W); // (the streak rises this far to the right)
     const W2 = Math.ceil(SLASH_W * Math.cos(ang) + SLASH_H * Math.sin(ang));
     const H2 = Math.ceil(SLASH_W * Math.sin(ang) + SLASH_H * Math.cos(ang));
@@ -801,8 +667,9 @@ function makeArcRenderer(
   box: { left: number; top: number; w: number; h: number },
 ): ArcRenderer | null {
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(box.w);
-  canvas.height = Math.round(box.h);
+  const BASEK = 0.8;
+  canvas.width = Math.round(box.w * BASEK);
+  canvas.height = Math.round(box.h * BASEK);
   Object.assign(canvas.style, { position: "absolute", left: `${box.left}px`, top: `${box.top}px`, width: `${box.w}px`, height: `${box.h}px`, pointerEvents: "none" });
   const gl = canvas.getContext("webgl", { premultipliedAlpha: true, alpha: true, antialias: false });
   if (!gl) return null;
@@ -957,8 +824,8 @@ function makeArcRenderer(
   parent.appendChild(canvas);
   return {
     scaleTo(k) {
-      canvas.width = Math.max(32, Math.round(box.w * k));
-      canvas.height = Math.max(32, Math.round(box.h * k));
+      canvas.width = Math.max(32, Math.round(box.w * BASEK * k));
+      canvas.height = Math.max(32, Math.round(box.h * BASEK * k));
       gl.viewport(0, 0, canvas.width, canvas.height);
     },
     draw(f) {
@@ -1011,8 +878,9 @@ function makeFlameField(parent: HTMLElement, mat: Rect, origin: [number, number]
   const w = vw;
   const h = vh;
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(w);
-  canvas.height = Math.round(h);
+  const BASEK = lite ? 0.45 : 0.55; // (flames are soft: they are drawn with about a third of the pixels and stretched up by the browser)
+  canvas.width = Math.round(w * BASEK);
+  canvas.height = Math.round(h * BASEK);
   Object.assign(canvas.style, { position: "absolute", left: `${left}px`, top: `${top}px`, width: `${w}px`, height: `${h}px`, pointerEvents: "none" });
   const gl = canvas.getContext("webgl", { premultipliedAlpha: true, alpha: true, antialias: false });
   if (!gl) return null;
@@ -1049,8 +917,8 @@ function makeFlameField(parent: HTMLElement, mat: Rect, origin: [number, number]
   parent.appendChild(canvas);
   return {
     scaleTo(k) {
-      canvas.width = Math.max(32, Math.round(w * k));
-      canvas.height = Math.max(32, Math.round(h * k));
+      canvas.width = Math.max(32, Math.round(w * BASEK * k));
+      canvas.height = Math.max(32, Math.round(h * BASEK * k));
       gl.viewport(0, 0, canvas.width, canvas.height);
     },
     draw(ms, strength) {
@@ -1084,6 +952,28 @@ function makeFlameField(parent: HTMLElement, mat: Rect, origin: [number, number]
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     },
   };
+}
+
+/** Compiles the finisher's shaders once on a throwaway canvas, so that the driver has them ready when the real ones are made (compiling is slow, and was done mid-play). */
+function warmShaders(): void {
+  try {
+    const gl = document.createElement("canvas").getContext("webgl");
+    if (!gl) return;
+    for (const [v, f] of [[VERT, FRAG], [ARC_VERT, ARC_FRAG], [FLAME_VERT, FLAME_FRAG]]) {
+      const prog = gl.createProgram()!;
+      for (const [type, src] of [[gl.VERTEX_SHADER, v], [gl.FRAGMENT_SHADER, f]] as const) {
+        const sh = gl.createShader(type)!;
+        gl.shaderSource(sh, src);
+        gl.compileShader(sh);
+        gl.attachShader(prog, sh);
+      }
+      gl.linkProgram(prog);
+      gl.getProgramParameter(prog, gl.LINK_STATUS); // (asking makes the driver finish)
+    }
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+  } catch {
+    /* (nothing to warm) */
+  }
 }
 
 // ───────────────────────────── the finisher ─────────────────────────────
@@ -1127,9 +1017,9 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     const s = rw / REAPER_W;
     const px = w.left + w.width / 2; // where the pivot is on the screen
     const py = w.top + w.height * (above ? 0.62 : 0.38);
-    const grids = { cloak: gridMesh(lite ? 26 : 36, lite ? 14 : 20), scythe: gridMesh(lite ? 40 : 60, lite ? 20 : 30), fist: gridRect(8, 6, 224, 316, 146, 108) };
+    const grids = { scythe: gridMesh(lite ? 28 : 40, lite ? 14 : 20), fist: gridRect(8, 6, 224, 316, 146, 108) };
     // the canvas is only as big as the places the Reaper can reach (found by trying the extremes of the swing): a smaller picture to put together
-    const probe = makeVerts(grids.cloak, grids.scythe, grids.fist);
+    const probe = makeVerts(grids.scythe, grids.fist);
     const K0: Placement = { s, ox: 0, oy: 0, px, py, flip };
     let x0 = Infinity;
     let y0 = Infinity;
@@ -1137,8 +1027,9 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     let y1 = -Infinity;
     for (const [rot, rise, scale, dx, dy] of [[0, 0.72, 1, 0, 0], [0, 0, 1, 0, 0], [34, 0.012, 1.05, 46, 26], [-40, -0.02, 1.12, 20, -30], [-90, -0.04, 1.18, -10, -60], [-128, -0.05, 1.2, -54, -62], [-150, -0.02, 1.1, -70, -20]]) {
       const tp: Pose = { ...timeline(0), rot, torso: 0, rise, scale, dx, dy, grip: 1, shudder: 1, ripple: 1, bend: 1 };
-      poseAll(grids, tp, probe, K0);
-      for (const arr of [probe.scythe, probe.fist, probe.arms[0], probe.arms[1], probe.cloak]) {
+      poseScythe(grids.scythe, tp, probe.scythe, K0);
+      poseFist(grids.fist, tp, probe.fist, K0);
+      for (const arr of [probe.scythe, probe.fist]) {
         for (let i = 0; i < arr.length; i += 4) {
           x0 = Math.min(x0, arr[i]);
           x1 = Math.max(x1, arr[i]);
@@ -1162,8 +1053,8 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
       background: "radial-gradient(ellipse at 50% 60%, rgba(168,85,247,.55), rgba(88,28,135,.25) 45%, transparent 70%)",
       opacity: "0",
     });
-    const renderer = await makeRenderer(stage, [CLOAK, SCYTHE, ARMS[0].src, ARMS[1].src, FIST_L], [grids.cloak.index, grids.scythe.index, armIndex(), grids.fist.index], left, top, cw, ch, 1);
-    const verts = makeVerts(grids.cloak, grids.scythe, grids.fist);
+    const renderer = await makeRenderer(stage, [SCYTHE, FIST_L], [grids.scythe.index, grids.fist.index], left, top, cw, ch, 1);
+    const verts = makeVerts(grids.scythe, grids.fist);
     const trail = lite ? null : new Float32Array(grids.scythe.px.length * 4);
     const K: Placement = { s, ox: left, oy: top, px, py, flip };
     // (without WebGL, the picture itself is turned about its pivot)
@@ -1267,7 +1158,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     }
 
     // sparks: bright streaks thrown off the cut, one by one as the blade passes (made now, paused, and played at the contact)
-    for (let i = 0; i < (lite ? 8 : 20); i++) {
+    for (let i = 0; i < (lite ? 6 : 12); i++) {
       const f = Math.random();
       const idx = Math.min(pts.length - 2, Math.floor(f * (pts.length - 1)));
       const [x, y] = pts[idx];
@@ -1359,11 +1250,8 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     // (two frames are given to the browser first, to put every layer together before anything moves)
     if (renderer) {
       renderer.begin();
-      renderer.draw(0, 0, verts.cloak, 0, 0, [1, 1, 1]);
-      renderer.draw(1, 1, verts.scythe, 0, 0, [1, 1, 1]);
-      renderer.draw(2, 2, verts.arms[0], 0, 0, [1, 1, 1]);
-      renderer.draw(2, 3, verts.arms[1], 0, 0, [1, 1, 1]);
-      renderer.draw(3, 4, verts.fist, 0, 0, [1, 1, 1]);
+      renderer.draw(0, 0, verts.scythe, 0, 0, [1, 1, 1]);
+      renderer.draw(1, 1, verts.fist, 0, 0, [1, 1, 1]);
     }
     matFire?.draw(900, 0.4);
     matFire?.draw(0, 0);
@@ -1458,11 +1346,11 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
             // ghosts of the scythe a few moments ago, fainter the further back
             for (let g = trails; g >= 1; g--) {
               poseScythe(grids.scythe, timeline(Math.max(0, t - g * 22)), trail, K);
-              renderer.draw(1, 1, trail, [0, 0.5, 0.3, 0.16][g] * p.alpha, 0.4, [1.2, 0.9, 1.35]);
+              renderer.draw(0, 0, trail, [0, 0.5, 0.3, 0.16][g] * p.alpha, 0.4, [1.2, 0.9, 1.35]);
             }
           }
-          renderer.draw(1, 1, verts.scythe, p.alpha, p.flash, [1, 1, 1]);
-          renderer.draw(3, 4, verts.fist, p.alpha, p.flash, [1, 1, 1]);
+          renderer.draw(0, 0, verts.scythe, p.alpha, p.flash, [1, 1, 1]);
+          renderer.draw(1, 1, verts.fist, p.alpha, p.flash, [1, 1, 1]);
         } else if (flat) {
           flat.style.opacity = String(p.alpha);
           flat.style.transform = `translateY(${p.rise * REAPER_H * s * flip}px) rotate(${(above ? 0 : 180) + p.rot}deg) scale(${p.scale})`;
