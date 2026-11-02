@@ -549,7 +549,7 @@ function decal(img: HTMLCanvasElement, x: number, y: number, r: number, sy: numb
   if (a <= 0.003 || r < 1) return;
   ctx.globalCompositeOperation = add ? "lighter" : "source-over";
   ctx.globalAlpha = a;
-  ctx.setTransform(curRes, 0, 0, curRes * sy, (x - offX) * curRes, y * curRes * sy - offY * curRes);
+  ctx.setTransform(curRes, 0, 0, curRes * sy, (x - offX) * curRes, (y - offY) * curRes);
   ctx.drawImage(img, -r, -r, r * 2, r * 2);
   ctx.setTransform(curRes, 0, 0, curRes, -offX * curRes, -offY * curRes);
   ctx.globalAlpha = 1;
