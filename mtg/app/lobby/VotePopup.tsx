@@ -37,7 +37,7 @@ export default function VotePopup({ room }: { room: RoomSnapshot }) {
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Vote" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
-      <div className={`flex max-h-[calc(100dvh-1rem)] w-full min-w-0 flex-col gap-4 overflow-x-hidden overflow-y-auto rounded-2xl sm:max-h-[calc(100dvh-2rem)] sm:gap-5 sm:rounded-3xl ${room.stage === "decks" ? "max-w-[88rem] p-3 sm:p-7" : "max-w-lg p-3 sm:p-6"}  border border-white/25 bg-slate-950/95 text-white shadow-2xl shadow-black/50 ring-1 ring-inset ring-white/10 [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]`}>
+      <div className={`flex max-h-[calc(100dvh-1rem)] w-full min-w-0 flex-col gap-4 overflow-x-hidden overflow-y-auto rounded-2xl sm:max-h-[calc(100dvh-2rem)] sm:gap-5 sm:rounded-3xl ${room.stage === "decks" ? "max-w-[88rem] p-3 sm:p-7 lg:overflow-y-hidden" :"max-w-lg p-3 sm:p-6"}  border border-white/25 bg-slate-950/95 text-white shadow-2xl shadow-black/50 ring-1 ring-inset ring-white/10 [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]`}>
         <header className="flex items-center gap-3">
           <ol className="flex flex-1 items-center gap-2" aria-label="Steps">
             {STEPS.map((s, i) => (
@@ -150,8 +150,9 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
   }
 
   return (
-    <section className="grid gap-x-7 gap-y-4 text-center lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:text-left">
-      <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
+    <section className="grid gap-x-7 gap-y-4 text-center lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:text-left">
+      {/* on a wide screen each side scrolls on its own: the table side's long content does not move the decks side */}
+      <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
         <div>
         <h2 className="text-2xl font-extrabold sm:text-3xl">Choose your deck</h2>
         <p className="mt-1 text-base text-slate-200 sm:text-lg">
@@ -168,7 +169,7 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
         )}
         <DeckPicker choices={options ?? []} size={size} randomId={RANDOM_ID} value={choice} onChange={(id) => ((touched.current = true), setChoice(id))} disabled={ready} loading={options === null} wide />
       </div>
-      <div className="flex flex-col gap-4 lg:col-start-2 lg:row-start-1">
+      <div className="flex flex-col gap-4 lg:col-start-2 lg:row-start-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
       <div className="rounded-2xl border border-white/20 bg-white/5 p-4 text-center">
         <h3 className="mb-3 text-base font-bold uppercase tracking-widest text-[#ffe29a]">Choose your table</h3>
         <LookPicker
