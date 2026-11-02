@@ -72,6 +72,12 @@ export function castCostOf(state: GameState, player: PlayerId, def: CardDef, tar
       less += mod.nFromPower ? Math.max(0, powerOf(state, perm)) : mod.n;
     }
   }
+  // Affinity: {1} less for each artifact (land, creature of that type) you control.
+  const affinity = parseCard(def).affinity;
+  if (affinity) {
+    const word = affinity === "artifacts" ? "artifact" : affinity;
+    less += me.battlefield.filter((p) => (word === "artifact" ? isArtifactDef(getCard(state, p.card.defId)) : word === "lands" ? getCard(state, p.card.defId).type === "land" : subtypesOf(state, p).some((t) => t === word || `${t}s` === word))).length;
+  }
   const cost = less > 0 ? { ...base, generic: Math.max(0, base.generic - less) } : base;
   // "White spells you cast cost {W} more to cast": one more colored mana for each such permanent you control.
   let taxed = cost;

@@ -6,6 +6,7 @@ import { readOpponentTapped, readLifeGainedTrigger, readLandfall, readAttackWith
 import { readLoyaltyAbility, readCrew, readEquip, readSacrificeForMana, readLandcycling, readActivatedAbility, readRestrictedMana, readSolvedAbility } from "./lines/activated.js";
 
 import { readCumulativeUpkeep, readEcho } from "./upkeepParts.js";
+import { readAffinity, readBloodthirst, readBushido, readExtort, readHeroic, readRenown } from "./lines/keywordAbilities.js";
 import { readDiscardedByOpponent, readGoblinKing, readHostControl, readHostDamageLife, readReduceDamage } from "./lines/theme.js";
 import { readSacrificeTrigger, readFirebending, readCreatureLandWithTrigger, readTappedIfMoreLands } from "./lines/sacrifice.js";
 import { readKeywordLord, readCreatureSpellCast } from "./lines/infect.js";
@@ -22,6 +23,12 @@ const READERS: ((line: string, out: ParsedCard) => boolean)[] = [
   readLoyaltyAbility,
   readReduceDamage,
   readEcho,
+  readBushido,
+  readRenown,
+  readExtort,
+  readHeroic,
+  readBloodthirst,
+  readAffinity,
   readCumulativeUpkeep,
   readHostDamageLife,
   readHostControl,
@@ -187,7 +194,7 @@ export function parseCreatureLine(rawLine: string, out: ParsedCard): void {
     return;
   }
   // "When The Sackville-Bagginses enter": a name that is plural
-  const line = rawLine.replace(/\.$/, "").replace(/^(?:raid|opus|channel|undergrowth|threshold|hellbent|metalcraft|morbid) — /, "").replace(/^when ~ enter,/, "when ~ enters,").replace(MARVEL_ABILITY_WORD, "");
+  const line = rawLine.replace(/\.$/, "").replace(/^(?:raid|opus|channel|undergrowth|threshold|hellbent|metalcraft|morbid|heroic) — /, "").replace(/^when ~ enter,/, "when ~ enters,").replace(MARVEL_ABILITY_WORD, "");
 
   for (const read of READERS) if (read(line, out)) return;
   out.unsupported.push(line);

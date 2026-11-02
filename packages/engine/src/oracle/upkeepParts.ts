@@ -13,7 +13,13 @@ const sacrificeUnlessPay: SentenceParser = (s) => {
   return m ? [{ type: "unlessPay", cost: m[1], otherwise: [{ type: "sacrifice", what: { t: "self" } }] }] : null;
 };
 
-export const UPKEEP_SENTENCES: SentenceParser[] = [sacrificeUnlessPay];
+/** "Amass 2" / "Amass Orcs 2". */
+const amass: SentenceParser = (s) => {
+  const m = /^amass (?:([a-z]+?)s? )?(\d+)$/.exec(s);
+  return m ? [{ type: "amass", n: Number(m[2]), ...(m[1] ? { subtype: m[1] } : {}) }] : null;
+};
+
+export const UPKEEP_SENTENCES: SentenceParser[] = [sacrificeUnlessPay, amass];
 
 /** "Echo {2}{R}": at the beginning of your next upkeep, pay it or sacrifice the permanent (only the first time). */
 export function readEcho(line: string, out: ParsedCard): boolean {

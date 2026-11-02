@@ -69,6 +69,8 @@ export type Effect =
   | { type: "setBase"; what: Ref; power: number; toughness: number } // becomes N/N until end of turn
   | { type: "loseDefender"; what: Ref }
   | { type: "winGame" }
+  | { type: "renown"; n: number } // "Renown 2": if it isn't renowned, +1/+1 counters, and it becomes renowned
+  | { type: "amass"; n: number; subtype?: string } // "Amass 2" / "Amass Orcs 2": +1/+1 counters on an Army you control (a 0/0 Army token first, if there is none)
   | { type: "unlessPay"; cost: string; otherwise: Effect[]; echo?: boolean; cumulative?: boolean } // "sacrifice ~ unless you pay {1}": the controller pays or `otherwise` happens (echo: only the first upkeep; cumulative: the cost once for each age counter)
   | { type: "mayPay"; prompt?: string; cost: string; life?: number; then: Effect[]; thenSpecs?: TargetSpec[]; thenText?: string } // "When you do, ... target ...": the targets are chosen after paying // "you may pay {1}. If you do, ..." (`life`: "pay 2 life")
   | { type: "mayDiscard"; then: Effect[]; thenSpecs?: TargetSpec[] } // "you may discard a card. When you do, ..."
@@ -510,7 +512,7 @@ export interface TriggeredAbility {
   /** "Whenever another Villain and/or artifact you control enters": an artifact counts as well as the types in `subtypes`. */
   orArtifact?: boolean;
   /** "Whenever you cast a spell that targets a creature you control" / "...one or more creatures". */
-  spellTargets?: "ownCreature" | "creatures";
+  spellTargets?: "ownCreature" | "creatures" | "self";
   /** "...if it's the first time that creature has become tapped this turn". */
   firstTapOnly?: boolean;
   /** "Whenever one or more creatures you control become tapped": once for all that were tapped together. */
@@ -683,7 +685,11 @@ export interface ParsedCard {
   delve?: true;
   /** "Kicker {2}": the extra mana that may be paid when casting. Offspring is a kicker by another name (`kickerName`). */
   kicker?: string;
-  kickerName?: "offspring" | "waterbend";
+  kickerName?: "offspring" | "waterbend" | "buyback";
+  /** "Bloodthirst 2": it enters with this many +1/+1 counters if an opponent was dealt damage this turn. */
+  bloodthirst?: number;
+  /** "Affinity for artifacts": it costs {1} less for each of these you control (artifacts, lands, or a creature type). */
+  affinity?: string;
   /** "As an additional cost to cast this spell, you may blight 1": the -1/-1 counters put on a creature you control. Paying it counts as kicking. */
   blight?: number;
   /** "Warp {W}": the cost to cast it from hand, after which it is exiled at the next end step. */

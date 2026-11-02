@@ -66,7 +66,7 @@ const LABELS = new Set([
   "heal", "fight", "swampwalk", "islandwalk", "forestwalk", "mountainwalk", "plainswalk",
   "eerie", "prepared", "raid",
   "explore", "solved", "infusion", "warp", "blight", "offspring", "toxic", "exalted", "delve", "ferocious", "delirium", "plot", "flurry", "replicate",
-  "opus", "harmonize", "echo", "cumulative upkeep", "threshold", "hellbent", "metalcraft", "morbid",
+  "opus", "harmonize", "echo", "cumulative upkeep", "threshold", "hellbent", "metalcraft", "morbid", "heroic", "bushido", "renown", "extort", "bloodthirst", "affinity", "buyback", "amass",
   // Jund Sacrifice and its sideboard
   "revolt", "learn", "channel", "waterbend", "firebending", "paradigm", "blood",
   // Mono-Black Infect

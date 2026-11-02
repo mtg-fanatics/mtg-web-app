@@ -673,7 +673,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
       ...(p.adventure ? { adventure: true } : {}),
       ...(p.harmonizeTap ? { harmonizeTap: p.harmonizeTap } : {}),
     });
-    const title = p.name + (p.x !== undefined && c.maxX !== undefined ? ` (X = ${p.x})` : "") + (p.kicked ? (c.blight ? " (blighted)" : c.kickerName === "offspring" ? " (with offspring)" : c.kickerName === "waterbend" ? " (waterbend)" : " (kicked)") : "") + (p.teamwork?.length ? " (teamwork)" : "") + (p.warp ? " (warp)" : "") + (p.replicate ? ` (${p.replicate + 1} copies with replicate)` : "");
+    const title = p.name + (p.x !== undefined && c.maxX !== undefined ? ` (X = ${p.x})` : "") + (p.kicked ? (c.blight ? " (blighted)" : c.kickerName === "offspring" ? " (with offspring)" : c.kickerName === "waterbend" ? " (waterbend)" : c.kickerName === "buyback" ? " (buyback)" : " (kicked)") : "") + (p.teamwork?.length ? " (teamwork)" : "") + (p.warp ? " (warp)" : "") + (p.replicate ? ` (${p.replicate + 1} copies with replicate)` : "");
     setPlan(null);
     if (specs.length === 0) {
       act(build([]));

@@ -81,6 +81,7 @@ export function dealDamage(
   }
   state.lastExcess = 0; // only damage to a creature has an excess
   if (target.k === "player") {
+    state.players[target.id].damagedThisTurn = true;
     if (source.infect) addPoison(state, target.id, amount, events);
     else changeLife(state, target.id, -amount, events);
   } else if (isPlaneswalker(state, target.perm)) {

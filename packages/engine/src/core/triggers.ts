@@ -164,6 +164,7 @@ export function spellCast(state: GameState, player: PlayerId, def: CardDef, targ
       spellKeywords: def.keywords ?? [],
       targetsOwnCreature: targetedCreatures.some((f) => f.owner.id === player),
       targetsCreature: targetedCreatures.length > 0,
+      targetedIids: targets.flatMap((t) => (t.kind === "permanent" ? [t.iid] : [])),
     });
   }
   for (const perm of state.players[OPPONENT[player]].battlefield) queueTriggers(state, perm.card, OPPONENT[player], "opponentCasts");
@@ -188,7 +189,7 @@ function claimOncePerTurn(perm: Permanent | undefined, n: number): boolean {
  * Queues the card's triggered abilities for `event`. They go on the stack when the game next settles.
  * `subtypes`: the creature types of what the event is about (a creature spell cast, a creature that died or got counters); `self`: it is this card.
  */
-export function queueTriggers(state: GameState, card: CardInstance, controller: PlayerId, event: TriggeredAbility["event"], extra?: { firstTap?: boolean; targetsOwnCreature?: boolean; targetsCreature?: boolean; spellColors?: string[]; spellSubtypes?: string[]; spellKicked?: boolean; spellCreature?: boolean; spellKeywords?: string[]; castCount?: number; other?: string; onlyOther?: boolean; byOpponent?: boolean; bySpell?: boolean; attackers?: string[]; subtypes?: string[]; self?: boolean; died?: LastKnown; count?: number; token?: boolean }): void {
+export function queueTriggers(state: GameState, card: CardInstance, controller: PlayerId, event: TriggeredAbility["event"], extra?: { firstTap?: boolean; targetedIids?: string[]; targetsOwnCreature?: boolean; targetsCreature?: boolean; spellColors?: string[]; spellSubtypes?: string[]; spellKicked?: boolean; spellCreature?: boolean; spellKeywords?: string[]; castCount?: number; other?: string; onlyOther?: boolean; byOpponent?: boolean; bySpell?: boolean; attackers?: string[]; subtypes?: string[]; self?: boolean; died?: LastKnown; count?: number; token?: boolean }): void {
   const def = getCard(state, card.defId);
   const triggers = parseCard(def).triggers;
   for (let n = 0; n < triggers.length; n++) {
@@ -212,6 +213,7 @@ export function queueTriggers(state: GameState, card: CardInstance, controller: 
     // "Whenever you cast a spell that targets a creature you control / one or more creatures"
     if (trigger.spellTargets === "ownCreature" && !extra?.targetsOwnCreature) continue;
     if (trigger.spellTargets === "creatures" && !extra?.targetsCreature) continue;
+    if (trigger.spellTargets === "self" && !(extra?.targetedIids ?? []).includes(card.iid)) continue; // heroic
     // "Whenever a creature you control becomes tapped during your turn, if it's the first time ..."
     if (trigger.yourTurnOnly && state.active !== controller) continue;
     if (trigger.firstTapOnly && !extra?.firstTap) continue;

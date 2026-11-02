@@ -35,7 +35,8 @@ export function enterBattlefield(state: GameState, card: CardInstance, controlle
   const printed = getCard(state, card.defId);
   const loyalty = printed.type === "planeswalker" ? (printed.loyalty ?? printed.toughness ?? 0) : undefined;
   const entering = parsed.entersWithCounters;
-  const counters = (entering === "X" ? x : (entering ?? 0)) + (kicked ? (parsed.kickedCounters ?? 0) : 0);
+  const thirsty = parsed.bloodthirst !== undefined && state.players[OPPONENT[controller]].damagedThisTurn === true ? parsed.bloodthirst : 0; // bloodthirst
+  const counters = (entering === "X" ? x : (entering ?? 0)) + (kicked ? (parsed.kickedCounters ?? 0) : 0) + thirsty;
   const minus = parsed.entersWithMinus ?? 0;
   const stun = parsed.entersWithStun ?? 0;
   const remembered = {
@@ -127,7 +128,7 @@ function resolveTop(state: GameState, events: GameEvent[]): void {
       if (!fizzled) runEffects(state, item.effects, { controller: item.controller, sourceId: item.card.iid, sourceName: def.name, sourceDefId: item.card.defId, targets: item.targets, specs: item.specs, stackId: item.id, x: item.x, kicked: item.kicked }, events);
       if (!fizzled && !item.copy && !item.flashback && parseCard(def).paradigm) exileParadigm(state, item, def.name, events);
       else if (!fizzled && !item.copy && !item.flashback && item.effects.some((e) => e.type === "shuffleSpell")) shuffleIntoLibrary(state, item, def.name, events); // Beacon of Destruction
-      else spellLeavesStack(state, item, item.adventure && !fizzled ? "adventure" : "graveyard"); // flashback: exiled afterwards; a copy ceases to exist
+      else spellLeavesStack(state, item, item.adventure && !fizzled ? "adventure" : !fizzled && item.kicked && parseCard(def).kickerName === "buyback" ? "hand" : "graveyard"); // buyback: back to the hand // flashback: exiled afterwards; a copy ceases to exist
     }
   } else {
     if (!fizzled) {

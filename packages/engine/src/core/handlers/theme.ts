@@ -2,13 +2,35 @@ import type { GameEvent } from "../../actions.js";
 import { getCard } from "../../cards.js";
 import { shuffle } from "../../state.js";
 import type { GameState, PlayerId } from "../../types.js";
-import { nameOf, playerLabel } from "../permanents.js";
-import { sacrificePermanent } from "../zones.js";
+import { findPermanentOrNull, nameOf, playerLabel, subtypesOf } from "../permanents.js";
+import { makeToken, putCounters, sacrificePermanent } from "../zones.js";
 import { subjectsOf } from "../targets.js";
 import type { EffectHandlers } from "./shared.js";
 
 /** The effects of the older theme decks. */
 export const THEME_EFFECTS = {
+  /** Renown: the first time it deals combat damage to a player it gets the counters and becomes renowned. */
+  renown({ state, ctx, say }, effect) {
+    const perm = findPermanentOrNull(state, ctx.sourceId)?.perm;
+    if (!perm || perm.renowned) return;
+    putCounters(state, perm, ctx.controller, effect.n);
+    perm.renowned = true;
+    say(`${nameOf(state, perm)} becomes renowned.`);
+  },
+  /** Amass: +1/+1 counters on an Army you control; with none, a 0/0 black Army token is created first. */
+  amass({ state, ctx, events, say }, effect) {
+    const me = state.players[ctx.controller];
+    let army = me.battlefield.find((p) => subtypesOf(state, p).includes("army"));
+    if (!army) {
+      const word = effect.subtype ? effect.subtype.charAt(0).toUpperCase() + effect.subtype.slice(1) : "";
+      const iid = makeToken(state, { name: word ? `${word} Army` : "Army", type: "creature", power: 0, toughness: 0, colors: ["B"], subtypes: word ? `${word} Army` : "Army", keywords: [], text: "" }, ctx.controller, events);
+      army = me.battlefield.find((p) => p.card.iid === iid);
+    }
+    if (!army) return;
+    putCounters(state, army, ctx.controller, effect.n);
+    if (effect.subtype && !subtypesOf(state, army).includes(effect.subtype)) army.addedSubtypes = [...(army.addedSubtypes ?? []), effect.subtype];
+    say(`${playerLabel(ctx.controller)} amasses ${effect.n}: ${nameOf(state, army)} has ${army.counters ?? 0} +1/+1 counters.`);
+  },
   /** "Prevent the next 3 damage that would be dealt to any target this turn." */
   prevent({ state, ctx, say }, effect) {
     for (const s of subjectsOf(state, effect.to, ctx)) {

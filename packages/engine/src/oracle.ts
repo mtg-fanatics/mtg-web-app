@@ -132,6 +132,13 @@ export function parseCard(def: CardDef): ParsedCard {
         result.plot = plot[1];
         return false;
       }
+      // Buyback is a kicker too: paying it returns the spell to its owner's hand as it resolves.
+      const buyback = /^buyback (\{[^}]+\}(?:\{[^}]+\})*)\.?$/.exec(line);
+      if (buyback && parseManaCost(buyback[1]) && (def.type === "instant" || def.type === "sorcery")) {
+        result.kicker = buyback[1];
+        result.kickerName = "buyback";
+        return false;
+      }
       const kicker = /^kicker (\{[^}]+\}(?:\{[^}]+\})*)\.?$/.exec(line);
       if (kicker && parseManaCost(kicker[1])) {
         result.kicker = kicker[1];

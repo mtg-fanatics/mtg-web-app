@@ -212,14 +212,17 @@ export default function CastPlanPanels({ state, actor, plan, modePick, onModePic
   if (!kickerDone && c.kickerName === "waterbend") return <WaterbendPanel state={state} actor={actor} plan={plan} onAdvance={onAdvance} onCancel={onCancel} />;
   if (!kickerDone) {
     const offspring = c.kickerName === "offspring";
+    const buyback = c.kickerName === "buyback";
     return (
       <ChoicePanel
-        title={offspring ? `${plan.name} has offspring` : `${plan.name} has a kicker`}
+        title={offspring ? `${plan.name} has offspring` : buyback ? `${plan.name} has buyback` : `${plan.name} has a kicker`}
         options={[
           { label: "Cast it normally", onPick: () => onAdvance({ ...plan, kicked: false }) },
           offspring
             ? { label: <>Pay offspring <ManaText text={c.kicker ?? ""} /> too: a 1/1 token copy enters with it</>, onPick: () => onAdvance({ ...plan, kicked: true }) }
-            : { label: <>Cast it kicked, paying the extra <ManaText text={c.kicker ?? ""} /></>, onPick: () => onAdvance({ ...plan, kicked: true }) },
+            : buyback
+              ? { label: <>Pay buyback <ManaText text={c.kicker ?? ""} /> too: it returns to your hand when it resolves</>, onPick: () => onAdvance({ ...plan, kicked: true }) }
+              : { label: <>Cast it kicked, paying the extra <ManaText text={c.kicker ?? ""} /></>, onPick: () => onAdvance({ ...plan, kicked: true }) },
         ]}
         onCancel={onCancel}
       />

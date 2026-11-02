@@ -27,7 +27,7 @@ export interface Castable {
   modal?: { min: number; max: number; bothIfKicked?: boolean; modes: { text: string; specs: TargetSpec[]; available: boolean }[] };
   /** The spell has a kicker the player could pay on top of the cost right now: its printed cost, e.g. "{2}". Offspring is one (`kickerName`). */
   kicker?: string;
-  kickerName?: "offspring" | "waterbend";
+  kickerName?: "offspring" | "waterbend" | "buyback";
   /** Waterbend: the artifacts and creatures that would be tapped to help pay it (each one {1}); the rest is mana. */
   waterbendTaps?: string[];
   /** "You may blight 1" as an additional cost: how many -1/-1 counters, and the creatures they could go on (answered as `kicked` and `sacrifice`). */

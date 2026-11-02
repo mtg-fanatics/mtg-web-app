@@ -178,6 +178,8 @@ export interface Permanent {
   tappedThisTurn?: boolean;
   /** Invasion counters (Alien Invasion). */
   invasion?: number;
+  /** Renown: it already got its counters. */
+  renowned?: boolean;
   /** Echo: its echo cost is still to be paid at the next upkeep. */
   echoDue?: boolean;
   /** Cumulative upkeep: the age counters on it. */
@@ -250,6 +252,8 @@ export interface PlayerState {
   drewFromEmpty?: boolean;
   /** Poison counters: ten or more and the player loses the game (rule 704.5c). */
   poison?: number;
+  /** An opponent dealt damage to this player this turn (bloodthirst). */
+  damagedThisTurn?: boolean;
   /** Lands that entered under this player's control this turn ("if you had a land enter the battlefield under your control this turn"). */
   landsEnteredThisTurn?: number;
   /** An emblem: "Instant and sorcery spells you cast have storm." */

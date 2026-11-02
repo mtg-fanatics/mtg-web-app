@@ -181,6 +181,7 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
       }
       const infect = kw(state, source, "infect");
       const shrink = infect || (!toPlayer && kw(state, source, "wither")); // wither: damage to a creature is -1/-1 counters (to a player it is ordinary damage)
+      if (toPlayer) target.damagedThisTurn = true;
       if (toPlayer && !infect) {
         target.life -= amount;
         target.lifeLostThisTurn = (target.lifeLostThisTurn ?? 0) + amount;
