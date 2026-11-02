@@ -962,12 +962,15 @@ function voidCollapse(): Fx {
   type Dot = { a: number; r: number; s: number };
   let st = { disk: [] as Dot[], boom: false, flash: 0 };
   let voidNow = 0;
-  return {
+  let hold = 0; // how long the end has been kept waiting for the last card to be sucked in
+  const fx: Fx = {
     dur: 6400,
     sound: "voidCollapse",
     setup() {
       st = { disk: [], boom: false, flash: 0 };
       voidNow = 0;
+      hold = 0;
+      fx.dur = 6400;
       holeClip = null;
       if (world) {
         // the hole's pull on every card that has started to fall, applied in every fixed step
@@ -989,8 +992,15 @@ function voidCollapse(): Fx {
         };
       }
     },
-    frame(t, dt) {
+    frame(rt, dt) {
       const t2 = tex as Tex;
+      // the show's own clock stops just before the hole is crushed, for as long as there is a card that has not been sucked in: the end comes after the last of them has gone
+      let t = rt - hold;
+      if (t >= 3500 && cards.some((c) => !c.hidden) && rt < 9000) {
+        hold += dt * 1000;
+        fx.dur = 6400 + hold;
+        t = rt - hold;
+      }
       // the world darkens round it
       const dk = sm(500, 2400, t) * (1 - sm(4700, 6100, t));
       if (dk > 0.01) {
@@ -1089,28 +1099,28 @@ function voidCollapse(): Fx {
       }
       // the cards: they tremble and rise off the table (held up by the script), then the hole's PULL takes them. The pull is a real force (grows, swirls, drag) applied to their
       // bodies in the physics engine, so they curve in, knock into each other, spin as they fall, and are stretched thin as they come close.
-      voidNow = t;
+      voidNow = rt;
       holeClip = t < 4300 ? { x: T.x, y: T.y, r: R } : null;
       for (let i = 0; i < cards.length; i++) {
         const c = cards[i];
         const b = c.body;
-        const t0 = 1300 + i * 230;
-        const rise = sm(t0 - 450, t0, t);
+        const t0 = 1300 + i * Math.min(230, 1100 / cards.length);
+        const rise = sm(t0 - 450, t0, rt);
         if (rise <= 0 || c.hidden) continue;
         if (c.art) c.sprite = true;
-        if (t < t0) {
+        if (rt < t0) {
           b.kinematic = true;
-          c.ox = Math.sin(t * 0.05 + i) * 3 * rise;
-          c.oy = Math.cos(t * 0.06 + i * 2) * 3 * rise;
-          c.z = rise * 46 + Math.sin(t * 0.006 + i) * 6 * rise;
-          c.tx = Math.sin(t * 0.004 + i) * 16 * rise;
-          c.ty = Math.cos(t * 0.005 + i * 1.7) * 16 * rise;
-          c.rot = Math.sin(t * 0.01 + i) * 4 * rise;
+          c.ox = Math.sin(rt * 0.05 + i) * 3 * rise;
+          c.oy = Math.cos(rt * 0.06 + i * 2) * 3 * rise;
+          c.z = rise * 46 + Math.sin(rt * 0.006 + i) * 6 * rise;
+          c.tx = Math.sin(rt * 0.004 + i) * 16 * rise;
+          c.ty = Math.cos(rt * 0.005 + i * 1.7) * 16 * rise;
+          c.rot = Math.sin(rt * 0.01 + i) * 4 * rise;
           continue;
         }
         if (!c.pull) {
           // the pull begins, from where it hangs
-          c.pull = { d0: Math.max(120, Math.hypot(c.cx + c.ox - T.x, c.cy + c.oy - T.y)), t0: t };
+          c.pull = { d0: Math.max(120, Math.hypot(c.cx + c.ox - T.x, c.cy + c.oy - T.y)), t0: rt };
           b.kinematic = false;
           b.hover = true;
           b.asleep = false;
@@ -1136,7 +1146,7 @@ function voidCollapse(): Fx {
           const d = Math.hypot(pose.x - T.x, pose.y - T.y);
           const e = clamp(1 - (d - R) / Math.max(1, c.pull.d0 - R));
           const e2 = e * e;
-          b.z = 46 * (1 - e2 * 0.7) + Math.sin(t * 0.006 + c.cx) * 5 * (1 - e);
+          b.z = 46 * (1 - e2 * 0.7) + Math.sin(rt * 0.006 + c.cx) * 5 * (1 - e);
           c.z = b.z;
           c.tx = pose.tx * (1 - e);
           c.ty = pose.ty * (1 - e);
@@ -1145,8 +1155,7 @@ function voidCollapse(): Fx {
           c.sc = 1 - e2 * 0.35;
           c.op = 1 - sm(0.9, 1, e);
           if (Math.random() < 0.5) emit({ x: pose.x, y: pose.y, life: 0.5, r: rnd(14, 26), pal: "violet", a: 0.8, kind: "puff", vx: rnd(-20, 20), vy: rnd(-20, 20), drag: 0, drop: true });
-          if (d < R * 0.9 + 6 && t - c.pull.t0 > 900) c.hidden = true; // (gone into the hole)
-          else if (t > 3700) c.hidden = true;
+          if (d < R * 0.9 + 6 && rt - c.pull.t0 > 900) c.hidden = true; // (gone into the hole)
         }
       }
       drawCards();
@@ -1211,6 +1220,7 @@ function voidCollapse(): Fx {
       flashRect(st.flash * 0.9, "245,235,255");
     },
   };
+  return fx;
 }
 
 function meteor(): Fx {
