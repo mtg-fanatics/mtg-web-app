@@ -4,6 +4,7 @@
 // zones, dealing damage, running effects, and state-based actions.
 
 export {
+  colorsOfPerm,
   bindSpecs,
   canPrevent,
   cardMatches,

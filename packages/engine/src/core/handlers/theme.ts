@@ -9,6 +9,28 @@ import type { EffectHandlers } from "./shared.js";
 
 /** The effects of the older theme decks. */
 export const THEME_EFFECTS = {
+  /** Cascade: exile from the top until a nonland card with a lesser mana value; it can be cast for free this turn, and everything else goes to the bottom in a random order. */
+  cascade({ state, ctx, events, say }, effect) {
+    const me = state.players[ctx.controller];
+    const exiled: typeof me.library = [];
+    let hit: (typeof me.library)[number] | undefined;
+    while (me.library.length > 0 && !hit) {
+      const card = me.library.shift()!;
+      const def = getCard(state, card.defId);
+      exiled.push(card);
+      if (def.type !== "land" && def.cost < effect.mv) hit = card;
+    }
+    const rest = exiled.filter((c) => c !== hit);
+    if (hit) {
+      me.exile.push(hit);
+      me.mayPlay = [...(me.mayPlay ?? []), { iid: hit.iid, source: "cascade", throughTurn: state.turn, payGeneric: 0 }];
+      say(`${playerLabel(ctx.controller)} exiles ${getCard(state, hit.defId).name}: it can be cast without paying its mana cost this turn.`);
+    } else say(`${playerLabel(ctx.controller)} exiles ${exiled.length} cards and finds nothing to cast.`);
+    const [shuffled, rng] = shuffle(rest, state.rng);
+    state.rng = rng;
+    me.library.push(...shuffled);
+    if (exiled.length > 0) events.push({ type: "libraryShuffled", player: ctx.controller });
+  },
   /** Renown: the first time it deals combat damage to a player it gets the counters and becomes renowned. */
   renown({ state, ctx, say }, effect) {
     const perm = findPermanentOrNull(state, ctx.sourceId)?.perm;

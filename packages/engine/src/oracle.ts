@@ -90,6 +90,18 @@ export function parseCard(def: CardDef): ParsedCard {
     .filter((line) => {
       // Guerrilla Tactics: a spell with an ability of its own that works from the graveyard of the one who discards it
       if (readDiscardedByOpponent(line.replace(/\.$/, ""), result)) return false;
+      if (line === "storm" && (def.type === "instant" || def.type === "sorcery")) {
+        result.storm = true;
+        return false;
+      }
+      if (line === "convoke") {
+        result.convoke = true;
+        return false;
+      }
+      if (line === "cascade") {
+        result.cascade = (result.cascade ?? 0) + 1;
+        return false;
+      }
       if (line === "~ can't be countered" || line === "~ can't be countered.") {
         result.cantBeCountered = true;
         return false;

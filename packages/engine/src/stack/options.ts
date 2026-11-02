@@ -1,12 +1,12 @@
 import { getCard } from "../cards.js";
-import { bindSpecs, exilePlayable, exilePlayTerms, forbidden, isCreature, isPermanentCard, kw, legalTargets, powerOf, subtypesOf } from "../core.js";
+import { bindSpecs, colorsOfPerm, exilePlayable, exilePlayTerms, forbidden, isCreature, isPermanentCard, kw, legalTargets, powerOf, subtypesOf } from "../core.js";
 import type { TargetSpec } from "../effects.js";
-import { addCosts, parseManaCost, payMana, withDelve, withX } from "../mana.js";
+import { addCosts, parseManaCost, payMana, withConvoke, withDelve, withX } from "../mana.js";
 import type { ManaCost } from "../mana.js";
 import { parseCard } from "../oracle.js";
 import type { CardDef, GameState, Permanent, PlayerId } from "../types.js";
 import { abilityHaste, abilityManaCost, abilityNeed, canCastNow, holdsPriority, levelLock, sorceryTiming } from "./shared.js";
-import { castCostOf, costChoices, crewers, delveChoice, extraSacrificeFits, waterbendTaps, harmonizers, liftedSpecs, tapPair, teamworkers } from "./cast.js";
+import { castCostOf, convokePool, costChoices, crewers, delveChoice, extraSacrificeFits, waterbendTaps, harmonizers, liftedSpecs, tapPair, teamworkers } from "./cast.js";
 
 // What a player could do right now (for the screen and for auto-passing).
 
@@ -39,6 +39,8 @@ export interface Castable {
   teamwork?: { n: number; options: string[] };
   /** Delve: graveyard cards that may be exiled to pay {1} each (best ones to give up first), at least `min` of them for the rest to be payable, at most `max`. */
   delve?: { min: number; max: number; options: string[] };
+  /** Convoke: the creatures that may be tapped to pay for {1} (or a mana of their color) each: at least `min` of them for the rest to be payable, at most `max`. */
+  convoke?: { min: number; max: number; options: string[] };
   /** Replicate: its cost, and the most times it can be paid right now (each payment is a copy, with targets of its own). */
   replicate?: { cost: string; max: number };
   /** An Adventure card in hand: this is its Adventure spell (cast with `adventure: true`). */
@@ -62,7 +64,10 @@ function castableAs(state: GameState, player: PlayerId, iid: string, def: CardDe
   const canWarp = warpCost !== null && payMana(state, player, warpCost, def).ok;
   // Delve: cards in the graveyard can pay for the generic mana.
   const yard = parsed.delve ? delveChoice(state, player, iid, Infinity) : [];
-  const afford = (c: ManaCost) => payMana(state, player, withDelve(c, yard.length), def).ok;
+  // Convoke: creatures can pay for part of it.
+  const tappers = parsed.convoke ? convokePool(state, player) : [];
+  const tapColors = tappers.map((p) => ({ colors: colorsOfPerm(state, p) }));
+  const afford = (c: ManaCost) => payMana(state, player, withConvoke(withDelve(c, yard.length), tapColors), def).ok;
   const canNormal = afford(withX(cost, 0));
   // "Costs {3} less to cast if it targets a tapped permanent" / "...a blue spell": when only that price can be paid, only such targets are offered.
   const reduction = parsed.costReduction;
@@ -100,6 +105,13 @@ function castableAs(state: GameState, player: PlayerId, iid: string, def: CardDe
     Object.assign(modalPart, { discard: options });
   }
   const zonePart = zone ? { zone, ...delveOf(state, player, def, withX(cost, 0), yard) } : delveOf(state, player, def, withX(cost, 0), yard);
+  if (parsed.convoke && tappers.length > 0) {
+    const need = withDelve(withX(cost, 0), 0);
+    const max = Math.min(tappers.length, need.generic + Object.values(need.colored).reduce((n, v) => n + (v ?? 0), 0));
+    let min = 0;
+    while (min < max && !payMana(state, player, withConvoke(need, tapColors.slice(0, min)), def).ok) min++;
+    if (max > 0) Object.assign(zonePart, { convoke: { min, max, options: tappers.map((p) => p.card.iid) } });
+  }
   const replicateCost = parsed.replicate ? parseManaCost(parsed.replicate) : null;
   if (replicateCost) {
     let max = 0;

@@ -46,6 +46,7 @@ const RULES: Rule[] = [
   { match: /\bward\b/i, help: "Ward: when an opponent's spell or ability targets this, it is countered unless that player pays the ward cost." },
   { match: /\blandfall\b|whenever a land (you control )?enters/i, help: "Landfall: triggers every time a land enters the battlefield under your control (playing a land counts)." },
   { match: /\bexalted\b/i, help: "Exalted: whenever a creature you control attacks alone, it gets +1/+1 until end of turn. Each instance of exalted you control triggers, so they add up." },
+  { match: /\bconvoke\b/i, help: "Convoke: while casting it, you may tap untapped creatures you control. Each one pays for {1} or one mana of its color." },
   { match: /\bdelve\b/i, help: "Delve: while casting it, you may exile cards from your graveyard. Each card exiled pays for {1} of its cost." },
   { match: /\bundying\b/i, help: "Undying: when it dies, if it had no +1/+1 counters on it, it comes back to the battlefield with a +1/+1 counter. With that counter on it, it won't come back a second time." },
   { match: /\bpersist\b/i, help: "Persist: when it dies, if it had no -1/-1 counters on it, it comes back to the battlefield with a -1/-1 counter. With that counter on it, it won't come back a second time." },

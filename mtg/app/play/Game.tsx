@@ -651,6 +651,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
       return;
     }
     if (c.delve && p.delve === undefined) return; // the delve panel is shown
+    if (c.convoke && p.convoke === undefined) return; // the convoke panel is shown
     if (c.replicate && c.replicate.max > 0 && p.replicate === undefined) return; // the replicate panel is shown
     if (c.harmonize && c.harmonize.options.length > 0 && p.harmonizeTap === undefined) return; // the harmonize panel is shown
     if ((c.sacrifice || c.discard) && p.sacrifice === undefined) return; // the sacrifice (or discard) panel is shown
@@ -669,6 +670,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
       ...(p.sacrifice ? { sacrifice: p.sacrifice } : {}),
       ...(p.warp ? { warp: true } : {}),
       ...(p.delve ? { delve: p.delve } : {}),
+      ...(p.convoke ? { convoke: p.convoke } : {}),
       ...(p.replicate ? { replicate: p.replicate } : {}),
       ...(p.adventure ? { adventure: true } : {}),
       ...(p.harmonizeTap ? { harmonizeTap: p.harmonizeTap } : {}),

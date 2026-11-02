@@ -1,4 +1,4 @@
-import { addCosts, castCostOf, manaSourcesToConfirm, parseCard, parseManaCost, payForAbility, payMana, powerOf, withDelve, withPhyrexianLife } from "@mtg/engine";
+import { addCosts, castCostOf, colorsOfPerm, manaSourcesToConfirm, parseCard, parseManaCost, payForAbility, payMana, powerOf, withConvoke, withDelve, withPhyrexianLife } from "@mtg/engine";
 import type { Action, CardDef, Castable, GameState, ManaColor, ManaCost, PlayerId } from "@mtg/engine";
 
 /** A spell being cast step by step: creature or Adventure, teamwork, modes, then the kicker, then X, then delve, then replicate, then harmonize, then an additional cost, then targets. */
@@ -23,6 +23,8 @@ export interface CastPlan {
   warp?: boolean;
   /** Delve: the graveyard cards exiled to pay for it ([] = none). */
   delve?: string[];
+  /** Convoke: the creatures tapped to pay for part of the cost ([] = none). */
+  convoke?: string[];
   /** Replicate: how many copies are paid for (0 = none). */
   replicate?: number;
 }
@@ -48,7 +50,9 @@ function costOf(state: GameState, action: Action, who: PlayerId): { cost: ManaCo
     // Replicate: its cost once more for each copy.
     const each = def && action.type === "castSpell" && action.replicate ? parseManaCost(parseCard(def).replicate ?? "") : null;
     const cost = printed && each ? Array.from({ length: action.type === "castSpell" ? (action.replicate ?? 0) : 0 }, () => each).reduce(addCosts, printed) : printed;
-    return { cost: cost && action.type === "castSpell" && action.delve ? withDelve(cost, action.delve.length) : cost, ability: null };
+    const delved = cost && action.type === "castSpell" && action.delve ? withDelve(cost, action.delve.length) : cost;
+    const tapped = action.type === "castSpell" && action.convoke ? me.battlefield.filter((p) => action.convoke!.includes(p.card.iid)).map((p) => ({ colors: colorsOfPerm(state, p) })) : [];
+    return { cost: delved && tapped.length > 0 ? withConvoke(delved, tapped) : delved, ability: null };
   }
   if (action.type !== "activateAbility") return { cost: null, ability: null };
   const source = [...me.battlefield.map((p) => p.card), ...me.hand, ...me.graveyard].find((c) => c.iid === action.iid);

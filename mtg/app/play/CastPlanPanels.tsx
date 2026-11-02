@@ -75,6 +75,26 @@ function DelvePanel({ state, actor, plan, onAdvance, onCancel }: Pick<Props, "st
   );
 }
 
+/** Convoke: untapped creatures to tap, each paying for {1} or a mana of its color. */
+function ConvokePanel({ state, actor, plan, onAdvance, onCancel }: Pick<Props, "state" | "actor" | "plan" | "onAdvance" | "onCancel">) {
+  const convoke = plan.castable.convoke!;
+  const [picked, setPicked] = useState<number[]>([]);
+  const perms = convoke.options.map((iid) => state.players[actor].battlefield.find((p) => p.card.iid === iid)!);
+  return (
+    <ChoicePanel
+      title={`${plan.name} has convoke: each creature you tap pays for {1} or one mana of its color (${picked.length} chosen${convoke.min > 0 ? `, at least ${convoke.min} needed` : ""})`}
+      options={perms.map((p) => ({ label: nameWithStats(state, p), onPick: () => undefined }))}
+      multi={{
+        selected: picked,
+        onToggle: (i) => setPicked(picked.includes(i) ? picked.filter((x) => x !== i) : picked.length < convoke.max ? [...picked, i] : picked),
+        onDone: () => onAdvance({ ...plan, convoke: picked.map((i) => perms[i].card.iid) }),
+        canDone: picked.length >= convoke.min,
+      }}
+      onCancel={onCancel}
+    />
+  );
+}
+
 /** A card with an Adventure: cast the creature, or the Adventure spell beside it. */
 function AdventurePanel({ plan, onAdvance, onCancel }: Pick<Props, "plan" | "onAdvance" | "onCancel">) {
   const [creature, spell] = plan.name.split(" // ");
@@ -244,6 +264,7 @@ export default function CastPlanPanels({ state, actor, plan, modePick, onModePic
     return <XPanel name={plan.name} max={c.maxX ?? 0} x={xValue} onChange={(x) => onX(Math.min(c.maxX ?? 0, Math.max(0, x)))} onCast={() => onAdvance({ ...plan, x: xValue })} onCancel={onCancel} />;
   }
   if (c.delve && plan.delve === undefined) return <DelvePanel state={state} actor={actor} plan={plan} onAdvance={onAdvance} onCancel={onCancel} />;
+  if (c.convoke && plan.convoke === undefined) return <ConvokePanel state={state} actor={actor} plan={plan} onAdvance={onAdvance} onCancel={onCancel} />;
   if (c.replicate && c.replicate.max > 0 && plan.replicate === undefined) {
     const each = c.replicate.cost;
     return (

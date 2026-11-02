@@ -6,6 +6,7 @@ import {
   cardsDiscarded,
   changeLife,
   checkStateBasedActions,
+  colorsOfPerm,
   countFor,
   exilePlayable,
   exilePlayTerms,
@@ -28,7 +29,7 @@ import {
   toughnessOf,
 } from "../core.js";
 import type { CardFilter, Effect, TargetChoice, TargetSpec } from "../effects.js";
-import { addCosts, COLOR_NAMES, hasteFrom, manaCostOf, parseManaCost, payForAbility, payMana, withDelve, withPhyrexianLife, withX } from "../mana.js";
+import { addCosts, COLOR_NAMES, withConvoke, hasteFrom, manaCostOf, parseManaCost, payForAbility, payMana, withDelve, withPhyrexianLife, withX } from "../mana.js";
 import { parseCard } from "../oracle.js";
 import { OPPONENT } from "../types.js";
 import type { CardDef, CardInstance, GameState, Permanent, PlayerId } from "../types.js";
@@ -125,10 +126,13 @@ export function delveChoice(state: GameState, player: PlayerId, spellIid: string
   return state.players[player].graveyard.filter((c) => c.iid !== spellIid).sort((a, b) => rank(a) - rank(b)).slice(0, generic).map((c) => c.iid);
 }
 
+/** Untapped creatures that could be tapped to pay convoke (summoning-sick ones too: it is not a {T} cost). */
+export const convokePool = (state: GameState, player: PlayerId): Permanent[] => state.players[player].battlefield.filter((p) => !p.tapped && isCreature(state, p));
+
 /** Untapped creatures that could be tapped to pay teamwork (summoning-sick ones too: it is not a {T} cost). */
 export const teamworkers = (state: GameState, player: PlayerId) => state.players[player].battlefield.filter((p) => !p.tapped && isCreature(state, p));
 
-export function castSpell(state: GameState, player: PlayerId, iid: string, targets: TargetChoice[], events: GameEvent[], x = 0, kicked = false, from: "hand" | "graveyard" | "exile" | "prepared" = "hand", modes?: number[], sacrifice?: string, warp = false, teamwork?: string[], phyrexianLife = 0, delve?: string[], replicate = 0, adventure = false, harmonizeTap?: string): string | null {
+export function castSpell(state: GameState, player: PlayerId, iid: string, targets: TargetChoice[], events: GameEvent[], x = 0, kicked = false, from: "hand" | "graveyard" | "exile" | "prepared" = "hand", modes?: number[], sacrifice?: string, warp = false, teamwork?: string[], phyrexianLife = 0, delve?: string[], replicate = 0, adventure = false, harmonizeTap?: string, convoke?: string[]): string | null {
   const me = state.players[player];
   // A prepared creature: a copy of its spell is cast (`iid` is the creature).
   const prepared = from === "prepared" ? me.battlefield.find((p) => p.card.iid === iid && p.prepared) : undefined;
@@ -254,8 +258,27 @@ export function castSpell(state: GameState, player: PlayerId, iid: string, targe
   if (delve && delve.length > 0 && !parsed.delve) return `${def.name} doesn't have delve.`;
   if (delved.length > full.generic) return `${def.name}: delve can only pay for the generic mana in its cost ({${full.generic}}).`;
   if (delved.some((id) => id === iid || !me.graveyard.some((c) => c.iid === id))) return `${def.name}: delve exiles cards from your graveyard.`;
-  for (const p of [...teamed, ...(harmonizer ? [harmonizer] : []), ...bent]) tapPerm(state, p, player); // paid as part of the cost, before the mana (they can't also be tapped for mana)
-  const paid = payMana(state, player, withDelve(full, delved.length), def);
+  // Convoke: untapped creatures you control, each paying for {1} or a mana of one of its colors.
+  let convoked: Permanent[] = [];
+  if (convoke && convoke.length > 0 && !parsed.convoke) return `${def.name} doesn't have convoke.`;
+  if (parsed.convoke) {
+    const pool = convokePool(state, player);
+    const rest = withDelve(full, delved.length);
+    const colorsOf = (list: Permanent[]) => list.map((p) => ({ colors: colorsOfPerm(state, p) }));
+    if (convoke) {
+      const chosen = [...new Set(convoke)].map((id) => pool.find((p) => p.card.iid === id));
+      if (chosen.some((p) => !p)) return `${def.name}: convoke taps untapped creatures you control.`;
+      convoked = chosen as Permanent[];
+    } else if (!payMana(state, player, rest, def).ok) {
+      // not told which: tap as many as it takes
+      for (const p of pool) {
+        convoked.push(p);
+        if (payMana(state, player, withConvoke(rest, colorsOf(convoked)), def).ok) break;
+      }
+    }
+  }
+  for (const p of [...teamed, ...(harmonizer ? [harmonizer] : []), ...bent, ...convoked]) tapPerm(state, p, player); // paid as part of the cost, before the mana (they can't also be tapped for mana)
+  const paid = payMana(state, player, withConvoke(withDelve(full, delved.length), convoked.map((p) => ({ colors: colorsOfPerm(state, p) }))), def);
   if (!paid.ok) {
     const price = warp ? `warp ${parsed.warp}` : from === "graveyard" && !fromYard ? (parsed.flashback ? `flashback ${flashbackSac ? `(sacrifice a ${flashbackSac})` : parsed.flashback}` : `harmonize ${parsed.harmonize}`) : (cost.x ? `${def.manaCost} with X = ${x}` : (def.manaCost ?? String(def.cost))) + (kicked ? ` + kicker ${parsed.kicker}` : "") + (payInstead ? ` + ${parsed.extraSacrificeOrPay}` : "");
     return paid.missing === "life"
@@ -310,7 +333,11 @@ export function castSpell(state: GameState, player: PlayerId, iid: string, targe
   pushCopies(state, player, card, effects, specs, targets.slice(specs.length), events, "replicate");
   // Storm (Ral's emblem): a copy for each spell cast before it this turn, by either player.
   const castBefore = (state.players.p1.spellsCastThisTurn ?? 0) + (state.players.p2.spellsCastThisTurn ?? 0);
-  if (me.stormEmblem && (def.type === "instant" || def.type === "sorcery")) pushCopies(state, player, card, effects, specs, own, events, "storm", spellX, castBefore);
+  if ((me.stormEmblem || parsed.storm) && (def.type === "instant" || def.type === "sorcery")) pushCopies(state, player, card, effects, specs, own, events, "storm", spellX, castBefore);
+  // Cascade: when it is cast, a trigger above it exiles cards until a cheaper spell turns up.
+  for (let n = 0; n < (parsed.cascade ?? 0); n++) {
+    state.triggerQueue.push({ specs: [], item: { kind: "ability", id: newId(state), controller: player, source: card.iid, sourceName: def.name, effects: [{ type: "cascade", mv: def.cost }], targets: [], specs: [], text: `Cascade: exile cards from the top of your library until you exile a nonland card that costs less than ${def.cost}. You may cast it without paying its mana cost.` } });
+  }
   spellCast(state, player, def, targets, manaSpent, wasKicked);
   openRound(state, OPPONENT[player]);
   return null;

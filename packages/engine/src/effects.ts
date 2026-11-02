@@ -69,6 +69,7 @@ export type Effect =
   | { type: "setBase"; what: Ref; power: number; toughness: number } // becomes N/N until end of turn
   | { type: "loseDefender"; what: Ref }
   | { type: "winGame" }
+  | { type: "cascade"; mv: number } // "Cascade": exile cards from the top until a nonland card with a lesser mana value; it may be cast for free this turn, the rest go to the bottom in a random order
   | { type: "renown"; n: number } // "Renown 2": if it isn't renowned, +1/+1 counters, and it becomes renowned
   | { type: "amass"; n: number; subtype?: string } // "Amass 2" / "Amass Orcs 2": +1/+1 counters on an Army you control (a 0/0 Army token first, if there is none)
   | { type: "unlessPay"; cost: string; otherwise: Effect[]; echo?: boolean; cumulative?: boolean } // "sacrifice ~ unless you pay {1}": the controller pays or `otherwise` happens (echo: only the first upkeep; cumulative: the cost once for each age counter)
@@ -686,6 +687,12 @@ export interface ParsedCard {
   /** "Kicker {2}": the extra mana that may be paid when casting. Offspring is a kicker by another name (`kickerName`). */
   kicker?: string;
   kickerName?: "offspring" | "waterbend" | "buyback";
+  /** Convoke: creatures tapped while casting it pay for {1} or a mana of their color each. */
+  convoke?: boolean;
+  /** Storm: a copy of the spell for each spell cast before it this turn. */
+  storm?: boolean;
+  /** Cascade: how many times it has it. */
+  cascade?: number;
   /** "Bloodthirst 2": it enters with this many +1/+1 counters if an opponent was dealt damage this turn. */
   bloodthirst?: number;
   /** "Affinity for artifacts": it costs {1} less for each of these you control (artifacts, lands, or a creature type). */

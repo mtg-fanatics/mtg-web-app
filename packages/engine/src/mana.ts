@@ -53,6 +53,21 @@ export function withX(cost: ManaCost, x: number): ManaCost {
 }
 
 /** Delve: the cost with `n` of its generic mana paid by cards exiled from the graveyard. */
+/**
+ * Convoke: each creature tapped pays for {1} or for one mana of one of its colors (a color the cost still asks for is used first).
+ * Creatures beyond what the cost needs pay nothing.
+ */
+export function withConvoke(cost: ManaCost, creatures: { colors: string[] }[]): ManaCost {
+  const colored = { ...cost.colored } as Record<string, number>;
+  let generic = cost.generic;
+  for (const c of creatures) {
+    const color = c.colors.find((col) => (colored[col] ?? 0) > 0);
+    if (color) colored[color]--;
+    else if (generic > 0) generic--;
+  }
+  return { ...cost, generic, colored: colored as ManaCost["colored"] };
+}
+
 export function withDelve(cost: ManaCost, n: number): ManaCost {
   return n > 0 ? { ...cost, generic: Math.max(0, cost.generic - n) } : cost;
 }
