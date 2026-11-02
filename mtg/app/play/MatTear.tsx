@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAnimationsOn } from "@/lib/motion";
+import { DEFAULT_FOCUS, matLayerStyle } from "@/lib/playmat";
+import type { MatFocus } from "@/lib/playmat";
 
 // The playmat as a sheet of paper. As its player loses life it tears away from the edges, bite by ragged bite, leaving a worn
 // paper rim and the dark table underneath, until at 0 life nothing is left.
@@ -83,7 +85,7 @@ const strips = (outer: string[], inner: string[]) => [0, 1, 2, 3].map((e) => pol
  * The surface of a playmat, in place of its plain background: put it inside the mat (which must be `relative`), under the cards.
  * `seed` makes each player's mat tear in its own places.
  */
-export function MatTear({ life, mat, seed }: { life: number; mat: string; seed: number }) {
+export function MatTear({ life, mat, seed, fx = DEFAULT_FOCUS }: { life: number; mat: string; seed: number; fx?: MatFocus }) {
   const on = useAnimationsOn();
   // For each stage: where the table shows through, and the paper rim along the tear.
   const stages = useMemo(() => {
@@ -110,7 +112,7 @@ export function MatTear({ life, mat, seed }: { life: number; mat: string; seed: 
   }, [reached]);
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-2xl">
-      <div className="absolute inset-0" style={{ background: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), ${mat}` }} />
+      <div className="absolute inset-0" style={matLayerStyle(`linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), ${mat}`, fx)} />
       {stages.slice(0, shown).map((s, index) => {
         const torn = index < lit ? 1 : 0;
         return (

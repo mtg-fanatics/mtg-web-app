@@ -1,8 +1,9 @@
 "use client";
 
 import type { PlayerId } from "@mtg/engine";
-import { MATS, resolve, SLEEVES } from "@/lib/playmat";
+import { MATS, resolve, SLEEVES, useMatFocusVersion } from "@/lib/playmat";
 import { SleeveBack } from "./AppearanceDialog";
+import MatPreview from "./MatPreview";
 
 /**
  * Choose the card sleeve and the playmat for one player, with a preview of the table. `sleeve` and `mat` are the stored
@@ -26,6 +27,7 @@ export default function LookPicker({
   disabled?: boolean;
   large?: boolean;
 }) {
+  useMatFocusVersion(); // (moving the mat redraws the preview)
   const s = resolve("sleeve", sleeve, who);
   const m = resolve("mat", mat, who);
   const ring = (on: boolean) => (on ? "border-[#fcd34d] ring-2 ring-[#fcd34d]" : "border-white/25 hover:border-white/70");
@@ -35,8 +37,8 @@ export default function LookPicker({
   return (
     <div className={`flex flex-col text-left ${large ? "gap-3" : "gap-2.5"}`}>
       {/* the table as it will look: the mat, with a stack of sleeved cards */}
-      <div className={`relative overflow-hidden rounded-xl border border-white/25 shadow-inner ${large ? "h-36" : "h-24"}`} style={{ background: m.css }} aria-label="Preview of your table">
-        <div className="absolute inset-0 bg-black/15" />
+      <MatPreview css={m.css} fx={m.fx} focusKey={m.focusKey} movable={m.movable} disabled={disabled} className={large ? "h-36" : "h-24"}>
+        <div className="absolute inset-0 bg-black/15 pointer-events-none" />
         <div className="absolute inset-x-3 bottom-2 top-2 rounded-lg border border-dashed border-white/30" />
         <div className="absolute right-6 top-1/2 -translate-y-1/2" style={{ height: cardH, width: cardW }}>
           {[3, 2, 1, 0].map((i) => (
@@ -45,7 +47,7 @@ export default function LookPicker({
             </div>
           ))}
         </div>
-      </div>
+      </MatPreview>
 
       <div>
         <span className={`field-label ${large ? "!text-sm" : ""}`}>Card sleeve</span>

@@ -941,6 +941,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
           top
           label={`${playerName(other)}'s battlefield`}
           mat={look.mat(other).css}
+          matFx={look.mat(other).fx}
           lane={lane}
           interaction={(p) => interaction(other, p)}
           inCombat={(p) => inCombat(other, p)}
@@ -1118,6 +1119,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
           owner={actor}
           label={`${playerName(actor)}'s battlefield`}
           mat={look.mat(actor).css}
+          matFx={look.mat(actor).fx}
           lane={lane}
           interaction={(p) => interaction(actor, p)}
           inCombat={(p) => inCombat(actor, p)}

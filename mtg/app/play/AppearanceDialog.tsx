@@ -5,6 +5,7 @@ import type { PlayerId } from "@mtg/engine";
 import { MATS, SLEEVES } from "@/lib/playmat";
 import type { useAppearance } from "@/lib/playmat";
 import { playerName } from "./log";
+import MatPreview from "./MatPreview";
 
 type Appearance = ReturnType<typeof useAppearance>;
 
@@ -60,8 +61,8 @@ export default function AppearanceDialog({ look, cursor, onClose, first = "p1" }
         ) : (
           <>
         {/* Preview: the mat with a stack of sleeved cards */}
-        <div className="relative h-36 overflow-hidden rounded-xl border border-white/25 shadow-inner" style={{ background: mat.css }}>
-          <div className="absolute inset-0 bg-black/10" />
+        <MatPreview css={mat.css} fx={mat.fx} focusKey={mat.focusKey} movable={mat.movable} disabled={look.locked} className="h-36">
+          <div className="absolute inset-0 bg-black/10 pointer-events-none" />
           <div className="absolute inset-x-4 bottom-3 top-3 rounded-lg border border-dashed border-white/30" />
           <div className="absolute right-6 top-1/2 flex -translate-y-1/2 gap-3">
             <div className="relative h-24 w-[68px]">
@@ -73,7 +74,7 @@ export default function AppearanceDialog({ look, cursor, onClose, first = "p1" }
             </div>
           </div>
           <span className="absolute left-6 top-1/2 -translate-y-1/2 font-display text-lg font-bold tracking-widest text-white/80 drop-shadow">{playerName(who).toUpperCase()}</span>
-        </div>
+        </MatPreview>
 
         <section>
           <div className="mb-2 flex items-center gap-3">
