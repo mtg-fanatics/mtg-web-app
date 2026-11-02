@@ -280,3 +280,10 @@ export function readAbilityWordStatic(line: string, out: ParsedCard): boolean {
   (out.statics ??= []).push({ ...st, cond });
   return true;
 }
+
+/** "~ doesn't untap during your untap step." (Grim Monolith, Jasconian Isle: it stays tapped until something untaps it) */
+export function readSelfNoUntap(line: string, out: ParsedCard): boolean {
+  if (line !== "~ doesn't untap during your untap step") return false;
+  (out.statics ??= []).push({ scope: "self", power: 0, toughness: 0, keywords: [], noUntap: true });
+  return true;
+}

@@ -112,6 +112,12 @@ function parseChoiceText(text: string, ctx: Ctx): Effect[] | null {
     const who = refFor("target opponent", ctx);
     return who ? [{ type: "discard", who, amount: 1, chooser: "you" }] : null;
   }
+  // Duress, Inquisition of Kozilek, Mind Rot-like: "Target opponent reveals their hand. You choose a noncreature, nonland card from it. That player discards that card."
+  const peek = /^target (opponent|player) reveals their hand\. you choose an? (nonland|noncreature, nonland|creature) card from it(?: with mana value (\d+) or less)?\. that player discards that card$/.exec(t);
+  if (peek) {
+    const who = refFor(`target ${peek[1]}`, ctx);
+    return who ? [{ type: "discard", who, amount: 1, chooser: "you", ...(peek[3] ? { maxMV: Number(peek[3]) } : {}), ...(peek[2] === "creature" ? { cardKind: "creature" as const } : { nonland: true, ...(peek[2] === "nonland" ? {} : { cardKind: "noncreature" as const }) }) }] : null;
+  }
   // Thoughtseize
   if (t === "target player reveals their hand. you choose a nonland card from it. that player discards that card. you lose 2 life") {
     const who = refFor("target player", ctx);
@@ -157,9 +163,9 @@ function parseChoiceText(text: string, ctx: Ctx): Effect[] | null {
   m = /^search your library for (an? .+? card(?: with mana value \d+ or less)?(?: or an? .+? card(?: with mana value \d+ or less)?)?), (reveal (?:it|that card), )?put (?:that card|it) into your hand, then shuffle$/.exec(t);
   const filters = m ? searchFilters(m[1]) : null;
   if (m && filters) return [{ type: "search", for: "any", to: "hand", filters, label: m[1].replace(/^an? /, ""), reveal: m[2] !== undefined }];
-  const reveal = new RegExp(`^look at the top (${NUMBER_WORDS}|\\d+) cards of your library\\. you may reveal (?:a|an) (.+?) card from among them and put (?:it|that card) into your hand\\. put the rest on the bottom of your library in (a random|any) order$`).exec(t);
+  const reveal = new RegExp(`^look at the top (${NUMBER_WORDS}|\\d+) cards of your library\\. you may reveal (?:a|an) (.+?) card(?: with power (\\d+) or less)? from among them and put (?:it|that card) into your hand\\. put the rest on the bottom of your library in (a random|any) order$`).exec(t);
   const filter = reveal ? parseCardFilter(reveal[2]) : null;
-  if (reveal && filter) return [{ type: "revealToHand", n: toNumber(reveal[1]) ?? 0, filter, random: reveal[3] === "a random", reveal: true }];
+  if (reveal && filter) return [{ type: "revealToHand", n: toNumber(reveal[1]) ?? 0, filter: reveal[3] ? { ...filter, maxPower: Number(reveal[3]) } : filter, random: reveal[4] === "a random", reveal: true }];
   return null;
 }
 

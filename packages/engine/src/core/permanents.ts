@@ -41,6 +41,7 @@ export function entersTappedNow(state: GameState, controller: PlayerId, def: Car
 export function cardMatches(def: CardDef, filter: CardFilter): boolean {
   if (filter.basic && !isBasicLand(def)) return false;
   if (filter.maxMV !== undefined && def.cost > filter.maxMV) return false;
+  if (filter.maxPower !== undefined && !(def.power !== undefined && def.power <= filter.maxPower)) return false;
   if (filter.all) return true;
   if (filter.nonland) return def.type !== "land";
   const line = (def.typeLine ?? def.type).toLowerCase();

@@ -45,7 +45,7 @@ export type Effect =
   | { type: "topOfLibrary"; what: Ref } // "put target creature on top of its owner's library"
   | { type: "reanimate"; what: Ref; to: "battlefield" | "hand"; tapped?: boolean; finality?: boolean; attacking?: boolean } // a card from a graveyard (`finality`: "with a finality counter on it")
   // The next three ask a player to choose cards, so a card that has one can't have any other effect (see PendingPick).
-  | { type: "discard"; who: Ref; amount: number; chooser: "victim" | "you" | "random"; nonland?: boolean } // "target player discards two cards" / "you choose a card from their hand"
+  | { type: "discard"; who: Ref; amount: number; chooser: "victim" | "you" | "random"; nonland?: boolean; /** "You choose a noncreature, nonland card" / "a creature card". */ cardKind?: "noncreature" | "creature"; /** "...with mana value 3 or less". */ maxMV?: number } // "target player discards two cards" / "you choose a card from their hand"
   | { type: "lookPick"; mode: "toHand" | "toGraveyard" | "arrange" | "iterate" | "look" | "toHandTop"; n: number; who?: Ref } // look at the top cards of a library ("iterate": one to hand, one exiled to play this turn, one to the bottom; "toHandTop": one to hand, one on top, one on the bottom)
   // "Look at the top five cards. You may reveal a creature card from among them and put it into your hand. Put the rest on the bottom."
   | { type: "revealToHand"; n: number; filter: CardFilter; random: boolean; required?: boolean; restTo?: "bottom" | "graveyard"; reveal?: boolean; take?: number } // `take`: "put two of them into your hand"
@@ -191,6 +191,8 @@ export interface CardFilter {
   /** Also required, on top of the terms above: "a basic Plains card", "a creature card with mana value 1 or less". */
   basic?: boolean;
   maxMV?: number;
+  /** "a creature card with power 2 or less". */
+  maxPower?: number;
 }
 
 /** A token the game makes up while playing: a Treasure, or "a 1/1 white Soldier creature token". */

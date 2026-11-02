@@ -221,14 +221,19 @@ export const LIBRARY_EFFECTS = {
         continue;
       }
       // "You choose a nonland card from it": the lands are seen but can't be chosen.
-      const choosable = effect.nonland ? hand.filter((c) => getCard(state, c.defId).type !== "land") : hand;
+      const kindFits = (c: (typeof hand)[number]) => {
+        const type = getCard(state, c.defId).type;
+        if (effect.maxMV !== undefined && getCard(state, c.defId).cost > effect.maxMV) return false;
+        return (!effect.nonland || type !== "land") && (effect.cardKind === "noncreature" ? type !== "creature" : effect.cardKind === "creature" ? type === "creature" : true);
+      };
+      const choosable = effect.nonland || effect.cardKind || effect.maxMV !== undefined ? hand.filter(kindFits) : hand;
       if (choosable.length === 0) continue;
       startPick({
         player: effect.chooser === "you" ? ctx.controller : s.id,
-        prompt: effect.chooser === "you" ? `${playerLabel(s.id)}'s hand: choose a ${effect.nonland ? "nonland " : ""}card for them to discard` : `Discard ${plural(count, "card")}`,
+        prompt: effect.chooser === "you" ? `${playerLabel(s.id)}'s hand: choose a ${effect.cardKind === "noncreature" ? "noncreature, nonland " : effect.cardKind === "creature" ? "creature " : effect.nonland ? "nonland " : ""}card for them to discard` : `Discard ${plural(count, "card")}`,
         kind: "discard",
         options: choosable.map((c) => c.iid),
-        ...(effect.nonland ? { seen: hand.filter((c) => !choosable.includes(c)).map((c) => c.iid) } : {}),
+        ...(effect.nonland || effect.cardKind || effect.maxMV !== undefined ? { seen: hand.filter((c) => !choosable.includes(c)).map((c) => c.iid) } : {}),
         optional: false,
         owner: s.id,
         remaining: count,
