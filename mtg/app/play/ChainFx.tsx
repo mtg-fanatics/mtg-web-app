@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { memo, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { OPPONENT } from "@mtg/engine";
 import type { CardDef, GameState, PlayerId } from "@mtg/engine";
 import { playerName } from "./log";
@@ -69,6 +69,84 @@ function kindLine(state: GameState, item: GameState["stack"][number]): string | 
   if (def?.type === "creature") return "A creature spell: when it resolves it enters the battlefield. It can be countered while it is on the chain.";
   return undefined;
 }
+
+const LINK_PITCH = 21; // distance between the centres of two links (they overlap: each hangs through the hole of the next)
+const LINK_LEN = 29;
+const LINK_WID = 19;
+
+/**
+ * A real chain between two hooks: it sags under its own weight (the lowest point is straight under the middle, whichever way the chain
+ * runs), its links follow the curve one after the other, alternating between a ring seen face-on (with its hole) and one seen edge-on
+ * (a thin bar; it is turned a quarter, so it passes through the hole of its neighbours), all of brushed steel with a dark rim and a shine.
+ * Drawn in the frame of the strand: it starts at (0, 0) and ends at (len, 0), turned `angle` degrees on screen.
+ */
+const ChainStrand = memo(function ChainStrand({ len, angle, seed }: { len: number; angle: number; seed: number }) {
+  const uid = useId().replace(/:/g, "");
+  const rad = (angle * Math.PI) / 180;
+  const gx = Math.sin(rad); // where "down on the screen" points in the strand's own frame
+  const gy = Math.cos(rad);
+  const sag = Math.max(8, Math.min(len * 0.15, 64));
+  const pts: { x: number; y: number; s: number }[] = [];
+  const SAMPLES = 40;
+  for (let i = 0; i <= SAMPLES; i++) {
+    const t = i / SAMPLES;
+    const d = 4 * t * (1 - t) * sag; // a parabola: close enough to the hanging curve
+    const x = t * len + d * gx;
+    const y = d * gy;
+    const s = i === 0 ? 0 : pts[i - 1].s + Math.hypot(x - pts[i - 1].x, y - pts[i - 1].y);
+    pts.push({ x, y, s });
+  }
+  const arc = pts[SAMPLES].s;
+  const n = Math.max(2, Math.round(arc / LINK_PITCH) + 1);
+  const links: { x: number; y: number; a: number; face: boolean; k: number }[] = [];
+  let j = 0;
+  for (let k = 0; k < n; k++) {
+    const target = (arc * k) / (n - 1);
+    while (j < SAMPLES - 1 && pts[j + 1].s < target) j++;
+    const p0 = pts[j];
+    const p1 = pts[j + 1];
+    const f = p1.s > p0.s ? Math.min(1, Math.max(0, (target - p0.s) / (p1.s - p0.s))) : 0;
+    const hash = Math.sin((k + 1) * 12.9898 + seed * 78.233) * 43758.5453;
+    const rnd = hash - Math.floor(hash);
+    links.push({
+      x: p0.x + (p1.x - p0.x) * f,
+      y: p0.y + (p1.y - p0.y) * f,
+      a: (Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180) / Math.PI + (rnd - 0.5) * 7, // (no two links hang exactly alike)
+      face: k % 2 === 0,
+      k,
+    });
+  }
+  const R = LINK_WID / 2 - 1.9; // (the rim is drawn on the outside of the ring)
+  return (
+    <svg className="chain-strand" width="1" height="1" overflow="visible" aria-hidden="true">
+      <defs>
+        <linearGradient id={`m${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#f8fafc" />
+          <stop offset="0.3" stopColor="#cbd5e1" />
+          <stop offset="0.55" stopColor="#64748b" />
+          <stop offset="0.8" stopColor="#94a3b8" />
+          <stop offset="1" stopColor="#334155" />
+        </linearGradient>
+      </defs>
+      {/* the rings seen face-on first, then the ones seen edge-on over them (they go through the holes) */}
+      {links.filter((l) => l.face).map((l) => (
+        <g key={l.k} transform={`translate(${l.x.toFixed(1)} ${l.y.toFixed(1)}) rotate(${l.a.toFixed(1)}) scale(1 ${(0.86 + 0.14 * Math.abs(Math.cos(l.k * 1.7 + seed))).toFixed(2)})`}>
+          <rect x={-LINK_LEN / 2 + 2} y={-R} width={LINK_LEN - 4} height={2 * R} rx={R} fill="none" stroke="#070d18" strokeWidth="6.4" />
+          <rect x={-LINK_LEN / 2 + 2} y={-R} width={LINK_LEN - 4} height={2 * R} rx={R} fill="none" stroke={`url(#m${uid})`} strokeWidth="4" />
+          <path d={`M${-LINK_LEN / 2 + 7} ${-R + 0.2} H${LINK_LEN / 2 - 7}`} stroke="#fff" strokeOpacity="0.8" strokeWidth="1" strokeLinecap="round" />
+          <rect className="chain-spark" style={{ "--i": l.k } as React.CSSProperties} x={-LINK_LEN / 2 + 2} y={-R} width={LINK_LEN - 4} height={2 * R} rx={R} fill="none" stroke="#e0fbff" strokeWidth="4" />
+        </g>
+      ))}
+      {links.filter((l) => !l.face).map((l) => (
+        <g key={l.k} transform={`translate(${l.x.toFixed(1)} ${l.y.toFixed(1)}) rotate(${l.a.toFixed(1)})`}>
+          <rect x={-LINK_LEN / 2 + 1} y={-3.4} width={LINK_LEN - 2} height="6.8" rx="3.4" fill={`url(#m${uid})`} stroke="#070d18" strokeWidth="1.3" />
+          <path d={`M${-LINK_LEN / 2 + 5} -1.6 H${LINK_LEN / 2 - 5}`} stroke="#fff" strokeOpacity="0.75" strokeWidth="1" strokeLinecap="round" />
+          <rect className="chain-spark" style={{ "--i": l.k } as React.CSSProperties} x={-LINK_LEN / 2 + 1} y={-3.4} width={LINK_LEN - 2} height="6.8" rx="3.4" fill="#e0fbff" />
+        </g>
+      ))}
+    </svg>
+  );
+});
 
 export default function ChainFx({ state, actor, extra, onPass }: { state: GameState; actor: PlayerId; extra?: Flash | null; /** Pass priority (or let it resolve, or continue): given to a player, not to someone watching. */ onPass?: () => void }) {
   const on = useAnimationsOn();
@@ -223,7 +301,7 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
   const lite = liteMode();
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[80]">
+    <div className={`pointer-events-none fixed inset-0 z-[80] ${lite ? "chain-lite" : ""}`}>
       {/* The buttons stay while the chain plays: pass, resolve or continue without waiting for it, and put the chain away to see the board. */}
       <div className="pointer-events-auto absolute left-1/2 top-[3.4rem] z-[100] flex max-w-[96vw] -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/25 bg-slate-950/90 p-1.5 shadow-xl shadow-black/50">
         {canPass ? (
@@ -267,8 +345,10 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
             <div
               key={`link-${l.id}`}
               className={`chain-link ${on && !l.leaving ? "chain-link-in" : ""} ${l.leaving ? "chain-link-out" : ""}`}
-              style={{ width: Math.max(1, Math.round(len / 73)) * 73, /* (whole links: the chain never ends in half a link) */ zIndex: 21 + 2 * l.n, transform: `translate(${a.x}px, ${a.y}px) rotate(${angle}deg)`, animationDelay: `${420 + l.fresh * STAGGER_MS}ms`, "--d": `${420 + l.fresh * STAGGER_MS}ms` } as React.CSSProperties}
-            />
+              style={{ width: Math.max(1, Math.round(len)), zIndex: 21 + 2 * l.n, transform: `translate(${a.x}px, ${a.y}px) rotate(${angle}deg)`, animationDelay: `${420 + l.fresh * STAGGER_MS}ms`, "--d": `${420 + l.fresh * STAGGER_MS}ms` } as React.CSSProperties}
+            >
+              <ChainStrand len={len} angle={angle} seed={l.n} />
+            </div>
           );
         })}
         {shown.map((l, i) => {
