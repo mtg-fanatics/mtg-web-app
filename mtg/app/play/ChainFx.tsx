@@ -42,9 +42,9 @@ const MIN_SHOW_MS = 4800; // a card (and what it says) is on screen at least thi
 const EXIT_GAP_MS = 2000; // cards that leave together leave one after the other, newest first, slowly
 const LEAVE_MS = 2000; // (the fade-out below takes this long)
 const STAGGER_MS = 260;
-const MAX_SHOWN = 6;
-const MAX_PHONE = 4; // a phone lists them one under the other, each with its text beside it
-const TILT = [-7, 4, -3, 6, -5, 3];
+const MAX_SHOWN = 12; // (everything on the chain is shown: the cards get smaller the more there are; a card is never left out and then brought back)
+const MAX_PHONE = 8; // a phone lists them one under the other, each with its text beside it
+const TILT = [-7, 4, -3, 6, -5, 3, -4, 5];
 
 const subscribe = (cb: () => void) => {
   window.addEventListener("resize", cb);
@@ -267,11 +267,12 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
 
   const [vw, vh] = sizeKey.split("x").map(Number);
   const phone = vw < 1024;
-  const rowH = Math.round(Math.min(vh * 0.17, 122));
-  const H = phone ? Math.round(rowH * 0.9) : Math.round(Math.min(vh * 0.36, 320));
-  const cw = Math.round(H * 0.716);
   const shown = links.slice(-(phone ? MAX_PHONE : MAX_SHOWN));
   const m = shown.length;
+  const rowH = Math.round(Math.min(vh * 0.17, 122, (vh * 0.62) / Math.max(1, m)));
+  // (more than six on a wide screen: smaller cards, so that they all fit and none has to leave)
+  const H = phone ? Math.round(rowH * 0.9) : Math.round(Math.min(vh * 0.36, 320) * (m > 6 ? Math.max(0.55, 6 / m) : 1));
+  const cw = Math.round(H * 0.716);
   const wide = Math.round(Math.min(vw * 0.94, 440)); // (phone) the width the card and its text share
   const stepX = m > 1 ? Math.min(H * 0.64, (vw * 0.8 - cw) / (m - 1)) : 0;
   const stepY = H * 0.24;
@@ -280,7 +281,10 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
     phone ? { x: Math.round(-wide / 2 + cw / 2), y: Math.round((i - (m - 1) / 2) * rowH) } : { x: Math.round((i - (m - 1) / 2) * stepX), y: Math.round((i - (m - 1) / 2) * stepY) },
   );
   // A wide screen: the notes sit in one row under the cards (each as wide as the room allows); a phone: beside each card.
-  const noteW = phone ? wide - cw - 12 : Math.max(150, Math.min(270, Math.floor((vw * 0.92) / m) - 12));
+  // (more than six: the notes shrink to a name each, in as many rows as they need)
+  const compact = !phone && m > 6;
+  const cols = compact ? Math.max(1, Math.min(m, Math.floor((vw * 0.92) / 162))) : m;
+  const noteW = phone ? wide - cw - 12 : Math.max(150, Math.min(270, Math.floor((vw * 0.92) / cols) - 12));
   const rowY = Math.round(Math.max(...at.map((a) => a.y), 0) + H / 2 + 16);
   // Where a chain is fastened to a card: low on its left side (a phone, with its cards one under the other: the middle), so the chain runs along the foot of the cascade
   const hook = (p: { x: number; y: number }) => (phone ? p : { x: Math.round(p.x - cw * 0.36), y: Math.round(p.y + H * 0.4) });
@@ -398,23 +402,24 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
         })}
         {/* what each card does: its own flat layer (text inside a tilted, scaling card is drawn small and then stretched: blurry) */}
         {shown.map((l, i) => {
-          const x = phone ? Math.round(at[i].x + cw / 2 + 10) : Math.round((i - (m - 1) / 2) * (noteW + 12) - noteW / 2);
-          const y = phone ? Math.round(at[i].y - H / 2) : rowY;
+          const col = compact ? i % cols : i;
+          const x = phone ? Math.round(at[i].x + cw / 2 + 10) : Math.round((col - (cols - 1) / 2) * (noteW + 12) - noteW / 2);
+          const y = phone ? Math.round(at[i].y - H / 2) : rowY + (compact ? Math.floor(i / cols) * 58 : 0);
           return (
             <div
               key={`note-${l.id}`}
               className={`chain-note ${on ? (l.leaving ? "chain-note-out" : "chain-note-in") : ""}`}
-              style={{ width: noteW, transform: `translate(${x}px, ${y}px)`, zIndex: 40 + l.n, maxHeight: phone ? H : Math.max(120, Math.floor(vh - originTop - y - 12)), animationDelay: l.leaving ? undefined : `${l.fresh * STAGGER_MS + 450}ms` }}
+              style={{ width: noteW, transform: `translate(${x}px, ${y}px)`, zIndex: 40 + l.n, maxHeight: phone ? H : compact ? 52 : Math.max(120, Math.floor(vh - originTop - y - 12)), animationDelay: l.leaving ? undefined : `${l.fresh * STAGGER_MS + 450}ms` }}
             >
               <div className="chain-note-name">{l.name}</div>
-              {l.text && (
+              {l.text && !compact && (
                 <p className="chain-note-text">
                   <ManaText text={l.text} />
                 </p>
               )}
-              {l.target && <p className="chain-note-target">Target: {l.target}</p>}
-              {l.kind && <p className="chain-note-kind">{l.kind}</p>}
-              {l.help.map((h, k) => (
+              {l.target && !compact && <p className="chain-note-target">Target: {l.target}</p>}
+              {l.kind && !compact && <p className="chain-note-kind">{l.kind}</p>}
+              {(compact ? [] : l.help).map((h, k) => (
                 <p key={k} className="chain-note-help">
                   ⓘ {h}
                 </p>
