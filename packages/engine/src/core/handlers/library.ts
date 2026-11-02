@@ -210,14 +210,14 @@ export const LIBRARY_EFFECTS = {
           iids.push(hand[at].iid);
           state.players[s.id].graveyard.push(...hand.splice(at, 1));
         }
-        cardsDiscarded(state, s.id, iids, events);
+        cardsDiscarded(state, s.id, iids, events, s.id !== ctx.controller);
         continue;
       }
       if (effect.chooser === "victim" && count >= hand.length) {
         // Nothing to choose: the whole hand goes.
         const iids = hand.map((c) => c.iid);
         state.players[s.id].graveyard.push(...hand.splice(0));
-        cardsDiscarded(state, s.id, iids, events);
+        cardsDiscarded(state, s.id, iids, events, s.id !== ctx.controller);
         continue;
       }
       // "You choose a nonland card from it": the lands are seen but can't be chosen.
@@ -233,6 +233,7 @@ export const LIBRARY_EFFECTS = {
         owner: s.id,
         remaining: count,
         ordered: [],
+        ...(s.id !== ctx.controller ? { byOpp: true } : {}),
       });
     }
   },
@@ -251,19 +252,21 @@ export const LIBRARY_EFFECTS = {
       toHand: "Choose the card to put into your hand. The other goes to the bottom of your library.",
       toGraveyard: `Put the top card of ${playerLabel(owner)}'s library into their graveyard?`,
       arrange: `Choose the card to put on top of your library (${plural(top.length, "card")} to arrange).`,
+      toHandTop: "Choose the card to put into your hand. Next you choose which of the others stays on top of your library; the last goes to the bottom.",
       iterate: "Choose the card to put into your hand. Next you choose one of the others to exile (you may play it this turn); the last goes to the bottom of your library.",
       look: `The top card of ${playerLabel(owner)}'s library. It stays there.`,
     };
     startPick({
       player: ctx.controller,
       prompt: prompts[effect.mode],
-      kind: effect.mode === "iterate" ? "toHand" : effect.mode,
+      kind: effect.mode === "iterate" || effect.mode === "toHandTop" ? "toHand" : effect.mode,
       options: top.map((c) => c.iid),
       optional: effect.mode === "toGraveyard" || effect.mode === "look",
       owner,
       remaining: 1,
       ordered: [],
       ...(effect.mode === "iterate" ? { thenExile: true } : {}),
+      ...(effect.mode === "toHandTop" ? { thenTop: true } : {}),
     });
   },
   revealToHand({ state, ctx, say, startPick }, effect) {

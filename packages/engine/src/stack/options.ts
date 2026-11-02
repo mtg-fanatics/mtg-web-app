@@ -286,6 +286,7 @@ export function getActivatable(state: GameState, player: PlayerId): Activatable[
       if (ability.oncePerTurn && perm.usedAbilities?.includes(index)) return;
       if (ability.onceOnly && perm.usedOnce?.includes(index)) return;
       if (ability.yourTurnOnly && state.active !== player) return;
+      if (ability.beforeAttackers && !(state.phase === "main1" || (state.phase === "attackers" && !state.combat))) return;
       if (abilityNeed(state, player, ability)) return;
       if (ability.solvedOnly && !perm.solved) return;
       if (levelLock(perm, ability)) return;

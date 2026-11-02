@@ -6,6 +6,7 @@ import { defSubtypes, findPermanentOrNull, hasDelirium, isCreature, playerLabel,
 import { counterStackItem, spellLeavesStack } from "../zones.js";
 import { subjectsOf } from "../targets.js";
 import { cardAnywhere, type EffectHandlers, type EffectOf } from "./shared.js";
+import { exileCopiesOf } from "./theme.js";
 
 const creatureCount = (state: GameState, player: PlayerId) => state.players[player].battlefield.filter((p) => isCreature(state, p)).length;
 
@@ -165,9 +166,12 @@ export const STACK_EFFECTS = {
       });
       if (s.item.kind === "spell" && (shielded || parseCard(getCard(state, s.item.card.defId)).cantBeCountered)) {
         say(`${getCard(state, s.item.card.defId).name} can't be countered.`);
+        if (effect.exileCopies) exileCopiesOf(state, s.item.controller, getCard(state, s.item.card.defId).name, events, say);
         continue;
       }
+      const named = s.item.kind === "spell" ? { controller: s.item.controller, name: getCard(state, s.item.card.defId).name } : null;
       counterStackItem(state, s.item, events, ctx.sourceName);
+      if (effect.exileCopies && named) exileCopiesOf(state, named.controller, named.name, events, say); // Counterbore
     }
   },
 } satisfies EffectHandlers;

@@ -21,7 +21,7 @@ const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function normalizeText(def: CardDef): string {
   let text = (def.text ?? "").replace(/\([^)]*\)/g, "");
   // "Thrun, the Last Troll" is "Thrun" in its text; so is "Sharae" in Sharae of Numbing Depths.
-  const short = /\bLegendary\b/.test(def.typeLine ?? "") && !def.name.includes(",") ? /^([A-Z][a-z]+) of /.exec(def.name)?.[1] : undefined;
+  const short = /\bLegendary\b/.test(def.typeLine ?? "") && !def.name.includes(",") ? /^([A-Z][a-z]+) (?:of|the) /.exec(def.name)?.[1] : undefined; // ("Arcanis the Omnipotent" is "Arcanis" in its text)
   for (const name of new Set([def.name, def.name.split(",")[0], ...(short ? [short] : [])])) {
     if (name.length >= 3) text = text.replace(new RegExp(escapeRegex(name), "gi"), "~");
   }
@@ -62,6 +62,7 @@ export function forEachCount(phrase: string): CountSpec | null {
   const atk = /^(other )?attacking ([a-z]+)$/.exec(phrase);
   if (atk && atk[2] !== "creature") return { kind: "attackers", subtype: atk[2], ...(atk[1] ? { other: true } : {}) };
   if (phrase === "attacking creature") return { kind: "attackers" };
+  if (phrase === "creature attacking you") return { kind: "attackingYou" };
   const plural = phrase
     .replace(/^attacking creature you control$/, "attacking creatures you control")
     .replace(/^other creature you control$/, "other creatures you control")
@@ -98,6 +99,8 @@ export function parseCount(phrase: string): CountSpec | null {
   // a creature type: "goblins you control"
   const typed = /^([a-z]+) you control$/.exec(phrase);
   if (typed && !/^(creatures|lands|artifacts|enchantments|plains|islands|swamps|mountains|forests)$/.test(typed[1])) return { kind: "permanents", what: "subtype", subtype: singularType(typed[1]), scope: "you" };
+  const inAllYards = /^(creature|sorcery|instant|land|artifact|enchantment) cards in all graveyards$/.exec(phrase);
+  if (inAllYards) return { kind: "yardsAll", cardType: inAllYards[1] };
   if (phrase === "cards in your graveyard") return { kind: "graveyard", creaturesOnly: false };
   if (phrase === "creature cards in your graveyard") return { kind: "graveyard", creaturesOnly: true };
   const m = /^(creatures|lands|artifacts|enchantments|plains|islands|swamps|mountains|forests) (you control|your opponents control|on the battlefield)$/.exec(phrase);

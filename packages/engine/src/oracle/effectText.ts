@@ -102,7 +102,8 @@ function parseCardFilter(phrase: string): CardFilter | null {
 const BASIC_LAND_TYPES = ["plains", "island", "swamp", "mountain", "forest"];
 
 function parseChoiceText(text: string, ctx: Ctx): Effect[] | null {
-  const t = text.replace(/\.$/, "");
+  const t = text.replace(/\.$/, "").replace(/^you may search your library/, "search your library"); // (a search may always find nothing, so "you may" changes nothing)
+  if (t === "look at the top three cards of your library. put one of those cards into your hand, one on top of your library, and one on the bottom of your library") return [{ type: "lookPick", mode: "toHandTop", n: 3 }];
   if (t === "look at target opponent's hand. you may exile a nonland card from it until ~ leaves the battlefield") {
     const who = refFor("target opponent", ctx);
     return who ? [{ type: "exileFromHand", who }] : null;
@@ -230,6 +231,7 @@ export function parseEffectText(rawText: string, ctx: Ctx): Effect[] | null {
     .replace(/(you may put an? [a-z]+ creature card with mana value \d+ or less from your hand onto the battlefield)\. if you don't, draw a card/g, "$1, else draw a card")
     .replace(/remove a -1\/-1 counter from target creature\. if you do, you gain (\d+) life/g, "@@removeminus $1@@")
     .replace(/target player loses all poison counters\. ~ deals that much damage to that player/g, "@@poisonburn@@")
+    .replace(/counter target spell\. search its controller's graveyard, hand, and library for all cards with the same name as that spell and exile them\. then that player shuffles/g, "@@counterbore@@")
     .replace(/you may discard a card\. if you do, draw a card/g, "@@rummage@@")
     .replace(/you may discard a card\. if you do, draw two cards/g, "@@rummagedraw 2@@")
     .replace(/you may discard up to two cards\. if you do, draw that many cards/g, "@@discarddraw 2@@")

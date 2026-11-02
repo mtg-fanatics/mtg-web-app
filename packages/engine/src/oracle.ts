@@ -6,6 +6,7 @@ import { COLOR_OF, normalizeText, parseCount, singularType, toNumber } from "./o
 import { newCtx } from "./oracle/targets.js";
 import { parseClause, parseEffectText, parseModes } from "./oracle/effectText.js";
 import { parseCreatureLine } from "./oracle/lines.js";
+import { readDiscardedByOpponent } from "./oracle/lines/theme.js";
 import { doubleFaces } from "./oracle/doubleFaced.js";
 import { rewriteTeamwork, stripModeName, TEAMWORK_HEADER } from "./oracle/teamwork.js";
 
@@ -87,6 +88,8 @@ export function parseCard(def: CardDef): ParsedCard {
   const text = normalizeText(def)
     .split("\n")
     .filter((line) => {
+      // Guerrilla Tactics: a spell with an ability of its own that works from the graveyard of the one who discards it
+      if (readDiscardedByOpponent(line.replace(/\.$/, ""), result)) return false;
       if (line === "~ can't be countered" || line === "~ can't be countered.") {
         result.cantBeCountered = true;
         return false;

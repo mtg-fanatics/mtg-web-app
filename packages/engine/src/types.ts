@@ -121,6 +121,8 @@ export interface Permanent {
   crewed?: boolean;
   /** The creatures that crewed it this turn. */
   crewedBy?: string[];
+  /** "Prevent the next 3 damage that would be dealt to it this turn": what is left of the shield. */
+  preventShield?: number;
   /** Regeneration shields (until end of turn): the next time it would be destroyed it is tapped and healed instead. */
   regenShield?: number;
   /** Hit by something that says it "can't be regenerated" this turn. */
@@ -256,6 +258,10 @@ export interface PlayerState {
   leftThisTurn?: number;
   /** Cards outside the game: the sideboard a Lesson can be learned from. */
   sideboard?: CardInstance[];
+  /** "Prevent the next 3 damage that would be dealt to target player this turn": what is left of the shield. */
+  preventShield?: number;
+  /** "Skips all combat phases of their next turn": the number of the turn whose combat phases are skipped. */
+  skipCombat?: number;
   /** Mana that was added and not spent yet. */
   pool?: FloatingMana[];
   /** "Whenever a creature dies this turn, you gain 1 life": once for each spell that said so. */
@@ -291,6 +297,13 @@ export interface GameState {
   pendingChoice: PendingChoice | null;
   /** Additional combat phases still to come this turn. */
   extraCombats?: number;
+  /**
+   * Relentless Assault: "After this main phase, there is an additional combat phase followed by an additional main phase." `extraCombatMain`: how many are still to start,
+   * `extraStep`: the additional combat has begun, so the next main phase is the additional one, `extraResume`: what the turn goes on with after it.
+   */
+  extraCombatMain?: number;
+  extraStep?: "main";
+  extraResume?: "attackers" | "end";
   /** A choice among cards that the game is waiting for (see effects.ts). */
   pendingPick: PendingPick | null;
   /** "Prevent all combat damage that would be dealt this turn." Cleared as the next turn begins. */

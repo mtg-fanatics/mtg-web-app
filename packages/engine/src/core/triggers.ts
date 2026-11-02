@@ -284,8 +284,10 @@ export function queueDamageDraws(state: GameState, perm: Permanent): void {
 }
 
 /** A player discarded cards: the event, and their "whenever you discard one or more cards" triggers, once for the whole batch ("that many" is its X). */
-export function cardsDiscarded(state: GameState, player: PlayerId, iids: string[], events: GameEvent[]): void {
+export function cardsDiscarded(state: GameState, player: PlayerId, iids: string[], events: GameEvent[], byOpponent = false): void {
   if (iids.length === 0) return;
+  // "When a spell or ability an opponent controls causes you to discard ~" (Guerrilla Tactics): the discarded card itself triggers
+  if (byOpponent) for (const card of state.players[player].graveyard.filter((c) => iids.includes(c.iid))) queueTriggers(state, card, player, "discardedByOpp");
   events.push({ type: "cardsDiscarded", player, iids });
   state.players[player].discardedThisTurn = (state.players[player].discardedThisTurn ?? 0) + iids.length;
   for (const perm of state.players[player].battlefield) queueTriggers(state, perm.card, player, "youDiscard", { count: iids.length });

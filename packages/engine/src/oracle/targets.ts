@@ -147,10 +147,10 @@ function graveyardCardSpec(phrase: string): TargetSpec | null {
   const byPower = phrase.includes(" with mana value less than or equal to ~'s power ");
   phrase = phrase.replace(" with mana value less than or equal to ~'s power ", " ");
   const extra: Partial<TargetSpec> = byPower ? { mvAtMostPower: true } : {};
-  const m = /^target (non-([a-z]+) )?(?:(?!nonland )([a-z]+ ))?(creature|permanent|nonland permanent|instant or sorcery) card from your graveyard$/.exec(phrase);
+  const m = /^target (non-([a-z]+) )?(?:(?!nonland )([a-z]+ ))?(creature|permanent|nonland permanent|instant or sorcery|sorcery|instant) card from your graveyard$/.exec(phrase);
   if (m) {
     if ((m[3] && (m[4] !== "creature" || CARD_TYPES.includes(m[3].trim()))) || (m[2] && m[4] !== "creature")) return null;
-    const spec: TargetSpec = { kind: m[4] === "creature" ? "graveyardCreature" : m[4] === "instant or sorcery" ? "graveyardSpell" : "graveyardPermanent", controller: "you", label, ...extra };
+    const spec: TargetSpec = { kind: m[4] === "creature" ? "graveyardCreature" : /^(instant or sorcery|sorcery|instant)$/.test(m[4]) ? "graveyardSpell" : "graveyardPermanent", controller: "you", label, ...extra, ...(m[4] === "sorcery" || m[4] === "instant" ? { types: [m[4]] } : {}) };
     if (m[4] === "nonland permanent") spec.nonland = true;
     if (m[2]) spec.notSubtype = m[2];
     return m[3] ? { ...spec, subtype: m[3].trim() } : spec;
@@ -229,6 +229,13 @@ export function refFor(phrase: string, ctx: Ctx): Ref | null {
     case "all other creatures":
     case "each other creature":
       return ctx.allowSelf ? { t: "allCreatures", scope: "all", notSelf: true } : null;
+    case "all lands":
+      return { t: "allLands" };
+    case "all creatures that attacked this turn":
+      return { t: "allCreatures", scope: "all", attacked: true };
+    case "each creature with flying":
+      return { t: "allCreatures", scope: "all", flying: true };
+    case "all creatures without flying":
     case "each creature without flying":
       return { t: "allCreatures", scope: "all", noFlying: true };
     case "all tapped creatures":
@@ -253,6 +260,9 @@ export function refFor(phrase: string, ctx: Ctx): Ref | null {
   if (nonType) return { t: "allCreatures", scope: "all", notSubtype: nonType[1] ?? nonType[2] };
   const known = ctx.phrases.get(phrase);
   if (known !== undefined) return { t: "target", i: known };
+  // "Goblin creatures you control"
+  const typedCreatures = /^([a-z]+) creatures you control$/.exec(phrase);
+  if (typedCreatures && CREATURE_TYPES.includes(typedCreatures[1])) return { t: "allCreatures", scope: "yours", subtype: typedCreatures[1] };
   const groupOfType = /^([a-z]+) you control$/.exec(phrase);
   if (groupOfType && !/^(creatures|lands|artifacts|enchantments|permanents|planeswalkers|spells)$/.test(groupOfType[1]) && groupOfType[1].endsWith("s")) return { t: "allCreatures", scope: "yours", subtype: singularType(groupOfType[1]) };
   const spec = targetSpec(phrase);
@@ -266,7 +276,7 @@ export const isCreatureRef = (r: Ref, ctx: Ctx) =>
   r.t === "allCreatures" || r.t === "attackingCreatures" || r.t === "other" || r.t === "creaturesOf" || r.t === "enchanted" || r.t === "self" || (r.t === "target" && (ctx.targets[r.i].kind === "creature" || ctx.targets[r.i].kind === "creatureOrPlaneswalker"));
 /** Something that can be destroyed: a creature, or a targeted land / artifact. */
 export const isPermanentRef = (r: Ref, ctx: Ctx) =>
-  isCreatureRef(r, ctx) || (r.t === "target" && ["permanent", "land", "artifact", "artifactOrLand", "enchantment", "artifactOrEnchantment", "planeswalker"].includes(ctx.targets[r.i].kind));
+  isCreatureRef(r, ctx) || r.t === "allLands" || (r.t === "target" && ["permanent", "land", "artifact", "artifactOrLand", "enchantment", "artifactOrEnchantment", "planeswalker"].includes(ctx.targets[r.i].kind));
 export const isPlayerRef = (r: Ref, ctx: Ctx) =>
   r.t === "you" || r.t === "opp" || r.t === "eachPlayer" || r.t === "ownerOf" || r.t === "controllerOf" || (r.t === "target" && (ctx.targets[r.i].kind === "player" || ctx.targets[r.i].kind === "playerOrPlaneswalker"));
 

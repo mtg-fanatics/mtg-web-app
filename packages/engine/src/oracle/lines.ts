@@ -5,6 +5,7 @@ import { readEntersWithCounters, readEntersWithMinusCounters, readKickedCounters
 import { readOpponentTapped, readLifeGainedTrigger, readLandfall, readAttackWithOthers, readBecomesTarget, readCastSpellTrigger, readDrawCardTrigger, readEnchantedDealsDamage, readPackTactics, readBeginningOfStep, readAnySpellCast, readCastKindSpell, readAllyDies, readCountersPutOnAlly, readAnotherCreatureEntersOrLeaves, readBlocksOrBlocked, readDamagedCreatureDies, readDamageAndAnyDies, readEerie, readReturnWhenHostDies, readTapXOnEnter, readDiesReturnsToBattlefield, readAllyEnters, readYouAttack, readYouDiscard, readExcessDamage, readSelfTrigger, readTrigger, readAllyAttacks, readToSolve } from "./lines/triggers.js";
 import { readLoyaltyAbility, readCrew, readEquip, readSacrificeForMana, readLandcycling, readActivatedAbility, readRestrictedMana, readSolvedAbility } from "./lines/activated.js";
 
+import { readDiscardedByOpponent, readGoblinKing, readHostControl, readHostDamageLife, readReduceDamage } from "./lines/theme.js";
 import { readSacrificeTrigger, readFirebending, readCreatureLandWithTrigger, readTappedIfMoreLands } from "./lines/sacrifice.js";
 import { readKeywordLord, readCreatureSpellCast } from "./lines/infect.js";
 import { readUndying, readCostLessByPower } from "./lines/green.js";
@@ -18,6 +19,11 @@ import { MARVEL_ABILITY_WORD, readAttacksAlone, readExalted, readChapter, readEq
 /** The readers in the order they are tried. The first one that reads the line wins, so a more specific sentence must come before a general one. */
 const READERS: ((line: string, out: ParsedCard) => boolean)[] = [
   readLoyaltyAbility,
+  readReduceDamage,
+  readHostDamageLife,
+  readHostControl,
+  readGoblinKing,
+  readDiscardedByOpponent,
   readSacrificeTrigger,
   readKeywordLord,
   readCreatureSpellCast,

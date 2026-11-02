@@ -13,15 +13,16 @@ import { SACRIFICE_EFFECTS } from "./handlers/sacrifice.js";
 import { INFECT_EFFECTS } from "./handlers/infect.js";
 import { GREEN_EFFECTS } from "./handlers/green.js";
 import { STUN_EFFECTS } from "./handlers/stun.js";
+import { THEME_EFFECTS } from "./handlers/theme.js";
 
 // Running a spell's or ability's effects, one after another. What each kind of effect does is in handlers/.
 
-const HANDLERS: Required<EffectHandlers> = { ...DAMAGE_EFFECTS, ...PERMANENT_EFFECTS, ...ZONE_EFFECTS, ...LIBRARY_EFFECTS, ...STACK_EFFECTS, ...MARVEL_EFFECTS, ...SACRIFICE_EFFECTS, ...INFECT_EFFECTS, ...GREEN_EFFECTS, ...STUN_EFFECTS };
+const HANDLERS: Required<EffectHandlers> = { ...DAMAGE_EFFECTS, ...PERMANENT_EFFECTS, ...ZONE_EFFECTS, ...LIBRARY_EFFECTS, ...STACK_EFFECTS, ...MARVEL_EFFECTS, ...SACRIFICE_EFFECTS, ...INFECT_EFFECTS, ...GREEN_EFFECTS, ...STUN_EFFECTS, ...THEME_EFFECTS };
 
 /** Runs a spell's or ability's effects in order. State-based actions are checked by the caller afterwards. */
 export function runEffects(state: GameState, effects: Effect[], ctx: RunContext, events: GameEvent[]): void {
   const source = findPermanentOrNull(state, ctx.sourceId)?.perm;
-  const trait = { name: ctx.sourceName, controller: ctx.controller, deathtouch: source ? kw(state, source, "deathtouch") : false, lifelink: source ? kw(state, source, "lifelink") : false, infect: source ? kw(state, source, "infect") : false };
+  const trait = { name: ctx.sourceName, controller: ctx.controller, deathtouch: source ? kw(state, source, "deathtouch") : false, lifelink: source ? kw(state, source, "lifelink") : false, infect: source ? kw(state, source, "infect") : false, ...(source ? { perm: source } : {}) };
   const say = (text: string) => events.push({ type: "effect", text });
   const value = (amount: Amount): number => {
     if (amount === "X") return ctx.x ?? 0;

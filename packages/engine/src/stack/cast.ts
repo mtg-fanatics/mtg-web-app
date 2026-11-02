@@ -408,6 +408,7 @@ export function activateAbility(state: GameState, player: PlayerId, iid: string,
   if (ability.oncePerTurn && found.perm.usedAbilities?.includes(index)) return `${def.name}'s ability can only be activated once each turn.`;
   if (ability.onceOnly && found.perm.usedOnce?.includes(index)) return `${def.name}'s ability can only be activated once.`;
   if (ability.yourTurnOnly && state.active !== player) return `${def.name}'s ability can only be activated during your turn.`;
+  if (ability.beforeAttackers && !(state.phase === "main1" || (state.phase === "attackers" && !state.combat))) return `${def.name}'s ability can only be activated during your turn, before attackers are declared.`;
   const needed = abilityNeed(state, player, ability);
   if (needed) return `${def.name}'s ability can't be used: ${needed}.`;
   if (ability.solvedOnly && !found.perm.solved) return `${def.name} isn't solved yet.`;

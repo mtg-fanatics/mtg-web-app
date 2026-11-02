@@ -24,6 +24,7 @@ const CONFIRM: Partial<Record<PickKind, (name: string) => string>> = {
   handExile: (n) => `Exile ${n}`,
   exileToPlay: (n) => `Exile ${n}`,
   playExile: (n) => `Exile ${n}: play it this turn`,
+  keepTop: (n) => `Keep ${n} on top`,
   mayCost: (n) => `Sacrifice or discard ${n}`,
   discardDraw: (n) => `Discard ${n}`,
   fromYard: (n) => `Return ${n}`,

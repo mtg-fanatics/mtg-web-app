@@ -21,6 +21,7 @@ import {
 } from "../core.js";
 import type { StackItem, TargetChoice, TargetSpec } from "../effects.js";
 import { parseCard } from "../oracle.js";
+import { shuffle } from "../state.js";
 import { OPPONENT } from "../types.js";
 import type { CardInstance, GameState, PlayerId } from "../types.js";
 import { checkTargets, openRound, rememberMode } from "./shared.js";
@@ -51,6 +52,17 @@ export function enterBattlefield(state: GameState, card: CardInstance, controlle
   if (parsed.saga) {
     entered.lore = 1; // a Saga enters with a lore counter: chapter I
     queueChapters(state, entered, controller);
+  }
+  // Mind Control, Confiscate: "You control enchanted creature": it moves to the Aura's controller until the Aura leaves (see returnControlled in zones.ts)
+  if (parsed.hostControl && attachedTo) {
+    const host = findPermanentOrNull(state, attachedTo);
+    if (host && host.owner.id !== controller) {
+      host.owner.battlefield.splice(host.owner.battlefield.indexOf(host.perm), 1);
+      host.perm.controlledWhile = { source: card.iid, owner: host.owner.id };
+      host.perm.summoningSick = true;
+      state.players[controller].battlefield.push(host.perm);
+      events.push({ type: "effect", text: `${playerLabel(controller)} gains control of ${getCard(state, host.perm.card.defId).name}.` });
+    }
   }
   queueTriggers(state, card, controller, "enters");
   creatureEntered(state, card, controller); // (for other permanents only triggers about their type apply, e.g. "a Cartouche you control enters")
@@ -112,6 +124,7 @@ function resolveTop(state: GameState, events: GameEvent[]): void {
     } else {
       if (!fizzled) runEffects(state, item.effects, { controller: item.controller, sourceId: item.card.iid, sourceName: def.name, sourceDefId: item.card.defId, targets: item.targets, specs: item.specs, stackId: item.id, x: item.x, kicked: item.kicked }, events);
       if (!fizzled && !item.copy && !item.flashback && parseCard(def).paradigm) exileParadigm(state, item, def.name, events);
+      else if (!fizzled && !item.copy && !item.flashback && item.effects.some((e) => e.type === "shuffleSpell")) shuffleIntoLibrary(state, item, def.name, events); // Beacon of Destruction
       else spellLeavesStack(state, item, item.adventure && !fizzled ? "adventure" : "graveyard"); // flashback: exiled afterwards; a copy ceases to exist
     }
   } else {
@@ -124,6 +137,15 @@ function resolveTop(state: GameState, events: GameEvent[]): void {
   if (state.combat) state.combat.attackers = state.combat.attackers.filter((a) => findPermanentOrNull(state, a.attacker) !== null);
   const did = outcomeSince(state, before);
   if (did.length > 0) told.did = did;
+}
+
+/** "Shuffle ~ into its owner's library": the spell's card goes into its owner's library, which is shuffled, instead of into the graveyard. */
+function shuffleIntoLibrary(state: GameState, item: Extract<StackItem, { kind: "spell" }>, name: string, events: GameEvent[]): void {
+  const owner = state.players[item.card.owner];
+  owner.library.push(item.card);
+  [owner.library, state.rng] = shuffle(owner.library, state.rng);
+  events.push({ type: "libraryShuffled", player: owner.id });
+  events.push({ type: "effect", text: `${name} is shuffled into its owner's library.` });
 }
 
 /** Paradigm: "Then exile this spell." Its owner may cast a copy of it at the beginning of each of their first main phases. */

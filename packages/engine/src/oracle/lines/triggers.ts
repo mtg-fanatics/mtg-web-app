@@ -170,7 +170,7 @@ export function readPackTactics(line: string, out: ParsedCard): boolean {
 
 // ── turn structure: "At the beginning of your upkeep / each end step / combat on your turn, ..."
 export function readBeginningOfStep(line: string, out: ParsedCard): boolean {
-  const turn = /^at the beginning of (your upkeep|each upkeep|your end step|each end step|combat on your turn),? (.+)$/.exec(line);
+  const turn = /^at the beginning of (your upkeep|each upkeep|your end step|each end step|the end step|combat on your turn),? (.+)$/.exec(line);
   if (turn) {
     let rest = turn[2];
     let cond: TriggerCond = {};
@@ -190,7 +190,7 @@ export function readBeginningOfStep(line: string, out: ParsedCard): boolean {
     const ctx = newCtx(true);
     const effects = parseEffectText(rest, ctx);
     if (effects && effects.length > 0) {
-      const event = ({ "your upkeep": "upkeep", "each upkeep": "upkeepEach", "your end step": "endStep", "each end step": "endStepEach", "combat on your turn": "beginCombat" } as const)[turn[1] as "your upkeep"];
+      const event = ({ "your upkeep": "upkeep", "each upkeep": "upkeepEach", "your end step": "endStep", "each end step": "endStepEach", "the end step": "endStepEach", "combat on your turn": "beginCombat" } as const)[turn[1] as "your upkeep"];
       out.triggers.push({ event, effects, targets: ctx.targets.map((t) => (may ? { ...t, optional: true } : t)), text: line, ...(Object.keys(cond).length ? { cond } : {}) });
       return true;
     }
@@ -509,7 +509,7 @@ export function readSelfTrigger(line: string, out: ParsedCard): boolean {
 }
 
 export function readTrigger(line: string, out: ParsedCard): boolean {
-  const trigger = /^(?:when(?:ever)?|as) ~ (enters(?: the battlefield)?|dies|is put into a graveyard from the battlefield|attacks|blocks|becomes blocked|deals combat damage to a player),? (.+)$/.exec(line);
+  const trigger = /^(?:when(?:ever)?|as) ~ (enters(?: the battlefield)?|dies|is put into a graveyard from the battlefield|attacks|blocks|becomes blocked|deals combat damage to a player|deals damage to an opponent),? (.+)$/.exec(line);
   if (trigger) {
     const ctx = newCtx(true);
     const head = trigger[1];
@@ -519,7 +519,7 @@ export function readTrigger(line: string, out: ParsedCard): boolean {
     if (cond) trigger[2] = intervening![2];
     const triggerCond = cond ? { cond } : {};
     const eventOf = (): TriggeredAbility["event"] =>
-      head.startsWith("enters") ? "enters" : head === "dies" || head.startsWith("is put") ? "dies" : head === "attacks" ? "attacks" : head === "blocks" ? "blocks" : head === "becomes blocked" ? "blocked" : "combatDamagePlayer";
+      head.startsWith("enters") ? "enters" : head === "dies" || head.startsWith("is put") ? "dies" : head === "attacks" ? "attacks" : head === "blocks" ? "blocks" : head === "becomes blocked" ? "blocked" : head === "deals damage to an opponent" ? "damageOpp" : "combatDamagePlayer";
     // "When this dies, return it to its owner's hand": the card is not on the battlefield any more.
     if (eventOf() === "dies" && /^return (?:it|~) to its owner's hand$/.test(trigger[2])) {
       out.triggers.push({ event: "dies", effects: [{ type: "returnFromYard" }], targets: [], text: line });

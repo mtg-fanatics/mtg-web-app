@@ -219,6 +219,8 @@ export function countFor(s: GameState, me: PlayerId, spec: CountSpec, sourceIid?
       return !spec.subtype || subtypesOf(s, perm).includes(spec.subtype);
     }).length;
   }
+  if (spec.kind === "yardsAll") return Object.values(s.players).reduce((n, p) => n + p.graveyard.filter((c) => getCard(s, c.defId).type === spec.cardType).length, 0);
+  if (spec.kind === "attackingYou") return (s.combat?.attackers ?? []).filter((a) => !a.target && s.players[OPPONENT[me]].battlefield.some((p) => p.card.iid === a.attacker)).length;
   if (spec.kind === "opponents") return 1;
   if (spec.kind === "discardedThisTurn") return s.players[me].discardedThisTurn ?? 0;
   if (spec.kind === "handDeficit") return Math.max(0, spec.to - s.players[me].hand.length);

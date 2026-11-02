@@ -1,6 +1,6 @@
 import { getCard } from "../../cards.js";
 import type { CardInstance, Permanent, PlayerId } from "../../types.js";
-import { findPermanentOrNull, isArtifactDef, isCreature, kw, nameOf, playerLabel } from "../permanents.js";
+import { colorsOfPerm, findPermanentOrNull, isArtifactDef, isCreature, kw, nameOf, playerLabel } from "../permanents.js";
 import { isToken, makeToken, putCounters, putIntoGraveyard, regenerateInstead, removeFromBattlefield, sacrificePermanent, spellLeavesStack } from "../zones.js";
 import { creatureEntered, queueTriggers } from "../triggers.js";
 import { subjectsOf } from "../targets.js";
@@ -87,11 +87,11 @@ export const ZONE_EFFECTS = {
     }
   },
   bounceOwn({ state, ctx, startPick }, effect) {
-    const mine = state.players[ctx.controller].battlefield.filter((p) => isCreature(state, p) && !(effect.other && p.card.iid === ctx.sourceId));
+    const mine = state.players[ctx.controller].battlefield.filter((p) => isCreature(state, p) && !(effect.other && p.card.iid === ctx.sourceId) && (!effect.color || colorsOfPerm(state, p).includes(effect.color)));
     if (mine.length === 0 || state.pendingPick) return;
     startPick({
       player: ctx.controller,
-      prompt: `${ctx.sourceName}: choose ${effect.other ? "another creature" : "a creature"} you control to return to its owner's hand`,
+      prompt: `${ctx.sourceName}: choose ${effect.other ? "another creature" : effect.color === "G" ? "a green creature" : "a creature"} you control to return to its owner's hand`,
       kind: "bounceOwn",
       options: mine.map((p) => p.card.iid),
       optional: false,

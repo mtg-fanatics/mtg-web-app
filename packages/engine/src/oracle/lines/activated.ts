@@ -160,11 +160,13 @@ export function readActivatedAbility(line: string, out: ParsedCard): boolean {
       body = body.replace(/\.?\s*this ability costs \{(\d+)\} less to activate for each legendary creature you control\.?$/, (_, n: string) => ((lessPerLegendary = Number(n)), ""));
       body = body.replace(/^it deals /, "~ deals ");
       body = body.replace(/\.?\s*activate only during your turn\.?$/, () => ((yourTurnOnly = true), ""));
+      let beforeAttackers = false;
+      body = body.replace(/\.?\s*activate only during your turn, before attackers are declared\.?$/, () => ((yourTurnOnly = true), (beforeAttackers = true), ""));
       const effects = parseManaCostOk(mana) ? parseEffectText(body, ctx) : null;
       // "{1}{B}: Return this card from your graveyard to the battlefield tapped.": the ability works from the graveyard.
       if (!zone && effects?.some((e) => e.type === "returnSelfToBattlefield" || e.type === "returnFromYard")) zone = "graveyard";
       if (effects && effects.length > 0) {
-        const ability: ActivatedAbility = { tap, mana, effects, targets: ctx.targets, text: line, ...(sorceryOnly ? { sorceryOnly } : {}), ...(needColored ? { needColored } : {}), ...(oncePerTurn ? { oncePerTurn } : {}), ...(onceOnly ? { onceOnly } : {}), ...(yourTurnOnly ? { yourTurnOnly } : {}), ...(needYardCreatures ? { needYardCreatures } : {}), ...(needToughness ? { needToughness } : {}), ...(minLife !== undefined ? { minLife } : {}), ...(sacrifice ? { sacrifice } : {}), ...(zone ? { zone } : {}), ...(discardSelf ? { discardSelf } : {}), ...(exileSelf ? { exileSelf } : {}), ...(payLife ? { payLife } : {}), ...(costCard ? { costCard } : {}), ...(exileFromYard ? { exileFromYard } : {}), ...(tapTwoSharing ? { tapTwoSharing } : {}), ...(lessPerLegendary ? { lessPerLegendary } : {}) };
+        const ability: ActivatedAbility = { tap, mana, effects, targets: ctx.targets, text: line, ...(sorceryOnly ? { sorceryOnly } : {}), ...(needColored ? { needColored } : {}), ...(oncePerTurn ? { oncePerTurn } : {}), ...(onceOnly ? { onceOnly } : {}), ...(yourTurnOnly ? { yourTurnOnly } : {}), ...(beforeAttackers ? { beforeAttackers } : {}), ...(needYardCreatures ? { needYardCreatures } : {}), ...(needToughness ? { needToughness } : {}), ...(minLife !== undefined ? { minLife } : {}), ...(sacrifice ? { sacrifice } : {}), ...(zone ? { zone } : {}), ...(discardSelf ? { discardSelf } : {}), ...(exileSelf ? { exileSelf } : {}), ...(payLife ? { payLife } : {}), ...(costCard ? { costCard } : {}), ...(exileFromYard ? { exileFromYard } : {}), ...(tapTwoSharing ? { tapTwoSharing } : {}), ...(lessPerLegendary ? { lessPerLegendary } : {}) };
         out.activated.push(ability);
         return true;
       }

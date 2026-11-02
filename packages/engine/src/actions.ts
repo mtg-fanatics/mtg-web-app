@@ -403,7 +403,7 @@ export function applyAction(state: GameState, player: PlayerId, action: Action):
             (only.artifact && isArtifact);
           if (!allowed) return fail(`${nameOf(next, perm)} can't block ${nameOf(next, attackerPerm)}: it can only be blocked by certain creatures.`);
         }
-        for (const walk of parseCard(attackerDef).landwalk ?? []) {
+        for (const walk of [...(parseCard(attackerDef).landwalk ?? []), ...staticEffectsOn(next, attackerPerm).flatMap((st) => st.landwalk ?? [])]) {
           const land = walk.charAt(0).toUpperCase() + walk.slice(1);
           if (me.battlefield.some((p) => getCard(next, p.card.defId).type === "land" && (getCard(next, p.card.defId).typeLine ?? "").includes(land))) {
             return fail(`${nameOf(next, attackerPerm)} has ${walk}walk and can't be blocked: you control a ${land}.`);

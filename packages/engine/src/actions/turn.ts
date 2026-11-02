@@ -12,6 +12,13 @@ import type { Effect } from "../effects.js";
 export function advancePhase(state: GameState, events: GameEvent[]): void {
   switch (state.phase) {
     case "main1":
+      if (extraCombatAfterMain(state, "attackers")) break;
+      if (state.players[state.active].skipCombat === state.turn) {
+        // "Skips all combat phases of their next turn" (False Peace)
+        state.players[state.active].skipCombat = undefined;
+        state.phase = "main2";
+        break;
+      }
       state.phase = "attackers";
       // "At the beginning of combat on your turn"
       for (const perm of state.players[state.active].battlefield) queueTriggers(state, perm.card, state.active, "beginCombat");
@@ -20,6 +27,7 @@ export function advancePhase(state: GameState, events: GameEvent[]): void {
       state.phase = "main2"; // reached only when nobody attacks
       break;
     case "main2":
+      if (extraCombatAfterMain(state, "end")) break;
       state.phase = "end";
       // "At the beginning of your end step" / "of each end step"
       for (const owner of Object.values(state.players)) {
@@ -41,6 +49,41 @@ export function advancePhase(state: GameState, events: GameEvent[]): void {
       return;
   }
   events.push({ type: "phaseChanged", phase: state.phase });
+}
+
+/**
+ * Relentless Assault: when a main phase ends and an additional combat phase and main phase are waiting, they come now, then the turn goes on with what it was
+ * about to do (`resume`: the regular combat, or the end step). True if the turn went into one of them (the phase is set).
+ */
+function extraCombatAfterMain(state: GameState, resume: "attackers" | "end"): boolean {
+  const beginCombat = () => {
+    state.phase = "attackers";
+    for (const perm of state.players[state.active].battlefield) queueTriggers(state, perm.card, state.active, "beginCombat");
+  };
+  if (state.extraStep === "main") {
+    // the additional main phase is over
+    if ((state.extraCombatMain ?? 0) > 0) {
+      state.extraCombatMain = (state.extraCombatMain ?? 1) - 1; // (a second Relentless Assault: another round)
+      beginCombat();
+      return true;
+    }
+    const back = state.extraResume;
+    state.extraStep = undefined;
+    state.extraResume = undefined;
+    if (back === "attackers") {
+      beginCombat();
+      return true;
+    }
+    return false;
+  }
+  if ((state.extraCombatMain ?? 0) > 0) {
+    state.extraCombatMain = (state.extraCombatMain ?? 1) - 1;
+    state.extraStep = "main";
+    state.extraResume = resume;
+    beginCombat();
+    return true;
+  }
+  return false;
 }
 
 /** Warp: "exile this creature at the beginning of the next end step". */
@@ -95,6 +138,9 @@ export function startNextTurn(state: GameState, events: GameEvent[]): void {
   state.noPrevention = undefined;
   state.noGroundBlock = undefined;
   state.extraCombats = undefined;
+  state.extraCombatMain = undefined;
+  state.extraStep = undefined;
+  state.extraResume = undefined;
   // Rule 514.2: damage wears off for everyone at end of turn.
   for (const p of Object.values(state.players)) {
     p.drawnThisTurn = 0;
@@ -102,6 +148,7 @@ export function startNextTurn(state: GameState, events: GameEvent[]): void {
     p.discardedThisTurn = undefined;
     p.freeNext = undefined;
     p.doubleDamage = undefined;
+    p.preventShield = undefined;
     p.lifeGainedThisTurn = 0;
     p.lifeLostThisTurn = 0;
     p.landsEnteredThisTurn = undefined;
@@ -125,6 +172,7 @@ export function startNextTurn(state: GameState, events: GameEvent[]): void {
       perm.toughnessBonus = 0;
       perm.tempKeywords = [];
       perm.regenShield = 0; // "until end of turn"
+      perm.preventShield = undefined;
       perm.usedAbilities = [];
       perm.crewed = false; // a Vehicle stops being a creature at end of turn
       perm.crewedBy = undefined;

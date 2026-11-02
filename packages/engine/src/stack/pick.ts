@@ -243,6 +243,12 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
     if (!found || !pick.options.includes(iid!)) return "Choose one of the permanents you control.";
     sacrificePermanent(state, found.perm, found.owner.id, events);
     checkStateBasedActions(state, events);
+    pick.remaining -= 1; // (Wildfire: several lands, one at a time)
+    pick.options = pick.options.filter((o) => o !== iid);
+    if (pick.remaining > 0 && pick.options.length > 0) {
+      pick.prompt = pick.prompt.replace(/\(\d+ left\)/, `(${pick.remaining} left)`);
+      return null;
+    }
     finish();
     return null;
   }
@@ -446,7 +452,7 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
       const first = pick.ordered.length === 1 ? getCard(state, owner.graveyard[owner.graveyard.length - 1].defId) : undefined;
       if (first && (pick.enoughType === "artifact" ? isArtifactDef(first) : pick.enoughType === "creature" && first.type === "creature")) pick.remaining = 0;
       if (pick.remaining > 0 && pick.options.length > 0) return null; // the next card
-      cardsDiscarded(state, pick.owner, pick.ordered, events);
+      cardsDiscarded(state, pick.owner, pick.ordered, events, pick.byOpp === true);
       state.pendingPick = null;
       // Connive: a nonland card discarded puts a +1/+1 counter on the conniving creature.
       const conniver = pick.conniver ? findPermanentOrNull(state, pick.conniver) : undefined;
@@ -495,7 +501,21 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
         state.pendingPick = { ...pick, kind: "playExile", prompt: "Choose the card to exile: you may play it this turn. The other goes to the bottom of your library.", options: others, thenExile: undefined };
         return null;
       }
+      if (pick.thenTop) {
+        // Telling Time: one of the others stays on top, the last goes to the bottom
+        if (others.length > 1) {
+          state.pendingPick = { ...pick, kind: "keepTop", prompt: "Choose the card to keep on top of your library. The other goes to the bottom.", options: others, thenTop: undefined };
+          return null;
+        }
+        break; // (a single card left stays on top)
+      }
       for (const other of others) owner.library.push(take(owner.library, other)); // to the bottom
+      break;
+    }
+    case "keepTop": {
+      owner.library.unshift(take(owner.library, iid));
+      for (const other of pick.options.filter((o) => o !== iid)) owner.library.push(take(owner.library, other)); // to the bottom
+      events.push({ type: "effect", text: `${playerLabelOf(pick.owner)} keeps a card on top of their library and puts the other on the bottom.` });
       break;
     }
     case "playExile": {

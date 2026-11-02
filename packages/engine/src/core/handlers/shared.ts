@@ -7,6 +7,7 @@ import type { CardInstance, GameState, Permanent, PlayerId } from "../../types.j
 import { canPrevent, findPermanentOrNull, isPlaneswalker, nameOf, playerLabel, toughnessOf } from "../permanents.js";
 import { addPoison, changeLife } from "../zones.js";
 import { creatureDamaged, excessDamageDealt, queueTriggers } from "../triggers.js";
+import { absorbDamage, hostDamageLife } from "../prevention.js";
 
 /** A spell, ability or creature dealing damage, with what changes how its damage works. */
 export interface DamageSource {
@@ -16,6 +17,8 @@ export interface DamageSource {
   lifelink: boolean;
   /** Infect: damage to players is poison counters, damage to creatures is -1/-1 counters. */
   infect: boolean;
+  /** The permanent that deals it, when it is one (Spirit Link looks at what a creature deals). */
+  perm?: Permanent;
 }
 
 /** What every effect handler gets: the game, the spell or ability being run, and helpers bound to them. */
@@ -66,9 +69,16 @@ export function dealDamage(
     events.push({ type: "effect", text: `The damage to ${target.k === "player" ? playerLabel(target.id) : nameOf(state, target.perm)} is prevented.` });
     return;
   }
+  if (target.k === "player" && state.players[source.controller].doubleDamage && target.id !== source.controller) amount *= 2; // "it deals double that damage instead"
+  // "Prevent the next 3 damage that would be dealt to it this turn", "prevent 1 of that damage" (a planeswalker has no shield)
+  if (target.k === "player" || !isPlaneswalker(state, target.perm)) {
+    const before = amount;
+    amount = absorbDamage(state, target, amount);
+    if (amount < before) events.push({ type: "effect", text: `${before - amount} of the damage to ${target.k === "player" ? playerLabel(target.id) : nameOf(state, target.perm)} is prevented.` });
+    if (amount <= 0) return;
+  }
   state.lastExcess = 0; // only damage to a creature has an excess
   if (target.k === "player") {
-    if (state.players[source.controller].doubleDamage && target.id !== source.controller) amount *= 2; // "it deals double that damage instead"
     if (source.infect) addPoison(state, target.id, amount, events);
     else changeLife(state, target.id, -amount, events);
   } else if (isPlaneswalker(state, target.perm)) {
@@ -88,6 +98,9 @@ export function dealDamage(
   }
   events.push({ type: "damage", source: source.name, target: target.k === "player" ? target.id : target.perm.card.iid, amount });
   if (source.lifelink) changeLife(state, source.controller, amount, events);
+  if (source.perm) hostDamageLife(state, source.perm, amount, events);
+  // "Whenever ~ deals damage to an opponent" (Thieving Magpie)
+  if (source.perm && target.k === "player" && target.id !== source.controller) queueTriggers(state, source.perm.card, source.controller, "damageOpp");
 }
 
 export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;

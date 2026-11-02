@@ -126,6 +126,7 @@ function PlayersPanelInner({
                     <span className="rounded bg-stone-100 px-1" title="Cards in graveyard">⚰️<b>{p.graveyard.length}</b></span>
                   </span>
                   <DeathLife n={p.deathLife ?? 0} short />
+                  {(p.preventShield ?? 0) > 0 && <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[13px] font-bold text-sky-800" title="The next damage dealt to this player this turn is prevented">🛡️ {p.preventShield}</span>}
                   <Emblems texts={(p.emblems ?? []).map((e) => e.text)} short />
                   {(p.poison ?? 0) > 0 && (
                     <span data-poison={id} className={`rounded px-1.5 py-0.5 text-[13px] font-bold tabular-nums ${(p.poison ?? 0) >= 7 ? "bg-lime-200 text-lime-900" : "bg-lime-100 text-lime-800"}`}>
@@ -176,6 +177,11 @@ function PlayersPanelInner({
               </span>
               <LifeTotal id={id} value={p.life} />
               <DeathLife n={p.deathLife ?? 0} />
+              {(p.preventShield ?? 0) > 0 && (
+                <span title="The next damage dealt to this player this turn is prevented" className="rounded bg-sky-100 px-1.5 py-0.5 text-sm font-bold text-sky-800">
+                  🛡️ {p.preventShield}
+                </span>
+              )}
               <Emblems texts={(p.emblems ?? []).map((e) => e.text)} />
               {(p.poison ?? 0) > 0 && (
                 <span data-poison={id} title="Poison counters: a player with ten or more loses the game" className={`rounded px-1.5 py-0.5 text-sm font-bold tabular-nums ${(p.poison ?? 0) >= 7 ? "bg-lime-200 text-lime-900" : "bg-lime-100 text-lime-800"}`}>
@@ -250,6 +256,8 @@ function PlayerDetail({ state, id, actor, unseen, note, onResign, onClose }: { s
           <span className="font-display text-5xl font-bold tabular-nums">{p.life}</span>
           {(p.poison ?? 0) > 0 && <span className="rounded bg-lime-100 px-2 py-1 text-base font-bold text-lime-800">☠️ {p.poison}/10 poison</span>}
         </div>
+        {(p.preventShield ?? 0) > 0 && <div className="mt-2 rounded bg-sky-100 px-2 py-1 text-sm font-semibold text-sky-800">🛡️ The next {p.preventShield} damage dealt to this player this turn is prevented.</div>}
+        {p.skipCombat === state.turn + 1 || p.skipCombat === state.turn + 2 ? <div className="mt-2 rounded bg-amber-100 px-2 py-1 text-sm font-semibold text-amber-900">Skips all combat phases of their next turn.</div> : null}
         {(p.deathLife ?? 0) > 0 && (
           <div className="mt-2">
             <DeathLife n={p.deathLife ?? 0} />

@@ -16,7 +16,7 @@ function fightOrBite({ state, ctx, events, say }: EffectRun, effect: EffectOf<"f
   const first = subjectsOf(state, effect.type === "fight" ? effect.a : effect.from, ctx).find((x) => x.k === "perm");
   const second = subjectsOf(state, effect.type === "fight" ? effect.b : effect.to, ctx).find((x) => x.k === "perm");
   if (first?.k !== "perm" || second?.k !== "perm") return; // a target is gone: nothing happens
-  const traitOf = (perm: Permanent, controller: PlayerId) => ({ name: nameOf(state, perm), controller, deathtouch: kw(state, perm, "deathtouch"), lifelink: kw(state, perm, "lifelink"), infect: kw(state, perm, "infect") });
+  const traitOf = (perm: Permanent, controller: PlayerId) => ({ perm, name: nameOf(state, perm), controller, deathtouch: kw(state, perm, "deathtouch"), lifelink: kw(state, perm, "lifelink"), infect: kw(state, perm, "infect") });
   const hit = (from: Permanent, fromOwner: PlayerId, to: Permanent, amount = Math.max(0, powerOf(state, from)) * (effect.type === "bite" ? (effect.times ?? 1) : 1)) => {
     const quality = qualityOfPerm(state, from);
     if (isProtectedFrom(state, to, quality) && canPrevent(state)) return say(`${nameOf(state, to)} has protection: the damage is prevented.`);

@@ -125,6 +125,8 @@ export function Lane({
       ...(p.chosenColor ? [`Color: ${p.chosenColor}`] : []),
       ...(p.chosenType ? [`Type: ${p.chosenType.charAt(0).toUpperCase()}${p.chosenType.slice(1)}`] : []),
       ...(p.regenShield ? ["Regenerates"] : []),
+      ...(p.preventShield ? [`Prevents the next ${p.preventShield} damage this turn`] : []),
+      ...(p.controlledWhile ? [`Under control of ${state.cards[everything.find((x) => x.card.iid === p.controlledWhile!.source)?.card.defId ?? ""]?.name ?? "an effect"}`] : []),
       // keywords it has without printing them: delirium, an anthem, an Equipment, a counter
       ...gainedKeywords(state, p).map((k) => k.charAt(0).toUpperCase() + k.slice(1)),
       // effects that last until end of turn

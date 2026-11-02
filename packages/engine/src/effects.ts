@@ -12,8 +12,9 @@ export type Ref =
   | { t: "you" } // the controller
   | { t: "opp" } // the controller's opponent
   | { t: "eachPlayer" }
-  | { t: "allCreatures"; scope: "all" | "yours" | "opponents"; except?: number; noFlying?: boolean; subtype?: string; notSubtype?: string; notSelf?: boolean; tapped?: boolean; power?: { n: number; op: "min" | "max" }; mv?: { n: number; op: "min" | "max" } } // `except`: not the i-th target; `notSelf`: "all other creatures"; `tapped`: only tapped (true) or untapped (false) ones; `power`/`mv`: "with power 4 or greater", "with mana value 3 or less"
+  | { t: "allCreatures"; scope: "all" | "yours" | "opponents"; except?: number; noFlying?: boolean; flying?: boolean; attacked?: boolean; subtype?: string; notSubtype?: string; notSelf?: boolean; tapped?: boolean; power?: { n: number; op: "min" | "max" }; mv?: { n: number; op: "min" | "max" } } // `except`: not the i-th target; `notSelf`: "all other creatures"; `tapped`: only tapped (true) or untapped (false) ones; `power`/`mv`: "with power 4 or greater", "with mana value 3 or less"
   | { t: "allPlaneswalkers" }
+  | { t: "allLands" } // every land ("destroy all lands")
   | { t: "ownerOf"; i: number } // the owner of the i-th target ("its owner gains 4 life")
   | { t: "controllerOf"; i: number } // the controller of the i-th target, as it was when the spell resolved
   | { t: "enchanted" } // the permanent this Aura is attached to
@@ -40,12 +41,12 @@ export type Effect =
   | { type: "untap"; what: Ref }
   | { type: "pump"; power: number; toughness: number; what: Ref; per?: CountSpec } // until end of turn (`per`: for each of something)
   | { type: "grant"; keyword: Keyword; what: Ref } // until end of turn
-  | { type: "counter"; what: Ref }
+  | { type: "counter"; what: Ref; exileCopies?: boolean } // `exileCopies` (Counterbore): then every card with the same name in its controller's graveyard, hand and library is exiled
   | { type: "topOfLibrary"; what: Ref } // "put target creature on top of its owner's library"
   | { type: "reanimate"; what: Ref; to: "battlefield" | "hand"; tapped?: boolean; finality?: boolean; attacking?: boolean } // a card from a graveyard (`finality`: "with a finality counter on it")
   // The next three ask a player to choose cards, so a card that has one can't have any other effect (see PendingPick).
   | { type: "discard"; who: Ref; amount: number; chooser: "victim" | "you" | "random"; nonland?: boolean } // "target player discards two cards" / "you choose a card from their hand"
-  | { type: "lookPick"; mode: "toHand" | "toGraveyard" | "arrange" | "iterate" | "look"; n: number; who?: Ref } // look at the top cards of a library ("iterate": one to hand, one exiled to play this turn, one to the bottom)
+  | { type: "lookPick"; mode: "toHand" | "toGraveyard" | "arrange" | "iterate" | "look" | "toHandTop"; n: number; who?: Ref } // look at the top cards of a library ("iterate": one to hand, one exiled to play this turn, one to the bottom; "toHandTop": one to hand, one on top, one on the bottom)
   // "Look at the top five cards. You may reveal a creature card from among them and put it into your hand. Put the rest on the bottom."
   | { type: "revealToHand"; n: number; filter: CardFilter; random: boolean; required?: boolean; restTo?: "bottom" | "graveyard"; reveal?: boolean; take?: number } // `take`: "put two of them into your hand"
   // Search your library for a card (a basic land card, or any card): onto the battlefield (tapped) or into your hand, then shuffle.
@@ -72,7 +73,7 @@ export type Effect =
   | { type: "mayDiscard"; then: Effect[]; thenSpecs?: TargetSpec[] } // "you may discard a card. When you do, ..."
   | { type: "drawUnlessPay"; cost: string } // "you may draw a card unless that player pays {1}" (the opponent who cast the spell)
   | { type: "tapOrUntap"; what: Ref } // you may tap or untap target permanent
-  | { type: "bounceOwn"; other: boolean } // "return a creature you control to its owner's hand": the player chooses
+  | { type: "bounceOwn"; other: boolean; color?: string } // "return a creature you control to its owner's hand": the player chooses (`color`: "a green creature")
   | { type: "sacrifice"; what: Ref } // sacrifice a permanent ("when this becomes the target of a spell or ability, sacrifice it")
   | { type: "stun"; what: Ref; theirsOnly?: boolean; amount?: number } // stun counters, one unless `amount` says (`theirsOnly`: only on the ones the controller doesn't control)
   | { type: "shuffleIntoLibrary"; what: Ref } // Floodpits Drowner: "shuffle ~ and target creature ... into their owners' libraries"
@@ -167,7 +168,13 @@ export type Effect =
   | { type: "deathLifeThisTurn" } // "whenever a creature dies this turn, you gain 1 life"
   | { type: "proliferate" } // another counter of each kind on the players and permanents that already have one (the ones that help you)
   | { type: "edict"; who: Ref; types: EdictType[] } // "each opponent sacrifices a creature or planeswalker of their choice"
-  | { type: "castCopy"; defId: string }; // paradigm: a copy of the exiled spell is cast, with the targets chosen for it
+  | { type: "castCopy"; defId: string } // paradigm: a copy of the exiled spell is cast, with the targets chosen for it
+  | { type: "prevent"; amount: number; to: Ref } // "prevent the next 3 damage that would be dealt to any target this turn": a shield on a creature or a player until end of turn
+  | { type: "shuffleSelfFromYard" } // "you may shuffle it into its owner's library" (when it dies): the card goes from the graveyard into its owner's library
+  | { type: "sacrificeLands"; who: Ref; n: number } // "each player sacrifices four lands of their choice" (one of these for each player): all of them when they have no more than that
+  | { type: "extraCombatMain" } // "after this main phase, there is an additional combat phase followed by an additional main phase"
+  | { type: "shuffleSpell" } // "shuffle ~ into its owner's library": the spell goes into the library instead of the graveyard (Beacon of Destruction)
+  | { type: "skipCombat"; who: Ref }; // "target player skips all combat phases of their next turn"
 
 /** Which cards a "reveal a ... card" effect may take: any of the types, or any of the creature types (subtypes), or any nonland card. */
 export interface CardFilter {
@@ -367,6 +374,8 @@ export interface StaticEffect {
   ward?: string;
   /** "Can't be blocked" while it applies. */
   unblockable?: boolean;
+  /** "...and have mountainwalk": the land types it gives walking over (it can't be blocked while the defending player controls one). */
+  landwalk?: string[];
   /** "Other creatures you control": not the permanent itself. */
   other?: boolean;
   /** "Other Minotaur creatures you control get +1/+1": only creatures with one of these types. */
@@ -390,6 +399,8 @@ export type CountSpec =
   | { kind: "hand" }
   | { kind: "graveyard"; creaturesOnly: boolean; spellsOnly?: boolean; adventures?: boolean } // `adventures`: "and/or have an Adventure" counts too
   | { kind: "attackers"; subtype?: string; other?: boolean } // creatures you control that are attacking
+  | { kind: "yardsAll"; cardType: string } // the cards of that type in all graveyards ("the number of sorcery cards in all graveyards")
+  | { kind: "attackingYou" } // the creatures attacking you (not a planeswalker of yours)
   | { kind: "toughnessGtPower" } // creatures you control with toughness greater than power
   | { kind: "opponents" } // the number of opponents you have
   | { kind: "selfPower" } // the power of the permanent the ability belongs to
@@ -436,7 +447,7 @@ export interface TriggeredAbility {
   event: "oppPermTapped" | "youTapOpp" | "oppArtifactAbility" | "enters" | "dies" | "attacks" | "noncreatureSpell" | "instantOrSorcery" | "landfall" | "lifeGained" | "allyEnters" | "combatDamagePlayer" | "blocks" | "blocked" | "damagedDies" | "drawCard" | "drawSecond" | "battalion" | "attackTwo" | "becomesTarget"
     | "youSacrifice" | "anySacrifice"
     | "upkeep" | "upkeepEach" | "endStep" | "endStepEach" | "beginCombat" | "allyLeaves" | "anyCreatureEnters" | "youCast" | "opponentCasts" | "anyCasts" | "oppCreatureDies" | "youAttack" | "hostDamagesPlayer" | "drawFifth" | "enchantedDies"
-    | "allyDies" | "allyCountersAdded" | "allyAttacks" | "allyTargeted" | "youDiscard" | "excessDamage" | "damaged" | "anyDies" | "teamworkTap" | "attacksAlone" | "selfTapped" | "hostTapped" | "allyTapped" | "tokenEnters" | "yourAbilityTargets" | "anyDrawSecond" | "allyDamaged" | "hostUpkeep";
+    | "allyDies" | "allyCountersAdded" | "allyAttacks" | "allyTargeted" | "youDiscard" | "excessDamage" | "damaged" | "anyDies" | "teamworkTap" | "attacksAlone" | "selfTapped" | "hostTapped" | "allyTapped" | "tokenEnters" | "yourAbilityTargets" | "anyDrawSecond" | "allyDamaged" | "hostUpkeep" | "discardedByOpp" | "damageOpp";
   /** An "intervening if": the trigger only happens when this is true as the event occurs. */
   cond?: {
     lifeGainedAtLeast?: number;
@@ -568,6 +579,8 @@ export interface ActivatedAbility {
   needColored?: { color: string; n: number };
   /** "Activate only during your turn." */
   yourTurnOnly?: boolean;
+  /** "..., before attackers are declared." */
+  beforeAttackers?: boolean;
   /** The ability works from the hand or the graveyard ("{1}{U}, discard this card: ..."), not from the battlefield. */
   zone?: "hand" | "graveyard";
   /** "Discard a card" or "Sacrifice a creature" as part of the cost: the player chooses which card when activating. */
@@ -710,8 +723,14 @@ export interface ParsedCard {
   targetTax?: number;
   /** "Enchanted creature has 'Whenever you gain life, put that many +1/+1 counters on this creature'." */
   hostGainLifeCounters?: boolean;
+  /** "You control enchanted creature" (Mind Control, Confiscate): the Aura's controller controls what it enchants. */
+  hostControl?: boolean;
   /** "Prevent all noncombat damage that would be dealt to you and creatures you control." */
   preventNoncombat?: boolean;
+  /** "If a source would deal damage to you, prevent 1 of that damage" (Urza's Armor): how much of every hit to its controller is prevented. */
+  reduceDamageToYou?: number;
+  /** "Whenever enchanted creature deals damage, you gain that much life" (Spirit Link): the Aura's controller gains life equal to the damage the creature it enchants deals. */
+  hostDamageLife?: boolean;
   /** "If you would draw a card except the first one you draw in each of your draw steps, draw two cards instead." */
   drawDouble?: boolean;
   /** "If you would gain life, you gain that much life plus 1 / twice that much instead." */
@@ -845,7 +864,7 @@ export interface PendingPick {
   /** The card the choice comes from. A resolving spell is already in the graveyard, so this is how both players see what is going on. */
   source?: { iid: string; name: string; defId?: string };
   prompt: string;
-  kind: "discard" | "bounceOwn" | "tapSome" | "topBottom" | "rummage" | "mayPay" | "tax" | "toggle" | "toHand" | "toGraveyard" | "searchLand" | "searchAny" | "revealToHand" | "arrange" | "scry" | "surveil" | "ward" | "crew" | "mode" | "color" | "creatureType" | "handExile" | "exileToPlay" | "handToField" | "mayCost" | "legend" | "look" | "playExile" | "learn" | "discardDraw" | "fromYard" | "sacrificeOwn";
+  kind: "discard" | "bounceOwn" | "tapSome" | "topBottom" | "rummage" | "mayPay" | "tax" | "toggle" | "toHand" | "toGraveyard" | "searchLand" | "searchAny" | "revealToHand" | "arrange" | "scry" | "surveil" | "ward" | "crew" | "mode" | "color" | "creatureType" | "handExile" | "exileToPlay" | "handToField" | "mayCost" | "legend" | "look" | "playExile" | "keepTop" | "learn" | "discardDraw" | "fromYard" | "sacrificeOwn";
   /** The cards to choose between (instance ids). They are shown to the chooser. */
   options: string[];
   /** The player may decline (eye spy, a search that finds nothing). */
@@ -865,6 +884,10 @@ export interface PendingPick {
   tapIfNot?: string;
   /** To hand: then one of the others is exiled to play this turn, the last goes to the bottom (Expressive Iteration). */
   thenExile?: boolean;
+  /** Discard: the cards are discarded because of an opponent's spell or ability (Guerrilla Tactics). */
+  byOpp?: boolean;
+  /** To hand: then one of the others stays on top of the library, the last goes to the bottom (Telling Time). */
+  thenTop?: boolean;
   /** Crew: the Vehicle being crewed. */
   vehicle?: string;
   /** Connive: the creature that gets a +1/+1 counter if the discarded card is not a land. */

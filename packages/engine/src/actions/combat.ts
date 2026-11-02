@@ -1,4 +1,5 @@
 import { getCard } from "../cards.js";
+import { absorbDamage, hostDamageLife } from "../core/prevention.js";
 import { parseCard } from "../oracle.js";
 import {
   addPoison,
@@ -10,6 +11,8 @@ import {
   isProtectedFrom,
   kw,
   lethalFor,
+  nameOf,
+  playerLabel,
   onBoard,
   powerOf,
   sacrificePermanent,
@@ -169,6 +172,13 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
       if (amount <= 0) continue; // rule 510.1a: 0 or less damage isn't dealt
       const toPlayer = "battlefield" in target;
       if (toPlayer && state.players[source.card.owner].doubleDamage && target.id !== source.card.owner) amount *= 2;
+      // "Prevent the next 3 damage that would be dealt to it this turn", "prevent 1 of that damage" (a planeswalker has no shield)
+      if (toPlayer || getCard(state, target.card.defId).type !== "planeswalker") {
+        const through = absorbDamage(state, toPlayer ? { k: "player", id: target.id } : { k: "perm", perm: target }, amount);
+        if (through < amount) events.push({ type: "effect", text: `${amount - through} of the combat damage to ${toPlayer ? playerLabel(target.id) : nameOf(state, target)} is prevented.` });
+        amount = through;
+        if (amount <= 0) continue;
+      }
       const infect = kw(state, source, "infect");
       if (toPlayer && !infect) {
         target.life -= amount;
@@ -192,8 +202,10 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
       const toxic = toPlayer ? (parseCard(getCard(state, source.card.defId)).toxic ?? 0) : 0;
       if (toPlayer && toxic > 0) poison.push({ player: target.id, amount: toxic });
       if (source.sacOnDamage) sacrifice.add(source);
+      hostDamageLife(state, source, amount, events); // Spirit Link
       if (toPlayer && onBoard(source.card.iid)) {
         queueTriggers(state, source.card, source.card.owner, "combatDamagePlayer");
+        queueTriggers(state, source.card, source.card.owner, "damageOpp"); // "whenever ~ deals damage to an opponent" (combat damage is damage too)
         queueDamageDraws(state, source);
         // Auras on the creature: "Whenever enchanted creature deals damage to an opponent, ..."
         for (const owner of Object.values(state.players)) {
