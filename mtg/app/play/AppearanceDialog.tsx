@@ -34,7 +34,7 @@ export default function AppearanceDialog({ look, cursor, onClose, first = "p1" }
   const mat = look.mat(who);
   const storedSleeve = look.storedSleeve[who];
   const storedMat = look.storedMat[who];
-  const ring = (on: boolean) => (on ? "border-[#fcd34d] ring-2 ring-[#fcd34d]" : "border-white/30 hover:border-white/70");
+  const ring = (on: boolean) => (on ? "border-[#d9694f] ring-2 ring-[#d9694f]" : "border-white/30 hover:border-white/70");
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Sleeves and playmat" onClick={onClose} className="game-modal fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
@@ -79,7 +79,7 @@ export default function AppearanceDialog({ look, cursor, onClose, first = "p1" }
         <section>
           <div className="mb-2 flex items-center gap-3">
             <h3 className="font-display text-sm font-bold uppercase tracking-widest text-slate-300">Card sleeves</h3>
-            <button onClick={() => sleeveFile.current?.click()} className="rounded-lg bg-amber-400 px-3 py-1 text-xs font-bold text-black hover:bg-[#fcd34d]">
+            <button onClick={() => sleeveFile.current?.click()} className="rounded-lg bg-amber-400 px-3 py-1 text-xs font-bold text-black hover:bg-[#d9694f]">
               Use my own picture…
             </button>
             <input ref={sleeveFile} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void look.upload("sleeve", who, f); e.target.value = ""; }} />
@@ -98,7 +98,7 @@ export default function AppearanceDialog({ look, cursor, onClose, first = "p1" }
             ))}
             {storedSleeve.startsWith("data:") && (
               <div className="flex flex-col items-center gap-1">
-                <SleeveBack css={sleeve.css} edge={sleeve.edge} className="h-[84px] w-[60px] border-2 border-[#fcd34d] ring-2 ring-[#fcd34d]" />
+                <SleeveBack css={sleeve.css} edge={sleeve.edge} className="h-[84px] w-[60px] border-2 border-[#d9694f] ring-2 ring-[#d9694f]" />
                 <span className="text-[10px] text-slate-300">Your picture</span>
               </div>
             )}
@@ -109,7 +109,7 @@ export default function AppearanceDialog({ look, cursor, onClose, first = "p1" }
         <section>
           <div className="mb-2 flex items-center gap-3">
             <h3 className="font-display text-sm font-bold uppercase tracking-widest text-slate-300">Playmat</h3>
-            <button onClick={() => matFile.current?.click()} className="rounded-lg bg-amber-400 px-3 py-1 text-xs font-bold text-black hover:bg-[#fcd34d]">
+            <button onClick={() => matFile.current?.click()} className="rounded-lg bg-amber-400 px-3 py-1 text-xs font-bold text-black hover:bg-[#d9694f]">
               Use my own picture…
             </button>
             <input ref={matFile} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void look.upload("mat", who, f); e.target.value = ""; }} />
@@ -128,7 +128,7 @@ export default function AppearanceDialog({ look, cursor, onClose, first = "p1" }
             ))}
             {storedMat.startsWith("data:") && (
               <div className="flex flex-col items-center gap-1">
-                <span className="h-14 w-full rounded-lg border-2 border-[#fcd34d] ring-2 ring-[#fcd34d]" style={{ background: mat.css }} />
+                <span className="h-14 w-full rounded-lg border-2 border-[#d9694f] ring-2 ring-[#d9694f]" style={{ background: mat.css }} />
                 <span className="text-[10px] text-slate-300">Your picture</span>
               </div>
             )}

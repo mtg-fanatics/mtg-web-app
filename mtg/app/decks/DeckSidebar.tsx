@@ -36,7 +36,7 @@ export default function DeckSidebar({ rows, groups, entries, status, emptyText, 
   return (
     <aside className="glass flex h-fit flex-col gap-3 p-4 lg:sticky lg:top-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="font-display text-lg font-bold text-[#ffe29a]">Deck</h2>
+        <h2 className="font-display text-lg font-bold text-[#e8dcc0]">Deck</h2>
         <span className="text-sm text-slate-300">{status.count} cards</span>
       </div>
       <Status status={status} />

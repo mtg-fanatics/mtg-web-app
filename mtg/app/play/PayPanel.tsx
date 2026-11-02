@@ -38,7 +38,7 @@ export function PayPanel({ state, choice, onPay, onCancel }: { state: GameState;
       </h2>
       <p className="text-sm" style={{ color: "#d1fae5" }}>Pick the mana to spend. Nothing is tapped for you.</p>
       <div className="flex flex-wrap gap-2">
-        {usable.length === 0 && <span className="text-sm" style={{ color: "#fde68a" }}>You have no untapped mana.</span>}
+        {usable.length === 0 && <span className="text-sm" style={{ color: "#e8d9b5" }}>You have no untapped mana.</span>}
         {usable.map((s) => {
           const on = picked.includes(s.iid);
           return (
@@ -60,8 +60,8 @@ export function PayPanel({ state, choice, onPay, onCancel }: { state: GameState;
           );
         })}
       </div>
-      {picked.length > 0 && !check.ok && <p className="text-sm font-semibold" style={{ color: "#fde68a" }}>That is not enough mana of the right colors yet: pick more.</p>}
-      {extra.length > 0 && <p className="text-sm font-semibold" style={{ color: "#fde68a" }}>That is more than the cost: untick {extra.map(label).join(", ")}.</p>}
+      {picked.length > 0 && !check.ok && <p className="text-sm font-semibold" style={{ color: "#e8d9b5" }}>That is not enough mana of the right colors yet: pick more.</p>}
+      {extra.length > 0 && <p className="text-sm font-semibold" style={{ color: "#e8d9b5" }}>That is more than the cost: untick {extra.map(label).join(", ")}.</p>}
       <div className="flex flex-wrap gap-2">
         <button onClick={() => onPay(spare)} disabled={!check.ok || extra.length > 0} className="min-h-11 rounded-xl bg-gradient-to-b from-amber-300 to-amber-500 px-5 text-sm font-extrabold text-black disabled:opacity-40">
           Pay

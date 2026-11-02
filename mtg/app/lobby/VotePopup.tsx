@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { STARTER_DECK } from "@mtg/engine";
 import { holdWallpaper } from "../LiveWallpaper";
+import { Cross } from "../Icons";
 import { CoinDisplay } from "../play/CoinFlip";
 import LookPicker from "../play/LookPicker";
 import { myLook, randomLook } from "@/lib/playmat";
@@ -36,19 +37,19 @@ export default function VotePopup({ room }: { room: RoomSnapshot }) {
   const guest = room.you === room.host ? room.players.find((p) => p.seat !== room.host) : undefined; // the host may still remove the guest
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Vote" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
-      <div className={`flex max-h-[calc(100dvh-1rem)] w-full min-w-0 flex-col gap-4 overflow-x-hidden overflow-y-auto rounded-2xl sm:max-h-[calc(100dvh-2rem)] sm:gap-5 sm:rounded-3xl ${room.stage === "decks" ? "max-w-[88rem] p-3 sm:p-7 lg:overflow-y-hidden" :"max-w-lg p-3 sm:p-6"}  border border-white/25 bg-slate-950/95 text-white shadow-2xl shadow-black/50 ring-1 ring-inset ring-white/10 [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]`}>
+    <div role="dialog" aria-modal="true" aria-label="Choosing decks" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
+      <div className={`flex max-h-[calc(100dvh-1rem)] w-full min-w-0 flex-col gap-4 overflow-x-hidden overflow-y-auto sm:max-h-[calc(100dvh-2rem)] sm:gap-5 leather ${room.stage === "decks" ? "max-w-[88rem] p-3 sm:p-7 lg:overflow-y-hidden" :"max-w-lg p-3 sm:p-6"} text-white`}>
         <header className="flex items-center gap-3">
           <ol className="flex flex-1 items-center gap-2" aria-label="Steps">
             {STEPS.map((s, i) => (
-              <li key={s.stage} className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-sm font-bold max-sm:px-2.5 ${i === at ? "bg-amber-400 text-black" : i < at ? "bg-emerald-400/20 text-[#a7f3d0]" : "bg-white/10 text-slate-300"}`}>
-                {i < at ? "✓" : i + 1} <span className={i === at ? "" : "max-sm:hidden"}>{s.label}</span>
+              <li key={s.stage} className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1 text-[15px] font-bold max-sm:px-2.5 ${i === at ? "paper !border-[1.5px] !shadow-none" : i < at ? "bg-[#6b9a7f]/20 text-[#a9d4b9]" : "bg-white/10 text-slate-300"}`}>
+                {i < at ? "✓" : `${i + 1}.`} <span className={i === at ? "" : "max-sm:hidden"}>{s.label}</span>
               </li>
             ))}
           </ol>
-          {guest && <KickButton name={guest.name} />}
-          <button onClick={() => leaveRoom()} aria-label="Leave the room" title="Leave the room" className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-lg leading-none hover:bg-white/20">
-            ×
+          {guest && !guest.bot && <KickButton name={guest.name} />}
+          <button onClick={() => leaveRoom()} aria-label="Leave the table" title="Leave the table" className="btn-ghost !h-10 !w-10 !px-0">
+            <Cross width={18} height={18} />
           </button>
         </header>
 
@@ -154,7 +155,7 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
       {/* on a wide screen each side scrolls on its own: the table side's long content does not move the decks side */}
       <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
         <div>
-        <h2 className="text-2xl font-extrabold sm:text-3xl">Choose your deck</h2>
+        <h2 className="text-3xl text-[#e8dcc0] sm:text-4xl">Bring your deck</h2>
         <p className="mt-1 text-base text-slate-200 sm:text-lg">
           {size} cards. {room.players.some((p) => p.bot) ? "The bot plays a random deck." : "Your opponent does not see which one you pick."}
         </p>
@@ -171,7 +172,7 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
       </div>
       <div className="flex flex-col gap-4 lg:col-start-2 lg:row-start-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
       <div className="rounded-2xl border border-white/20 bg-white/5 p-4 text-center">
-        <h3 className="mb-3 text-base font-bold uppercase tracking-widest text-[#ffe29a]">Choose your table</h3>
+        <h3 className="mb-3 text-xl text-[#e8dcc0]">Dress your side of the table</h3>
         <LookPicker
           large
           who={room.you}
@@ -182,7 +183,7 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
           onMat={(v) => (setMat(v), myLook.write("mat", v))}
         />
         <div className="mt-4 border-t border-white/15 pt-4">
-          <h3 className="mb-1 text-base font-bold uppercase tracking-widest text-[#ffe29a]">Finishing move</h3>
+          <h3 className="mb-1 text-base font-bold uppercase tracking-widest text-[#e8dcc0]">Finishing move</h3>
           <p className="mb-3 text-sm text-slate-300">{FINISHERS.find((f) => f.id === finisher)?.blurb} It plays on your opponent&apos;s mat when you win.</p>
           <div className="mb-3 flex flex-wrap justify-center gap-2">
             {FINISHERS.map((f) => (
@@ -190,7 +191,7 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
                 key={f.id}
                 onClick={() => (setFinisherState(f.id), setFinisher(f.id))}
                 aria-pressed={finisher === f.id}
-                className={`rounded-xl border px-3 py-1.5 text-sm font-bold ${finisher === f.id ? "border-amber-300 bg-amber-300/25 text-amber-100" : "border-white/25 bg-white/5 text-white hover:bg-white/15"}`}
+                className={finisher === f.id ? "paper !border-[1.5px] !px-3 !py-1.5 text-[15px] font-extrabold !shadow-none" : "btn-ghost !px-3 !py-1.5"}
               >
                 {f.name}
               </button>
@@ -205,14 +206,14 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
       <button
         onClick={() => void confirm()}
         disabled={ready || busy || options === null}
-        className="rounded-2xl bg-gradient-to-b from-amber-300 to-amber-500 px-8 py-3.5 text-lg font-extrabold sm:py-4 sm:text-xl text-black shadow-lg shadow-amber-500/30 transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
+        className="btn-gold !px-8 !py-3.5 !text-xl sm:!py-4 sm:!text-2xl"
       >
-        {ready ? "Ready ✓" : busy ? "Preparing…" : "Ready"}
+        {ready ? "Ready, and waiting" : busy ? "Shuffling…" : "I am ready"}
       </button>
       <p className="text-center text-sm font-semibold text-slate-300">
-        {saved || ready ? "✓ Saved as your default: next time this deck, sleeve and playmat are already picked." : "Your deck, card sleeve and playmat are saved as your default when you press Ready."}
+        {saved || ready ? "Noted: next time this deck, sleeve and playmat are already waiting for you." : "Your deck, card sleeve and playmat are saved as your default when you press Ready."}
       </p>
-      <PlayerChips room={room} show={(p) => (p.deckReady ? <span className="font-bold text-[#a7f3d0]">ready ✓</span> : p.bot ? <span className="text-slate-300">waiting for you</span> : <span className="text-slate-300">choosing…</span>)} />
+      <PlayerChips room={room} show={(p) => (p.deckReady ? <span className="font-bold text-[#a9d4b9]">ready</span> : p.bot ? <span className="text-slate-300">is waiting on you</span> : <span className="text-slate-300">choosing…</span>)} />
       </div>
     </section>
   );
@@ -229,7 +230,7 @@ function CoinStep({ room }: { room: RoomSnapshot }) {
 
   return (
     <section className="flex flex-col items-center gap-3 text-center">
-      <h2 className="font-display text-3xl font-extrabold uppercase tracking-[0.2em] text-[#ffe29a] [text-shadow:0_2px_18px_rgba(244,180,61,0.45)]">Coin toss</h2>
+      <h2 className="font-display text-3xl font-extrabold uppercase tracking-[0.2em] text-[#e8dcc0] [text-shadow:0_2px_18px_rgba(244,180,61,0.45)]">The coin toss</h2>
       <div className="relative">
         {/* a pool of warm light under the coin */}
         <div className="pointer-events-none absolute inset-x-6 -inset-y-2 rounded-full bg-[radial-gradient(closest-side,rgba(244,180,61,0.35),transparent)]" aria-hidden="true" />
@@ -237,25 +238,25 @@ function CoinStep({ room }: { room: RoomSnapshot }) {
       </div>
       {!landed ? (
         <p className="text-[15px] text-slate-200">
-          {name(coin.caller)} called <span className="font-bold capitalize text-[#fde68a]">{call}</span>…
+          {name(coin.caller)} called <span className="font-bold capitalize text-[#e8d9b5]">{call}</span>…
         </p>
       ) : (
         <>
           <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-amber-200/30 bg-amber-300/10 px-5 py-2 text-lg">
             <span className="font-display text-sm font-bold uppercase tracking-widest text-amber-200/80">It&apos;s</span>
-            <span className="font-display text-2xl font-extrabold capitalize text-[#ffe29a]">{result}</span>
-            <span className="text-slate-100"><span className="font-bold text-[#fde68a]">{name(winner)}</span> wins the flip</span>
+            <span className="font-display text-2xl font-extrabold capitalize text-[#e8dcc0]">{result}</span>
+            <span className="text-slate-100"><span className="font-bold text-[#e8d9b5]">{name(winner)}</span> wins the flip</span>
           </p>
           {coin.chose ? (
-            <p className="rounded-full border border-emerald-300/30 bg-emerald-400/15 px-5 py-2 text-[15px] font-semibold text-[#a7f3d0]">
+            <p className="rounded-full border border-emerald-300/30 bg-emerald-400/15 px-5 py-2 text-[15px] font-semibold text-[#a9d4b9]">
               {name(winner)} chose to go {coin.chose}. Starting the match…
             </p>
           ) : iWon ? (
             <>
-              <p className="text-[15px] text-slate-200">Who goes first?</p>
+              <p className="text-[15px] text-slate-200">Who plays first?</p>
               <div className="flex gap-3">
                 <button onClick={() => send("order", { first: true })} className="btn-gold !px-7 !py-3 text-base">
-                  Go first
+                  I will go first
                 </button>
                 <button onClick={() => send("order", { first: false })} className="btn-ghost !px-7 !py-3 text-base">
                   Go second
@@ -263,7 +264,7 @@ function CoinStep({ room }: { room: RoomSnapshot }) {
               </div>
             </>
           ) : (
-            <p className="rounded-full border border-white/15 bg-white/10 px-5 py-2 text-[15px] text-slate-200">Waiting for {name(winner)} to choose who goes first…</p>
+            <p className="rounded-full border border-white/15 bg-white/10 px-5 py-2 text-[15px] text-slate-200">{name(winner)} is deciding who plays first…</p>
           )}
         </>
       )}
@@ -278,8 +279,8 @@ function CallStep({ room }: { room: RoomSnapshot }) {
   return (
     <section className="flex flex-col items-center gap-4 text-center">
       <div>
-        <h2 className="font-display text-3xl font-extrabold uppercase tracking-[0.2em] text-[#ffe29a] [text-shadow:0_2px_18px_rgba(244,180,61,0.45)]">Coin toss</h2>
-        <p className="mt-1 text-[15px] text-slate-200">Whoever wins the toss chooses who goes first.</p>
+        <h2 className="font-display text-3xl font-extrabold uppercase tracking-[0.2em] text-[#e8dcc0] [text-shadow:0_2px_18px_rgba(244,180,61,0.45)]">The coin toss</h2>
+        <p className="mt-1 text-[15px] text-slate-200">Whoever wins the toss decides who plays first.</p>
       </div>
       {caller === room.you ? (
         <>

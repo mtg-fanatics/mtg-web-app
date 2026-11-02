@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MUSIC_EVENT, TRACKS, musicEnabled, musicTrack, musicVolume, playingTrack, setMusicEnabled, setMusicTrack, setMusicVolume } from "@/lib/music";
 import { playSound, setSoundEnabled, setSoundVolume, soundEnabled, soundVolume } from "@/lib/sound";
+import { Chev, Horn } from "./Icons";
 
 const HINT_KEY = "mtg-music-hint";
 const HINT_MS = 9000;
@@ -22,7 +23,7 @@ const markHint = () => {
   }
 };
 
-const heading = "font-display text-xs font-bold uppercase tracking-widest text-amber-200";
+const heading = "font-title text-base text-[#e8dcc0]";
 
 function Volume({ label, value, onChange, onDone, disabled }: { label: string; value: number; onChange: (v: number) => void; onDone?: () => void; disabled?: boolean }) {
   return (
@@ -37,7 +38,7 @@ function Volume({ label, value, onChange, onDone, disabled }: { label: string; v
         onChange={(e) => onChange(Number(e.target.value) / 100)}
         onPointerUp={onDone}
         onKeyUp={onDone}
-        className="min-w-0 flex-1 accent-amber-400"
+        className="min-w-0 flex-1 accent-[#b3392b]"
       />
       <span className="w-10 shrink-0 text-right tabular-nums">{Math.round(value * 100)}%</span>
     </label>
@@ -97,26 +98,24 @@ export default function AudioMenu() {
         aria-expanded={open}
         aria-haspopup="dialog"
         title="Change the music, or the music and sound volume"
-        className="flex items-center gap-1.5 rounded-md border border-amber-300/60 bg-amber-400/15 px-2 py-1 transition hover:bg-amber-400/25"
+        className="bar-btn flex items-center gap-1.5"
       >
-        <span aria-hidden="true">♫</span>
-        <span className="font-semibold text-amber-100 max-[479px]:hidden">{on ? track.name : "Music off"}</span>
-        <span aria-hidden="true" className="text-xs max-[479px]:hidden">
-          ▾
-        </span>
+        <Horn width={17} height={17} className="ink-icon" />
+        <span className="font-semibold max-[479px]:hidden">{on ? track.name : "Quiet"}</span>
+        <Chev width={13} height={13} className="ink-icon rotate-90 max-[479px]:hidden" />
       </button>
 
       {hint && !open && (
-        <div role="status" className="absolute right-0 top-full z-50 mt-2 w-64 max-md:fixed max-md:inset-x-3 max-md:top-[3rem] max-md:mt-0 max-md:w-auto rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-sm text-amber-950 shadow-xl">
-          <div className="absolute -top-1.5 right-6 h-3 w-3 rotate-45 border-l border-t border-amber-300 bg-amber-50" aria-hidden="true" />
+        <div role="status" className="absolute right-0 top-full z-50 mt-2 w-64 max-md:fixed max-md:inset-x-3 max-md:top-[3rem] max-md:mt-0 max-md:w-auto paper p-3 text-[15px]">
+          <div className="absolute -top-2 right-6 h-3 w-3 rotate-45 border-l-2 border-t-2 border-[#2a1d12] bg-[#e8dcc0]" aria-hidden="true" />
           <p>
-            Now playing <span className="font-semibold">{track.name}</span>. Click here to pick another tune or change the volume.
+            Playing <span className="font-semibold">{track.name}</span>. Tap here to change the tune or turn it up or down.
           </p>
         </div>
       )}
 
       {open && (
-        <div role="dialog" aria-label="Music and sound" className="absolute right-0 top-full z-50 mt-2 flex w-80 flex-col gap-3 max-md:fixed max-md:inset-x-3 max-md:top-[3rem] max-md:mt-0 max-md:max-h-[calc(100dvh-4rem)] max-md:w-auto max-md:overflow-y-auto rounded-xl border border-white/20 bg-slate-900/95 p-3 text-slate-100 shadow-2xl">
+        <div role="dialog" aria-label="Music and sound" className="absolute right-0 top-full z-50 mt-2 flex w-80 flex-col gap-3 max-md:fixed max-md:inset-x-3 max-md:top-[3rem] max-md:mt-0 max-md:max-h-[calc(100dvh-4rem)] max-md:w-auto max-md:overflow-y-auto leather !rounded-xl p-4 text-slate-100">
           <section className="flex flex-col gap-1.5">
             <h2 className={heading}>Music</h2>
             <div role="radiogroup" aria-label="Music" className="flex flex-col gap-1">
@@ -170,7 +169,7 @@ export default function AudioMenu() {
                 aria-pressed={effects}
                 className="rounded-md border border-white/20 bg-white/10 px-2 py-0.5 text-sm transition hover:bg-white/20"
               >
-                <span className={effects ? "font-semibold text-[#6ee7b7]" : "font-semibold text-slate-400"}>{effects ? "On" : "Off"}</span>
+                <span className={effects ? "font-semibold text-[#8fc4a5]" : "font-semibold text-slate-400"}>{effects ? "On" : "Off"}</span>
               </button>
             </div>
             <Volume

@@ -1,6 +1,7 @@
 "use client";
 
 import Logo from "../Logo";
+import { Scribble } from "../Icons";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearCached } from "@/lib/dashCache";
@@ -121,25 +122,25 @@ export default function LoginForm() {
         <div className="hero-scrim" aria-hidden="true" />
         <div className="relative flex flex-col items-center gap-2 text-center">
           <Logo size={96} glow className="hero-rise mb-2" />
-          <p className="hero-eyebrow hero-rise">A two-player card duel game</p>
+          <p className="hero-eyebrow hero-rise caps !not-italic">A game for two hands</p>
           <h1 className="hero-rise flex flex-col items-center gap-2 font-title" style={{ animationDelay: "0.06s" }}>
-            <span className="hero-title" style={{ fontSize: "clamp(2.2rem, 9vw, 3.4rem)" }}>DuelRealm</span>
-            <span className="hero-mtg">MTG</span>
+            <span className="hero-title" style={{ fontSize: "clamp(2.6rem, 10vw, 4.2rem)" }}>Inkfall</span>
           </h1>
+          <Scribble width={200} className="hero-rise -mt-1" />
         </div>
 
         <form onSubmit={submit} className="panel-glass hero-rise relative flex w-full flex-col gap-5 p-6 sm:p-7" style={{ animationDelay: "0.16s" }}>
           <div className="flex flex-col gap-1">
-            <h2 className="font-title text-xl font-extrabold uppercase tracking-[0.16em] text-[#ffe29a]">{signup ? "Create account" : "Welcome back"}</h2>
-            <p className="text-sm text-slate-300">{signup ? "Pick a username and a password to start dueling." : "Log in to build decks and join a match."}</p>
+            <h2 className="text-3xl text-[#e8dcc0]">{signup ? "Join the ledger" : "Back at the table"}</h2>
+            <p className="italic-note text-[17px] text-slate-300">{signup ? "Choose a name and a secret word, and the ink is yours." : "Say who you are and take your old seat."}</p>
           </div>
 
           <label className="flex flex-col gap-1.5">
-            <span className="field-label">Username</span>
+            <span className="field-label">Your name</span>
             <input className="auth-input" maxLength={MAX_USERNAME_LENGTH} value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoFocus />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="field-label">Password</span>
+            <span className="field-label">Your secret word</span>
             <input
               className="auth-input"
               type="password"
@@ -151,13 +152,13 @@ export default function LoginForm() {
           </label>
 
           {error && (
-            <p role="alert" className="rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm text-[#fecaca]">
+            <p role="alert" className="rounded-lg border-2 border-[#b3392b] bg-[#b3392b]/20 px-3 py-2 text-[15px] text-[#f0bfb0]">
               {error}
             </p>
           )}
 
           <button type="submit" disabled={busy} className="btn-gold w-full justify-center py-2.5">
-            {busy ? "Please wait…" : signup ? "Create account" : "Log in"}
+            {busy ? "One moment…" : signup ? "Sign the ledger" : "Come in"}
           </button>
 
           <button
@@ -166,9 +167,9 @@ export default function LoginForm() {
               setMode(signup ? "login" : "signup");
               setError(null);
             }}
-            className="text-sm text-slate-300 underline-offset-4 hover:text-[#ffe29a] hover:underline"
+            className="text-sm text-slate-300 underline-offset-4 hover:text-[#e8dcc0] hover:underline"
           >
-            {signup ? "Already have an account? Log in" : "No account yet? Create one"}
+            {signup ? "Already written in? Come in" : "Not in the ledger yet? Add your name"}
           </button>
         </form>
       </div>

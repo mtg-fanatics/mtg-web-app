@@ -155,7 +155,7 @@ function StackPanelFull({
       )}
       {who?.mine && (
         <div className="flex items-center gap-3">
-          <button onClick={onPass} className="rounded-lg bg-violet-600 px-4 py-2 text-base font-semibold text-white hover:bg-violet-500">
+          <button onClick={onPass} title="Shortcut: the space bar" className="rounded-lg bg-violet-600 px-4 py-2 text-base font-semibold text-white hover:bg-violet-500">
             {!top ? "Pass (go on)" : state.priority!.passes === 1 ? `Pass: ${top} resolves` : `Pass to ${playerName(OPPONENT[actor])}`}
           </button>
         </div>

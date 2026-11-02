@@ -2,6 +2,7 @@
 
 import { isPack, PACK_TYPE, setName } from "@/lib/decks";
 import { ManaSymbol } from "../play/ManaSymbols";
+import { Lens } from "../Icons";
 
 /** What the Decks page is narrowed to. Empty values mean "everything". */
 export interface DeckFilterState {
@@ -66,10 +67,7 @@ export default function DeckFilterBar({
   return (
     <div role="search" aria-label="Filter the decks" className="flex flex-wrap items-center gap-2.5">
       <label className="tool-field min-w-[13rem] flex-1 sm:max-w-xs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-3.5-3.5" />
-        </svg>
+        <Lens />
         <input value={value.query} onChange={(e) => set({ query: e.target.value })} maxLength={60} placeholder="Search by name" aria-label="Search decks by name" className="w-full" />
       </label>
 

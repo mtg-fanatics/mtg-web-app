@@ -79,7 +79,7 @@ function PileInner({ state, owner, kind, compact, onOpen, deckName, sleeve }: { 
           className={`relative shrink-0 rounded border border-white/30 ${compact ? "" : "h-28 w-20"} ${kind === "library" && cards.length > 0 ? CARD_BACK : "bg-white/10"}`}
           style={{ ...(compact ? { height: ART_HEIGHT, aspectRatio: "5 / 7" } : {}), ...(top?.image ? { backgroundImage: `url(${cardImageUrl(top.image)})`, backgroundSize: "cover", backgroundPosition: "center" } : {}) }}
         >
-          {kind === "library" && cards.length > 0 && <div className="absolute inset-1 rounded-sm border border-[#fcd34d]/50" />}
+          {kind === "library" && cards.length > 0 && <div className="absolute inset-1 rounded-sm border border-[#d9694f]/50" />}
           {cards.length === 0 && <span className="bf-bare absolute inset-0 flex items-center justify-center text-[10px] max-lg:hidden">bare</span>}
         </div>
       )}

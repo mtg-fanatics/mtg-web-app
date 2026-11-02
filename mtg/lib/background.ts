@@ -48,9 +48,9 @@ function write(key: string, value: string): boolean {
 
 /** The CSS value for the stored choice. */
 export function backgroundCss(stored: string): string {
-  if (stored.startsWith("preset:")) return PRESETS.find((p) => p.id === stored.slice(7))?.css ?? `url("${DEFAULT_IMAGE}")`;
+  if (stored.startsWith("preset:")) return PRESETS.find((p) => p.id === stored.slice(7))?.css ?? "var(--fibres)";
   if (stored.startsWith("data:")) return `url("${stored}")`;
-  return `url("${DEFAULT_IMAGE}")`;
+  return "var(--fibres)"; // Inkfall: a worn paper cloth, until licensed art is chosen (a preset, a picture from this computer, or your own CSS here)
 }
 
 /** Shrinks a picture to at most 1920 pixels wide and returns it as a JPEG data URL, so it fits in browser storage. */

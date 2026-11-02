@@ -308,7 +308,7 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
       {/* The buttons stay while the chain plays: pass, resolve or continue without waiting for it, and put the chain away to see the board. */}
       <div className="pointer-events-auto absolute left-1/2 top-[3.4rem] z-[100] flex max-w-[96vw] -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/25 bg-slate-950/90 p-1.5 shadow-xl shadow-black/50">
         {canPass ? (
-          <button onClick={onPass} className="min-h-11 rounded-xl bg-gradient-to-b from-amber-300 to-amber-500 px-5 text-base font-extrabold text-black shadow">
+          <button onClick={onPass} title="Shortcut: the space bar" className="min-h-11 rounded-xl bg-gradient-to-b from-amber-300 to-amber-500 px-5 text-base font-extrabold text-black shadow">
             {passLabel}
           </button>
         ) : (

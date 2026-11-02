@@ -129,16 +129,16 @@ export default function DeckPreview({
           </button>
         </div>
 
-        {error && <p className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#fecaca]">Could not load the deck: {error}</p>}
+        {error && <p className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#f0bfb0]">Could not load the deck: {error}</p>}
         {!loaded && !error && <CardSkeletons count={20} size="md" className="flex flex-wrap gap-2" />}
 
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto pr-1">
           {sections.map((s, si) => (
             <section key={s.id}>
-              <h3 className="mb-2.5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[#ffe29a]">
+              <h3 className="mb-2.5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[#e8dcc0]">
                 {s.label}
                 <span className="count-chip !px-2 !py-0 !text-xs">{s.total}</span>
-                <span className="h-px flex-1 bg-gradient-to-r from-[#f4b43d]/50 to-transparent" aria-hidden="true" />
+                <span className="h-px flex-1 bg-gradient-to-r from-[#d9694f]/50 to-transparent" aria-hidden="true" />
               </h3>
               <div className="flex flex-wrap gap-2.5">
                 {s.entries.map(({ def, qty }, ei) => (

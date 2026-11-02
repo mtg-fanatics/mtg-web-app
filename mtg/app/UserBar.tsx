@@ -9,6 +9,7 @@ import { animationSpeed, animationsEnabled, setAnimationSpeed, setAnimationsEnab
 import { connectSocial, disconnectSocial } from "@/lib/online/session";
 import { clearCached } from "@/lib/dashCache";
 import AudioMenu from "./AudioMenu";
+import { Hourglass, InkDrop } from "./Icons";
 
 /** Slim top bar shown only while signed in. */
 export default function UserBar() {
@@ -40,9 +41,9 @@ export default function UserBar() {
 
   return (
     <div className="topbar">
-      <Link href="/" className="flex items-center gap-2" aria-label="DuelRealm MTG home">
+      <Link href="/" className="flex items-center gap-2" aria-label="Inkfall, back to the front room">
         <Logo size={26} />
-        <span className="brand">DUELREALM</span>
+        <span className="brand">Inkfall</span>
       </Link>
       <span className="flex-1" />
       <button
@@ -51,33 +52,34 @@ export default function UserBar() {
           setAnimations(!animations);
         }}
         aria-pressed={animations}
-        title="Turn attack, confetti and other animations on or off"
+        title="Let the ink move (attacks, confetti and the rest), or keep the page still"
         aria-label={`Animations: ${animations ? "on" : "off"}`}
         className="bar-btn"
       >
-        <span className={`min-[480px]:hidden ${animations ? "" : "opacity-40 grayscale"}`} aria-hidden="true">✨</span><span className="max-[479px]:hidden">Animations: </span><span className={`max-[479px]:hidden ${animations ? "font-semibold text-[#6ee7b7]" : "font-semibold text-slate-400"}`}>{animations ? "On" : "Off"}</span>
+        <InkDrop width={17} height={17} className={`ink-icon mr-1 inline-block align-[-3px] min-[480px]:hidden ${animations ? "" : "opacity-40"}`} /><span className="max-[479px]:hidden">Motion: </span><span className={`max-[479px]:hidden ${animations ? "font-semibold text-[#8fc4a5]" : "font-semibold text-slate-400"}`}>{animations ? "Lively" : "Still"}</span>
       </button>
-      {animations && (
+      {(
         <button
+          disabled={!animations}
           onClick={() => {
             const next = SPEEDS[(SPEEDS.findIndex((x) => x.id === speed) + 1) % SPEEDS.length].id;
             setAnimationSpeed(next);
             setSpeed(next);
           }}
-          title="How fast attacks, spells and cards move: Normal, Fast or Faster"
+          title="How quickly the cards and spells move: Normal, Fast or Faster"
           aria-label={`Animation speed: ${speed}`}
-          className="bar-btn"
+          className={`bar-btn ${animations ? "" : "opacity-45"}`}
         >
-          <span aria-hidden="true">⏩</span> <span className="max-[479px]:hidden">Speed: </span>
-          <span className="font-semibold text-[#6ee7b7]">{SPEEDS.find((x) => x.id === speed)?.label}</span>
+          <Hourglass width={17} height={17} className="ink-icon mr-1 inline-block align-[-3px]" /> <span className="max-[479px]:hidden">Pace: </span>
+          <span className="font-semibold text-[#8fc4a5]">{SPEEDS.find((x) => x.id === speed)?.label}</span>
         </button>
       )}
       <AudioMenu />
       <span className="hidden sm:inline">
-        Signed in as <span className="font-semibold text-white">{username}</span>
+        Written in as <span className="font-semibold text-white">{username}</span>
       </span>
       <button onClick={signOut} className="bar-btn">
-        Sign out
+        Close the book
       </button>
     </div>
   );

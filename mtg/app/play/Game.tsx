@@ -172,6 +172,21 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   const game = localGame ?? (online ? (net.game?.view ?? null) : null);
   // The result screen comes up once the life totals have counted all the way down (even below zero), and a moment after, so the last hit is seen.
   useEffect(() => applyPerfClass(), []); // (cheaper effects and result screen on a weak computer)
+  // The space bar is the "Pass (go on)" / "Resolve" button: whatever that button would do right now. (Set further down, once the state is known.)
+  const spacePass = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(t.tagName))) return; // (space on a focused button or a text box keeps its own meaning)
+      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return; // (a pop-up is open: it is asking something else)
+      if (!spacePass.current) return;
+      e.preventDefault();
+      spacePass.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const won = !!game?.winner;
   const [endShown, setEndShown] = useState(false); // the result screen waits for the last life points to count down
   const [finisherDone, setFinisherDone] = useState(false); // ...and for the winner's finishing move
@@ -494,6 +509,9 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
     await commit(r);
     setError(null);
   }
+  // Space passes priority (go on / resolve the top of the chain), only when the Pass or Resolve button is there for this player to press.
+  const canSpacePass = !watching && !state.winner && state.priority?.holder === actor && !state.pendingPick && !state.pendingChoice;
+  spacePass.current = canSpacePass ? () => void act({ type: "passPriority" }) : null;
 
   /**
    * Shows the result of an action: cards that died fly to the graveyard first, then the new state appears and

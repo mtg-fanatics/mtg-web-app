@@ -65,8 +65,8 @@ export default function HandRow({ state, actor, mine, playable, exiled = [], han
   return (
     <div className="flex items-stretch gap-2 overflow-x-auto py-1 max-lg:gap-1.5">
       <div className="flex min-w-0 flex-col gap-0.5 max-lg:shrink-0">
-        <h3 className="text-[10px] font-semibold uppercase font-display tracking-wide text-[#a7f3d0] max-lg:hidden">Can play now ({ready.length})</h3>
-        <div className="flex min-h-[calc(var(--card-h,168px)*0.8+0.5rem)] items-start gap-1.5 rounded-lg border border-[#6ee7b7]/40 bg-[#022c22]/40 p-1 max-lg:min-h-0 max-lg:border-0 max-lg:bg-transparent max-lg:p-0 max-lg:has-[>p]:hidden">
+        <h3 className="text-[10px] font-semibold uppercase font-display tracking-wide text-[#a9d4b9] max-lg:hidden">Can play now ({ready.length})</h3>
+        <div className="flex min-h-[calc(var(--card-h,168px)*0.8+0.5rem)] items-start gap-1.5 rounded-lg border border-[#8fc4a5]/40 bg-[#022c22]/40 p-1 max-lg:min-h-0 max-lg:border-0 max-lg:bg-transparent max-lg:p-0 max-lg:has-[>p]:hidden">
           {ready.length > 0 ? ready.map(card) : <p className="self-center px-2 text-xs text-slate-300">Nothing can be played right now.</p>}
         </div>
       </div>

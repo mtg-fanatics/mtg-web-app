@@ -57,13 +57,13 @@ export default function DeckPicker({
   return (
     <div className={`flex flex-col text-left ${wide ? "gap-4" : "gap-3"}`} aria-busy={loading}>
       {/* the chosen deck */}
-      <div className={`relative flex items-end overflow-hidden rounded-2xl border border-amber-300/50 bg-slate-900/70 shadow-lg shadow-black/40 ${wide ? "min-h-[7rem]" : "min-h-[4.75rem]"}`}>
+      <div className={`relative flex items-end overflow-hidden rounded-xl border-2 border-[#120c07] bg-slate-900/70 shadow-lg shadow-black/40 ${wide ? "min-h-[7rem]" : "min-h-[4.75rem]"}`}>
         <div className="absolute inset-0 bg-cover opacity-55" style={art(picked)} aria-hidden="true" />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-slate-950/10" aria-hidden="true" />
         <div className={`relative flex w-full items-center gap-3 ${wide ? "px-6 py-5" : "px-4 py-3"}`}>
           <div className="min-w-0 flex-1">
-            <p className={`font-bold uppercase tracking-[0.25em] text-[#ffe29a] ${wide ? "text-sm" : "text-[10px]"}`}>Your deck</p>
-            <p className={`truncate font-display font-extrabold leading-tight ${wide ? "text-xl sm:text-3xl" : "text-lg"}`}>{picked ? picked.name : `Random ${size}-card deck`}</p>
+            <p className={`italic-note text-[#d8c8a2] ${wide ? "text-base" : "text-xs"}`}>Your deck</p>
+            <p className={`truncate font-title leading-tight text-[#f1e8d0] ${wide ? "text-2xl sm:text-4xl" : "text-xl"}`}>{picked ? picked.name : `Random ${size}-card deck`}</p>
             <p className={`text-slate-300 ${wide ? "text-base" : "text-xs"}`}>
               {picked ? [`${size} cards`, picked.official ? "Ready-made" : "Your deck", setName(picked.code ?? null)].filter(Boolean).join(" · ") : "A new mix every game"}
             </p>
@@ -83,14 +83,14 @@ export default function DeckPicker({
 
       {/* search and tabs */}
       <div className="flex flex-wrap items-center gap-2">
-        <div role="tablist" aria-label="Which decks" className="flex max-w-full gap-1 overflow-x-auto rounded-full border border-white/15 bg-white/5 p-0.5">
+        <div role="tablist" aria-label="Which decks" className="seg !flex max-w-full gap-1 overflow-x-auto">
           {tabs.map((t) => (
             <button
               key={t.id}
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
-              className={`whitespace-nowrap rounded-full font-bold transition ${wide ? "px-3 py-1.5 text-sm sm:px-5 sm:py-2 sm:text-base" : "px-3 py-1 text-xs"} ${tab === t.id ? "bg-amber-400 text-black" : "text-slate-200 hover:bg-white/10"}`}
+              className={`whitespace-nowrap rounded-md font-bold transition ${wide ? "px-3 py-1.5 text-sm sm:px-5 sm:py-2 sm:text-base" : "px-3 py-1 text-xs"} ${tab === t.id ? "paper !border-[1.5px] !shadow-none" : "text-slate-200 hover:bg-white/10"}`}
             >
               {t.label}{" "}
               {skeleton ? <Skeleton className="inline-block h-3.5 w-5 align-middle" /> : <span className={tab === t.id ? "opacity-70" : "text-slate-400"}>{t.count}</span>}
@@ -103,7 +103,7 @@ export default function DeckPicker({
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search decks…"
           aria-label="Search decks"
-          className={`min-w-0 flex-1 max-[520px]:basis-full rounded-full border border-white/20 bg-white/10 text-slate-100 placeholder:text-slate-400 focus:border-amber-300/70 focus:outline-none ${wide ? "px-5 py-2.5 text-base" : "px-3.5 py-1.5 text-sm"}`}
+          className={`min-w-0 flex-1 max-[520px]:basis-full auth-input !w-auto ${wide ? "px-5 py-2.5 text-base" : "px-3.5 py-1.5 text-sm"}`}
         />
       </div>
 
@@ -177,8 +177,8 @@ function Tile({
       aria-selected={selected}
       disabled={disabled}
       onClick={onPick}
-      className={`group relative flex h-full w-full items-stretch overflow-hidden rounded-xl border text-left transition disabled:opacity-60 ${wide ? "gap-3.5 p-2.5 pr-4" : "gap-2.5 p-1.5 pr-2.5"} ${
-        selected ? "border-amber-300 bg-amber-400/15 ring-2 ring-amber-300/70" : "border-white/15 bg-white/[0.06] hover:-translate-y-0.5 hover:border-amber-200/50 hover:bg-white/10"
+      className={`group relative flex h-full w-full items-stretch overflow-hidden rounded-lg border-2 text-left transition disabled:opacity-60 ${wide ? "gap-3.5 p-2.5 pr-4" : "gap-2.5 p-1.5 pr-2.5"} ${
+        selected ? "border-[#d9694f] bg-[#b3392b]/20 ring-2 ring-[#d9694f]/60" : "border-[#120c07] bg-white/[0.06] hover:-translate-y-0.5 hover:border-[#d9694f]/60 hover:bg-white/10"
       }`}
     >
       <span
@@ -190,7 +190,7 @@ function Tile({
       </span>
       {children}
       {selected && (
-        <span aria-hidden="true" className={`absolute flex items-center justify-center rounded-full bg-amber-400 font-extrabold text-black shadow ${wide ? "right-2 top-2 h-6 w-6 text-sm" : "right-1.5 top-1.5 h-5 w-5 text-xs"}`}>
+        <span aria-hidden="true" className={`absolute flex items-center justify-center rounded-[45%_55%_50%_50%] bg-[#e8dcc0] font-extrabold text-[#1f1710] shadow ${wide ? "right-2 top-2 h-6 w-6 text-sm" : "right-1.5 top-1.5 h-5 w-5 text-xs"}`}>
           ✓
         </span>
       )}

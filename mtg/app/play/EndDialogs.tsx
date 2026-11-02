@@ -6,6 +6,7 @@ import { OPPONENT } from "@mtg/engine";
 import { animationsEnabled } from "@/lib/motion";
 import ConfirmDialog from "../ConfirmDialog";
 import { playerName } from "./log";
+import { Scribble } from "../Icons";
 
 /** Asks before a player resigns. Resigning ends the game at once and the other player wins. */
 export function ResignDialog({ player, onConfirm, onCancel }: { player: PlayerId; onConfirm: () => void; onCancel: () => void }) {
@@ -21,50 +22,52 @@ export function ResignDialog({ player, onConfirm, onCancel }: { player: PlayerId
   );
 }
 
-/** A gold cup: the winner's medal. */
-function Trophy() {
+// The emblem above the result: crossed swords on a shield for a win, a skull for a loss, two seals for a draw.
+// Flat shapes only (no gradients or filters), so the screen costs next to nothing to draw.
+const INK = "#1f1710";
+const PAPER = "#e8dcc0";
+
+function Sword({ rotate }: { rotate: number }) {
   return (
-    <svg viewBox="0 0 64 64" width="74" height="74" aria-hidden="true" className="victory-icon">
-      <defs>
-        <linearGradient id="trophy-gold" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff3c4" />
-          <stop offset="0.45" stopColor="#f4b43d" />
-          <stop offset="1" stopColor="#b9731a" />
-        </linearGradient>
-      </defs>
-      <path d="M19 9h26v15c0 9.5-5.5 16-13 16s-13-6.5-13-16V9z" fill="url(#trophy-gold)" stroke="#7a4a0e" strokeWidth="1.5" />
-      <path d="M19 13H11c0 9 3.5 14 10 15.5M45 13h8c0 9-3.5 14-10 15.5" fill="none" stroke="url(#trophy-gold)" strokeWidth="3.4" strokeLinecap="round" />
-      <path d="M29 40h6v7h-6z" fill="url(#trophy-gold)" stroke="#7a4a0e" strokeWidth="1.2" />
-      <path d="M22 54h20v4H22zM26 47h12v7H26z" fill="url(#trophy-gold)" stroke="#7a4a0e" strokeWidth="1.2" strokeLinejoin="round" />
-      <path d="M32 15l2.4 5 5.4.7-4 3.7 1 5.3-4.8-2.7-4.8 2.7 1-5.3-4-3.7 5.4-.7z" fill="#fff8dc" opacity="0.92" />
-      <path d="M23 12v14" stroke="#fffbe6" strokeWidth="2" strokeLinecap="round" opacity="0.55" />
-    </svg>
+    <g transform={`rotate(${rotate} 48 52)`}>
+      <path d="M48 6l5 9v46h-10V15z" fill="#d9d2c0" stroke={INK} strokeWidth="2.4" strokeLinejoin="round" />
+      <path d="M48 12v46" stroke="#a79f8a" strokeWidth="1.6" />
+      <rect x="35" y="61" width="26" height="6" rx="2" fill="#8c6a3c" stroke={INK} strokeWidth="2.2" />
+      <rect x="45" y="67" width="6" height="14" fill="#5a3a22" stroke={INK} strokeWidth="2" />
+      <circle cx="48" cy="85" r="4.600" fill="#8c6a3c" stroke={INK} strokeWidth="2.2" />
+    </g>
   );
 }
 
-/** A cracked shield: for the player who lost. */
-function BrokenShield() {
+function Emblem({ result }: { result: "win" | "lose" | "draw" }) {
+  if (result === "win") {
+    return (
+      <svg viewBox="0 0 96 96" width="116" height="116" aria-hidden="true" className="victory-emblem">
+        <path d="M48 8l30 10v28c0 18-13 30-30 38C31 76 18 64 18 46V18z" fill="#b3392b" stroke={INK} strokeWidth="3" strokeLinejoin="round" />
+        <path d="M48 15l23 7.500V46c0 14-10 24-23 30.500C35 70 25 60 25 46V22.500z" fill="none" stroke={PAPER} strokeOpacity=".55" strokeWidth="1.800" strokeDasharray="3.500 3" />
+        <Sword rotate={-42} />
+        <Sword rotate={42} />
+        <circle cx="48" cy="52" r="5" fill="#e8dcc0" stroke={INK} strokeWidth="2.200" />
+      </svg>
+    );
+  }
+  if (result === "lose") {
+    return (
+      <svg viewBox="0 0 96 96" width="112" height="112" aria-hidden="true" className="victory-emblem">
+        <path d="M48 10c-18 0-30 12-30 28 0 10 4 17 11 21v11c0 3 2 5 5 5h28c3 0 5-2 5-5V59c7-4 11-11 11-21 0-16-12-28-30-28z" fill={PAPER} stroke={INK} strokeWidth="3.200" strokeLinejoin="round" />
+        <ellipse cx="35" cy="42" rx="8" ry="9.500" fill={INK} />
+        <ellipse cx="61" cy="42" rx="8" ry="9.500" fill={INK} />
+        <path d="M48 52l-5 10h10z" fill={INK} />
+        <path d="M37 71v10M44 72v10M52 72v10M59 71v10" stroke={INK} strokeWidth="2.600" strokeLinecap="round" />
+        <path d="M65 16l-5 10 6 5-4 9" fill="none" stroke="#7d2219" strokeWidth="2.400" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
   return (
-    <svg viewBox="0 0 64 64" width="70" height="70" aria-hidden="true" className="victory-icon">
-      <defs>
-        <linearGradient id="shield-steel" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#cbd5e1" />
-          <stop offset="1" stopColor="#475569" />
-        </linearGradient>
-      </defs>
-      <path d="M32 7l19 6.5V29c0 12.5-8.2 21-19 25.5C21.2 50 13 41.5 13 29V13.5L32 7z" fill="url(#shield-steel)" stroke="#1e293b" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M34 9l-6 14 8 6-7 10 5 8" fill="none" stroke="#fb7185" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-/** Balanced scales: nobody won. */
-function Scales() {
-  return (
-    <svg viewBox="0 0 64 64" width="70" height="70" aria-hidden="true" className="victory-icon" fill="none" stroke="#e2e8f0" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M32 8v44M22 52h20M12 18h40" />
-      <path d="M12 18l-7 16h14zM52 18l-7 16h14z" />
-      <path d="M5 34c0 4 3 6 7 6s7-2 7-6M45 34c0 4 3 6 7 6s7-2 7-6" />
+    <svg viewBox="0 0 96 64" width="112" height="75" aria-hidden="true" className="victory-emblem">
+      <path d="M48 6v46M26 52h44M14 16h68" fill="none" stroke={INK} strokeWidth="3.400" strokeLinecap="round" />
+      <path d="M14 16l-9 22h18zM82 16l-9 22h18z" fill="#4f7a62" stroke={INK} strokeWidth="2.600" strokeLinejoin="round" />
+      <path d="M5 38c0 5 4 8 9 8s9-3 9-8M73 38c0 5 4 8 9 8s9-3 9-8" fill="none" stroke={INK} strokeWidth="2.600" />
     </svg>
   );
 }
@@ -93,19 +96,24 @@ export function VictoryDialog({
 }) {
   const lost = you !== undefined && winner !== "draw" && winner !== you;
   const result = winner === "draw" ? "draw" : lost ? "lose" : "win";
-  const title = result === "draw" ? "Draw" : result === "lose" ? "Defeat" : "Victory";
+  const title = result === "draw" ? "A draw" : result === "lose" ? "Defeated" : "Victory";
   const spin = animationsEnabled();
   return (
     <>
       <div role="dialog" aria-modal="true" aria-label={result === "win" ? "You win" : result === "lose" ? "You lost" : "Draw"} className="victory-backdrop">
-        <div data-result={result} className={`victory-card ${spin ? "victory-pop" : ""}`}>
-          {result === "win" && <div aria-hidden="true" className={`victory-rays ${spin ? "victory-rays-turn" : ""}`} />}
-          <div className="victory-medal">{result === "draw" ? <Scales /> : result === "lose" ? <BrokenShield /> : <Trophy />}</div>
+        <div data-result={result} className={`victory-scroll ${spin ? "scroll-unroll" : ""}`}>
+          <div aria-hidden="true" className="scroll-roll" />
+          <div className="scroll-lower">
+          <div className="scroll-body">
+            <div className="scroll-sheet">
+              <div className="scroll-inner">
+          <div className="victory-medal"><Emblem result={result} /></div>
           <h2 className="victory-title">{title}</h2>
-          <p className="victory-sub">{result === "draw" ? "Neither player wins this one" : result === "lose" ? `${playerName(winner as PlayerId)} wins this one` : `Congratulations, ${playerName(winner as PlayerId)}!`}</p>
+          <Scribble width={200} className="victory-rule" />
+          <p className="victory-sub">{result === "draw" ? "Neither hand takes this one." : result === "lose" ? `${playerName(winner as PlayerId)} takes this one. The ink dries; there is always another game.` : `The table is yours, ${playerName(winner as PlayerId)}.`}</p>
           {reason && <p className="victory-reason">{reason}</p>}
           {series && (
-            <p className="victory-reason !text-[#fde68a]">
+            <p className="victory-reason">
               {series.decided
                 ? `${series.wins[series.you] > series.wins[OPPONENT[series.you]] ? "You won" : "You lost"} the best of ${series.bestOf}: ${series.wins[series.you]} – ${series.wins[OPPONENT[series.you]]}`
                 : `Game ${series.game} of up to ${series.bestOf}. Score: you ${series.wins[series.you]} – ${series.wins[OPPONENT[series.you]]} ${series.opponent}`}
@@ -113,7 +121,7 @@ export function VictoryDialog({
           )}
           {keep}
           {rematch?.state === "incoming" && (
-            <p role="status" className="victory-reason !text-[#fde68a]">
+            <p role="status" className="victory-reason">
               {rematch.opponent} wants a rematch.
             </p>
           )}
@@ -153,10 +161,15 @@ export function VictoryDialog({
               )
             )}
             {onLeave && (
-              <button onClick={onLeave} autoFocus={!series || series.decided} className="btn-gold !px-7 !py-3 !text-base">
-                Back to the lobby
+              <button onClick={onLeave} autoFocus={!series || series.decided} className="btn-gold victory-leave !px-7 !py-3 !text-base">
+                Back to the front room
               </button>
             )}
+          </div>
+              </div>
+            </div>
+            <div aria-hidden="true" className="scroll-roll scroll-roll-bottom" />
+          </div>
           </div>
         </div>
       </div>

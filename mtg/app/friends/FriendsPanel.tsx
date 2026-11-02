@@ -24,6 +24,7 @@ import { loadMe } from "@/lib/profile";
 import { inviteFriend, useOnline, watchFriends } from "@/lib/online/session";
 import type { FriendStatus } from "@/lib/online/protocol";
 import WatchButton from "../lobby/WatchButton";
+import { Chev, Lens, Minus, Plus } from "../Icons";
 
 const icon = {
   fill: "none",
@@ -65,11 +66,11 @@ function describe(st: FriendStatus | undefined): { text: string; dot: string } {
   if (!st || !st.online) return { text: "Offline", dot: "#64748b" };
   if (st.match?.status === "playing")
     return {
-      text: st.match.bot ? "Playing the computer" : "In a match",
-      dot: "#f87171",
+      text: st.match.bot ? "Dueling the clockwork" : "In a match",
+      dot: "#d9694f",
     };
-  if (st.match) return { text: "In a room", dot: "#fbbf24" };
-  return { text: "Online", dot: "#34d399" };
+  if (st.match) return { text: "At a table", dot: "#d9694f" };
+  return { text: "Online", dot: "#6b9a7f" };
 }
 
 function Names({ person, line }: { person: Person; line?: string }) {
@@ -219,17 +220,9 @@ export default function FriendsPanel() {
             aria-expanded={open}
             className="flex min-w-0 flex-1 items-center gap-2 text-left"
           >
-            <svg
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-              {...icon}
-              className={`transition ${open ? "rotate-90" : ""}`}
-            >
-              <path d="M9 6l6 6-6 6" />
-            </svg>
-            <h2 className="font-title text-sm font-extrabold uppercase tracking-[0.2em] text-[#ffe29a]">
-              Friends
+            <Chev width={16} height={16} className={`ink-icon transition ${open ? "rotate-90" : ""}`} />
+            <h2 className="font-title text-xl text-[#e8dcc0]">
+              Your company
             </h2>
             <span className="count-chip !px-2 !py-0.5 !text-xs">
               {friends.length}
@@ -249,16 +242,8 @@ export default function FriendsPanel() {
             aria-label="Add or search for friends"
             disabled={setup}
           >
-            <svg
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              {...icon}
-              strokeWidth={2.8}
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            Add
+            <Plus width={14} height={14} />
+            Find
           </button>
           {sheet && (
             <button onClick={() => setSheet(false)} aria-label="Close the friends list" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/10 text-2xl leading-none md:hidden">
@@ -278,7 +263,7 @@ export default function FriendsPanel() {
             {problem && (
               <p
                 role="alert"
-                className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#fecaca]"
+                className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#f0bfb0]"
               >
                 {problem}
               </p>
@@ -301,7 +286,7 @@ export default function FriendsPanel() {
                   <div
                     key={l.rowId}
                     className="deck-row !gap-2 !px-3 !py-2"
-                    style={{ "--accent": "#fb7185" } as React.CSSProperties}
+                    style={{ "--accent": "#d9694f" } as React.CSSProperties}
                   >
                     <Face person={l.person} size={32} />
                     <Names person={l.person} />
@@ -331,13 +316,13 @@ export default function FriendsPanel() {
               !setup &&
               incoming.length === 0 && (
                 <div className="empty-note !py-4 text-sm">
-                  No friends yet.
+                  Nobody has pulled up a chair yet.
                   <br />
                   <button
                     onClick={() => setAdding(true)}
-                    className="mt-1 font-semibold text-[#ffe29a] underline"
+                    className="mt-1 font-semibold text-[#e8dcc0] underline"
                   >
-                    Find someone to play with
+                    Go looking for company
                   </button>
                 </div>
               )}
@@ -346,7 +331,7 @@ export default function FriendsPanel() {
               <div
                 key={l.rowId}
                 className="deck-row !gap-2 !px-3 !py-2"
-                style={{ "--accent": "#34d399" } as React.CSSProperties}
+                style={{ "--accent": "#6b9a7f" } as React.CSSProperties}
               >
                 <span className="relative shrink-0">
                   <Face person={l.person} size={34} />
@@ -399,9 +384,7 @@ export default function FriendsPanel() {
                     aria-label={`Remove ${displayName(l.person)} from your friends`}
                     title="Remove friend"
                   >
-                    <svg viewBox="0 0 24 24" width="14" height="14" {...icon}>
-                      <path d="M5 12h14" />
-                    </svg>
+                    <Minus width={14} height={14} />
                   </button>
                 )}
                 {net.friends[l.person.id]?.match?.status === "playing" && (
@@ -419,7 +402,7 @@ export default function FriendsPanel() {
                       disabled={net.snapshot !== null}
                       title={
                         net.snapshot !== null
-                          ? "You are already in a room"
+                          ? "You already have a seat somewhere"
                           : undefined
                       }
                     />
@@ -569,10 +552,7 @@ function AddFriends({
           </button>
         </header>
         <label className="tool-field !rounded-2xl !py-3">
-          <svg viewBox="0 0 24 24" {...icon}>
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-3.5-3.5" />
-          </svg>
+          <Lens />
           <input
             autoFocus
             value={text}
@@ -588,7 +568,7 @@ function AddFriends({
         {problem && (
           <p
             role="alert"
-            className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#fecaca]"
+            className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#f0bfb0]"
           >
             {problem}
           </p>
@@ -622,14 +602,14 @@ function AddFriends({
                 style={
                   {
                     "--accent":
-                      link?.relation === "friend" ? "#34d399" : "#f4b43d",
+                      link?.relation === "friend" ? "#6b9a7f" : "#d9694f",
                   } as React.CSSProperties
                 }
               >
                 <Face person={p} size={38} />
                 <Names person={p} />
                 {link?.relation === "friend" ? (
-                  <span className="chip chip-ok">✓ Friends</span>
+                  <span className="chip chip-ok">Keeps your company</span>
                 ) : link?.relation === "outgoing" ? (
                   <span className="chip chip-meta">Request sent</span>
                 ) : link?.relation === "incoming" ? (
@@ -646,7 +626,7 @@ function AddFriends({
                     disabled={busy === p.id}
                     className="btn-gold"
                   >
-                    {busy === p.id ? "Sending…" : "Add friend"}
+                    {busy === p.id ? "Sealing the letter…" : "Send word"}
                   </button>
                 )}
               </div>

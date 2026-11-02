@@ -30,7 +30,7 @@ export default function LookPicker({
   useMatFocusVersion(); // (moving the mat redraws the preview)
   const s = resolve("sleeve", sleeve, who);
   const m = resolve("mat", mat, who);
-  const ring = (on: boolean) => (on ? "border-[#fcd34d] ring-2 ring-[#fcd34d]" : "border-white/25 hover:border-white/70");
+  const ring = (on: boolean) => (on ? "border-[#d9694f] ring-2 ring-[#d9694f]" : "border-white/25 hover:border-white/70");
   const cardH = large ? 88 : 68;
   const cardW = large ? 62 : 48;
 

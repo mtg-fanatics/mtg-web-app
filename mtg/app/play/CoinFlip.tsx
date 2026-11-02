@@ -68,7 +68,7 @@ export default function CoinFlip({
         {stage === "call" && (
           <>
             <p className="text-slate-200">
-              <span className="font-bold text-[#ffe29a]">{playerName(caller)}</span>, call it. The winner chooses who goes first.
+              <span className="font-bold text-[#e8dcc0]">{playerName(caller)}</span>, call it. The winner chooses who goes first.
             </p>
             <div className="flex gap-3">
               <button onClick={() => flip("heads")} className="btn-gold !px-8 !py-3 !text-base">
@@ -86,14 +86,14 @@ export default function CoinFlip({
 
         {stage === "flipping" && (
           <p className="text-slate-200">
-            {playerName(caller)} called <span className="font-bold capitalize text-[#ffe29a]">{call}</span>…
+            {playerName(caller)} called <span className="font-bold capitalize text-[#e8dcc0]">{call}</span>…
           </p>
         )}
 
         {stage === "result" && winner && call && result && (
           <>
             <p className="text-xl">
-              It&apos;s <span className="font-bold capitalize text-[#ffe29a]">{result}</span>! {playerName(caller)} called {call}, so <span className="font-bold text-[#ffe29a]">{playerName(winner)}</span> wins the flip.
+              It&apos;s <span className="font-bold capitalize text-[#e8dcc0]">{result}</span>! {playerName(caller)} called {call}, so <span className="font-bold text-[#e8dcc0]">{playerName(winner)}</span> wins the flip.
             </p>
             <p className="text-slate-300">{playerName(winner)}, who goes first?</p>
             <div className="flex gap-3">

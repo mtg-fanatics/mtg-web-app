@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import ReplayView from "../ReplayView";
 import { Skeleton } from "../../Skeleton";
 
-export const metadata: Metadata = { title: "Replay | DuelRealm MTG" };
+export const metadata: Metadata = { title: "Replay | Inkfall" };
 
 // With Cache Components, route params are runtime data and must be read inside <Suspense>.
 export default function ReplayPage({ params }: { params: Promise<{ id: string }> }) {

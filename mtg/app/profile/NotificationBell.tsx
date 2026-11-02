@@ -5,6 +5,7 @@ import { playSound } from "@/lib/sound";
 import { acceptRequest, displayName, listLinks, removeLink } from "@/lib/friends";
 import type { Link, Person } from "@/lib/friends";
 import { dismissCameOnline, dismissInvite, inviteFriend, joinRoom, liveInvites, useOnline } from "@/lib/online/session";
+import { Handbell } from "../Icons";
 
 const REFRESH_MS = 15_000; // how often to look for new friend requests
 const TOAST_MS = 8000;
@@ -102,7 +103,7 @@ export default function NotificationBell({ meId, meName }: { meId: string; meNam
     if (fresh.length > 0) playSound("notify");
   });
 
-  // the tab says how many are new, so it can be noticed from another tab: "(2) DuelRealm MTG"
+  // the tab says how many are new, so it can be noticed from another tab: "(2) Inkfall"
   const count = unseen.length;
   useEffect(() => {
     const base = document.title.replace(/^\(\d+\)\s*/, "");
@@ -150,10 +151,7 @@ export default function NotificationBell({ meId, meName }: { meId: string; meNam
         title="Notifications"
         className="relative grid h-[60px] w-[60px] place-items-center rounded-2xl border border-white/25 bg-slate-950/55 text-white shadow-xl shadow-black/40 ring-1 ring-inset ring-white/10 transition hover:-translate-y-0.5 hover:bg-slate-900/70"
       >
-        <svg viewBox="0 0 24 24" width="24" height="24" {...iconProps} className={unseen.length > 0 ? "text-[#ffe29a]" : ""}>
-          <path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z" />
-          <path d="M10 19.5a2 2 0 0 0 4 0" />
-        </svg>
+        <Handbell width={26} height={26} className={`ink-icon ${unseen.length > 0 ? "text-[#d9694f]" : ""}`} />
         {unseen.length > 0 && (
           <span className="absolute -right-2 -top-2 grid h-6 min-w-6 place-items-center">
             <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-red-500/60" />
@@ -196,9 +194,9 @@ export default function NotificationBell({ meId, meName }: { meId: string; meNam
       )}
 
       {open && (
-        <div role="dialog" aria-label="Notifications" style={{ background: "rgba(8, 12, 26, 0.97)" }} className="panel-glass absolute left-0 top-full z-30 mt-2 flex max-h-[70dvh] w-[min(24rem,calc(100vw-2rem))] max-md:fixed max-md:inset-x-3 max-md:top-14 max-md:mt-0 max-md:w-auto flex-col gap-2 overflow-y-auto p-3 text-white">
-          <h2 className="px-1 font-title text-xs font-extrabold uppercase tracking-[0.2em] text-[#ffe29a]">Notifications</h2>
-          {items.length === 0 && <p className="empty-note px-1 py-3 text-center text-[15px]">You&apos;re all caught up.</p>}
+        <div role="dialog" aria-label="Notifications" className="panel-glass absolute left-0 top-full z-30 mt-2 flex max-h-[70dvh] w-[min(24rem,calc(100vw-2rem))] max-md:fixed max-md:inset-x-3 max-md:top-14 max-md:mt-0 max-md:w-auto flex-col gap-2 overflow-y-auto p-3 text-white">
+          <h2 className="px-1 font-title text-xs font-extrabold uppercase tracking-[0.2em] text-[#e8dcc0]">Messages</h2>
+          {items.length === 0 && <p className="empty-note px-1 py-3 text-center text-[15px]">No letters tonight.</p>}
           {items.map((i) => (
             <div key={i.key} className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/[0.06] p-2.5">
               {i.kind === "invite" ? (
@@ -231,7 +229,7 @@ export default function NotificationBell({ meId, meName }: { meId: string; meNam
                     <>
                       <button
                         disabled={busy === i.key || inRoom}
-                        title={inRoom ? "Leave your current room first" : undefined}
+                        title={inRoom ? "Leave your current table first" : undefined}
                         onClick={() => void run(i.key, async () => ((await joinRoom(i.roomId)) ? setOpen(false) : undefined))}
                         className="btn-gold !px-3 !py-1.5"
                       >
@@ -275,7 +273,7 @@ export default function NotificationBell({ meId, meName }: { meId: string; meNam
             </div>
           ))}
           {online.error && (
-            <p role="alert" className="rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm text-[#fecaca]">
+            <p role="alert" className="rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm text-[#f0bfb0]">
               {online.error}
             </p>
           )}

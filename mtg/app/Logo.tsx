@@ -1,6 +1,6 @@
 /**
- * The DuelRealm logo (public/logo.svg) as a round picture: a gold ring with the five-color wheel.
- * `size` is in pixels. The picture has square corners in its file, the circle crop hides them.
+ * The Inkfall seal (public/logo.svg): a blot of sealing wax pressed with an ink drop and a nib slit.
+ * `size` is in pixels. `glow` is kept so old call sites still work: the seal casts a hard shadow now, never a glow.
  */
 export default function Logo({ size = 40, className = "", glow = false }: { size?: number; className?: string; glow?: boolean }) {
   return (
@@ -11,8 +11,8 @@ export default function Logo({ size = 40, className = "", glow = false }: { size
       width={size}
       height={size}
       draggable={false}
-      className={`shrink-0 select-none rounded-full object-cover ${glow ? "shadow-[0_0_34px_rgba(244,180,61,0.45)]" : ""} ${className}`}
-      style={{ width: size, height: size }}
+      className={`shrink-0 select-none object-contain ${className}`}
+      style={{ width: size, height: size, filter: glow ? "drop-shadow(4px 6px 0 rgba(8,5,3,.6))" : "drop-shadow(2px 3px 0 rgba(8,5,3,.55))", transform: "rotate(-4deg)" }}
     />
   );
 }

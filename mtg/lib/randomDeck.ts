@@ -24,19 +24,17 @@ function shuffled<T>(items: T[]): T[] {
   return out;
 }
 
-/** A random sample of cheap cards the game can play: a few random pages of the playable cards. */
+/**
+ * A random sample of cheap cards the game can play: a few pages of the playable cards, each starting at a random place in id order.
+ * (It used to count all of them first and page at a random offset: with thousands of playable cards that count timed out the database.
+ * Starting at a random id needs no count and no offset, so it stays fast however many cards become playable.)
+ */
 async function sampleSpells(): Promise<Candidate[]> {
   const supabase = createClient();
-  const base = () => supabase.from("cards").select("id, type, colors", { count: "exact" }).eq("playable", true).in("type", ["creature", "instant", "sorcery"]).lte("cost", 5);
-  const { count, error } = await base().range(0, 0);
-  if (error) throw new Error(error.message);
-  const total = count ?? 0;
-  const pages = await Promise.all(
-    Array.from({ length: 4 }, () => {
-      const from = Math.floor(Math.random() * Math.max(1, total - 250));
-      return base().order("id").range(from, from + 249);
-    }),
-  );
+  const page = (start: string) =>
+    supabase.from("cards").select("id, type, colors").eq("playable", true).in("type", ["creature", "instant", "sorcery"]).lte("cost", 5).gte("id", start).order("id").limit(250);
+  const hex = () => Array.from({ length: 3 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+  const pages = await Promise.all(Array.from({ length: 4 }, () => page(hex())));
   const seen = new Map<string, Candidate>();
   for (const page of pages) {
     if (page.error) throw new Error(page.error.message);

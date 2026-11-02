@@ -156,26 +156,23 @@ function PlayersPanelInner({
         const acting = id === actor;
         return (
           <div key={id} className={`rounded-xl border border-l-4 bg-white p-3 shadow-sm ${style.border} ${style.borderL} ${acting ? `shadow-lg ${style.glow} ring-2 ring-amber-300` : ""}`}>
-            {/* a long account name shortens (…) and the badge and Resign button wrap below it instead of leaving the panel */}
+            {/* a long account name shortens (…) and the badge wraps below it instead of leaving the panel; Resign sits at the end of the life row */}
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
               <span title={playerName(id)} className={`font-display min-w-0 max-w-full truncate rounded-full px-2.5 py-0.5 text-base font-bold ${style.chip}`}>
                 {playerName(id)}
               </span>
               {acting && <span className="shrink-0 whitespace-nowrap rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-extrabold uppercase font-display tracking-wide text-black">to act</span>}
-              {onResign && !state.winner && (
-                <button
-                  onClick={() => onResign(id)}
-                  className="ml-auto shrink-0 rounded border border-red-300 px-1.5 py-0.5 text-xs font-semibold text-red-700 hover:bg-red-50"
-                >
-                  Resign
-                </button>
-              )}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <span className="text-2xl" aria-hidden="true">
                 ❤️
               </span>
               <LifeTotal id={id} value={p.life} />
+              {onResign && !state.winner && (
+                <button onClick={() => onResign(id)} title="Give up this game: the other player wins" className="btn-danger ml-auto shrink-0 !px-3 !py-1">
+                  Resign
+                </button>
+              )}
               <DeathLife n={p.deathLife ?? 0} />
               {(p.preventShield ?? 0) > 0 && (
                 <span title="The next damage dealt to this player this turn is prevented" className="rounded bg-sky-100 px-1.5 py-0.5 text-sm font-bold text-sky-800">

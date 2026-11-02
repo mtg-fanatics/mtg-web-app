@@ -15,6 +15,7 @@ import DeckColors from "./DeckColors";
 import DeckFilterBar, { deckMatches, NO_FILTERS, setChoices, typeOf } from "./DeckFilters";
 import DeckPreview from "./DeckPreview";
 import MixPacks from "./MixPacks";
+import { Back, Plus } from "../Icons";
 
 const iconProps = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true } as const;
 
@@ -56,33 +57,30 @@ function Pager({ page, pages, onPage }: { page: number; pages: number; onPage: (
 export default function DeckList() {
   const [tab, setTab] = useState<"mine" | "official">("mine");
   return (
-    <main className="relative flex flex-1 flex-col p-4 text-slate-100 sm:p-6">
+    <main className="relative flex h-[calc(100dvh-2.6rem)] min-h-0 flex-none flex-col overflow-hidden p-4 text-slate-100 sm:p-6">
       <LiveWallpaper name="decks" />
-      <div className="panel-glass mx-auto flex w-full max-w-6xl flex-col gap-4 p-5 text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)] sm:p-6">
+      <div className="panel-glass mx-auto flex max-h-full min-h-0 w-full max-w-6xl flex-col gap-4 p-5 text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)] sm:p-6">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           <Link href="/" className="btn-ghost" aria-label="Back to the home page">
-            <svg viewBox="0 0 24 24" width="14" height="14" {...iconProps}>
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
+            <Back width={15} height={15} />
             Home
           </Link>
-          <h1 className="page-title">Decks</h1>
+          <h1 className="page-title">Your decks</h1>
           <div className="seg" role="group" aria-label="Which decks">
             <button onClick={() => setTab("mine")} aria-pressed={tab === "mine"}>
-              My decks
+              Mine
             </button>
             <button onClick={() => setTab("official")} aria-pressed={tab === "official"}>
-              Ready-made decks
+              Ready-made
             </button>
           </div>
           <Link href="/decks/new" className="btn-gold ml-auto !px-4 !py-2 !text-sm">
-            <svg viewBox="0 0 24 24" width="15" height="15" {...iconProps} strokeWidth={2.6}>
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+            <Plus width={16} height={16} />
             New deck
           </Link>
         </div>
-        {tab === "mine" ? <MyDecks /> : <OfficialDecks />}
+        {/* only the decks scroll, inside the panel: the title and the tabs stay where they are */}
+        <div className="deck-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-2">{tab === "mine" ? <MyDecks /> : <OfficialDecks />}</div>
       </div>
     </main>
   );
@@ -111,8 +109,7 @@ function MyDecks() {
   if (data.decks.length === 0)
     return (
       <p className="empty-note">
-        No decks of your own yet. Build one with &quot;New deck&quot;, or open Ready-made decks: you can play those as they are, or copy one
-        and change its cards.
+        The shelf is bare. Write a deck with &quot;New deck&quot;, or borrow from the ready-made ones: play them as they are, or copy one and change its cards.
       </p>
     );
 
@@ -124,9 +121,9 @@ function MyDecks() {
     <DeckFilterBar value={filters} onChange={(f) => (setFilters(f), setShown(0))} status shown={visible.length} total={data.decks.length} />
     {visible.length === 0 && (
       <p className="empty-note">
-        No decks match these filters.{" "}
-        <button onClick={() => setFilters(NO_FILTERS)} className="underline hover:text-[#ffe29a]">
-          Clear the filters
+        Nothing on the shelf fits.{" "}
+        <button onClick={() => setFilters(NO_FILTERS)} className="underline hover:text-[#e8dcc0]">
+          Wipe the filters clean
         </button>
       </p>
     )}
@@ -134,8 +131,8 @@ function MyDecks() {
       {visible.slice(current * DECK_PAGE_SIZE, (current + 1) * DECK_PAGE_SIZE).map((deck) => {
         const status = deckStatus(data.defs, deck.entries);
         return (
-          <li key={deck.id} className="deck-row" style={{ "--accent": status.ready ? "#34d399" : "#f4b43d" } as React.CSSProperties}>
-            <Link href={`/decks/${deck.id}`} className="deck-name hover:text-[#fcd34d]">
+          <li key={deck.id} className="deck-row" style={{ "--accent": status.ready ? "#6b9a7f" : "#d9694f" } as React.CSSProperties}>
+            <Link href={`/decks/${deck.id}`} className="deck-name hover:text-[#d9694f]">
               {deck.name}
             </Link>
             <DeckColors colors={deckColors(data.defs, deck.entries)} />
@@ -219,7 +216,7 @@ function OfficialDecks() {
       </div>
     );
   if (data.error) return <p className="text-sm text-[#fca5a5]">Could not load decks: {data.error}</p>;
-  if (data.decks.length === 0) return <p className="empty-note">No ready-made decks yet.</p>;
+  if (data.decks.length === 0) return <p className="empty-note">No ready-made decks have been bound yet.</p>;
 
   // the filters narrow everything below: the tiles of each section, and the packs to mix
   const decks = data.decks.filter((d) => deckMatches(filters, d, deckColors(data.defs, d.entries)));
@@ -241,16 +238,16 @@ function OfficialDecks() {
       {error && <p className="text-sm text-[#fca5a5]">{error}</p>}
       {decks.length === 0 && (
         <p className="empty-note">
-          No decks match these filters.{" "}
-          <button onClick={() => setFilters(NO_FILTERS)} className="underline hover:text-[#ffe29a]">
-            Clear the filters
+          Nothing on the shelf fits.{" "}
+          <button onClick={() => setFilters(NO_FILTERS)} className="underline hover:text-[#e8dcc0]">
+            Wipe the filters clean
           </button>
         </p>
       )}
       {sections.map((section) => (
         <section key={section.deckType} className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline gap-2">
-            <h2 className="font-title text-base font-extrabold uppercase tracking-[0.16em] text-[#ffe29a]">{section.title}</h2>
+            <h2 className="font-title text-base font-extrabold uppercase tracking-[0.16em] text-[#e8dcc0]">{section.title}</h2>
             {section.blurb && <span className="text-sm text-slate-300">{section.blurb}</span>}
           </div>
           <ul className="grid gap-3 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto max-sm:pb-2 max-sm:[&>li]:w-[82%] max-sm:[&>li]:shrink-0 max-sm:[&>li]:snap-start sm:grid-cols-2 lg:grid-cols-4">
@@ -271,7 +268,7 @@ function OfficialDecks() {
       {packs.length >= 1 && (
         <section className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline gap-2">
-            <h2 className="font-title text-base font-extrabold uppercase tracking-[0.16em] text-[#ffe29a]">Make your own trio</h2>
+            <h2 className="font-title text-base font-extrabold uppercase tracking-[0.16em] text-[#e8dcc0]">Make your own trio</h2>
             <span className="text-sm text-slate-300">Prefer a different combination? Mix any three packs into a 60-card deck, like Jumpstart.</span>
           </div>
           <MixPacks packs={packs} defs={data.defs} />

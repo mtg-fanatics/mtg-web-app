@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import DeckEditor from "../DeckEditor";
 import { CardSkeletons, Skeleton } from "../../Skeleton";
 
-export const metadata: Metadata = { title: "Edit deck | DuelRealm MTG" };
+export const metadata: Metadata = { title: "Edit deck | Inkfall" };
 
 // With Cache Components, route params are runtime data and must be read inside <Suspense>.
 export default function EditDeckPage({ params }: { params: Promise<{ id: string }> }) {

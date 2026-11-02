@@ -111,7 +111,7 @@ function Viewer({ replay }: { replay: Replay }) {
         {result && <span className="chip chip-ok">{result}</span>}
         <span className="ml-auto text-sm text-slate-300">{new Date(replay.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</span>
       </header>
-      {built.broken && <p className="shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/50 px-3 py-2 text-sm text-[#fde68a]">The replay stops at step {last}: the game rules have changed since this match, so the rest can&apos;t be shown. ({built.broken})</p>}
+      {built.broken && <p className="shrink-0 rounded-xl border border-amber-400/40 bg-amber-950/50 px-3 py-2 text-sm text-[#e8d9b5]">The replay stops at step {last}: the game rules have changed since this match, so the rest can&apos;t be shown. ({built.broken})</p>}
 
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <section className="glass glass-flat flex min-h-0 flex-col gap-2 p-3" aria-label="The table">
@@ -120,7 +120,7 @@ function Viewer({ replay }: { replay: Replay }) {
           <Side g={g} who="p1" name={name("p1")} onZoom={setZoomed} />
         </section>
         <aside className="glass glass-flat flex min-h-0 flex-col gap-2 p-3" aria-label="What happened">
-          <h2 className="font-display text-sm font-bold uppercase tracking-widest text-[#ffe29a]">What happened</h2>
+          <h2 className="font-display text-sm font-bold uppercase tracking-widest text-[#e8dcc0]">What happened</h2>
           <LogList lines={lines} steps={steps} at={at} onJump={setAt} name={name} />
         </aside>
       </div>
@@ -201,7 +201,7 @@ function Stack({ g }: { g: GameState }) {
   if (g.stack.length === 0) return null;
   return (
     <div className="shrink-0 rounded-xl border border-amber-300/40 bg-amber-400/10 px-3 py-1.5 text-sm">
-      <span className="mr-2 text-xs font-bold uppercase tracking-widest text-[#ffe29a]">On the stack</span>
+      <span className="mr-2 text-xs font-bold uppercase tracking-widest text-[#e8dcc0]">On the stack</span>
       {[...g.stack].reverse().map((s, i) => (
         <span key={s.id} className="mr-3">
           {i === 0 ? "▸ " : ""}

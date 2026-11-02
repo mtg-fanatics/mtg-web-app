@@ -48,10 +48,10 @@ export function Side({ label, children, player, tone, grow, mat, matFx, zones, o
   return (
     <section
       className={`relative flex flex-col gap-1.5 rounded-2xl border-2 px-1.5 py-1 shadow-lg lg:px-3 lg:py-2 ${grow ? "min-h-0 flex-1 overflow-y-auto" : "shrink-0"} ${
-        tray ? "border-[#6ee7b7]/50 bg-slate-950/65 text-white" : style ? `${style.border} ${style.borderL} ${style.soft}` : "border-zinc-200 border-l-zinc-400 bg-white/70"
+        tray ? "border-[#8fc4a5]/50 bg-slate-950/65 text-white" : style ? `${style.border} ${style.borderL} ${style.soft}` : "border-zinc-200 border-l-zinc-400 bg-white/70"
       }`}
     >
-      <h2 className={`flex items-center gap-2 font-display text-xs font-bold uppercase tracking-widest max-lg:sr-only ${tray ? "text-[#a7f3d0]" : "text-zinc-600"}`}>
+      <h2 className={`flex items-center gap-2 font-display text-xs font-bold uppercase tracking-widest max-lg:sr-only ${tray ? "text-[#a9d4b9]" : "text-zinc-600"}`}>
         {style && <span className={`inline-block h-2.5 w-2.5 rounded-full ${style.bar}`} aria-hidden="true" />}
         {label}
       </h2>
@@ -261,7 +261,7 @@ export function Battlefield({
 function CombatZone({ perms, attackingSide, lane, interaction }: { perms: Permanent[]; attackingSide: boolean; lane: LaneContext; interaction: Interaction }) {
   return (
     <div className={`flex flex-col gap-1 rounded-lg border-2 border-dashed px-2 py-1 ${attackingSide ? "border-red-400 bg-[#450a0a]/45" : "border-sky-400 bg-[#082f49]/45"}`}>
-      <div className={`flex items-center gap-2 text-[11px] font-extrabold uppercase font-display tracking-widest ${attackingSide ? "text-[#fecaca]" : "text-[#bae6fd]"}`}>
+      <div className={`flex items-center gap-2 text-[11px] font-extrabold uppercase font-display tracking-widest ${attackingSide ? "text-[#f0bfb0]" : "text-[#c9d3e0]"}`}>
         {attackingSide ? "⚔ Attack zone" : "🛡 Block zone"}
         {perms.length > 0 && <span>({perms.length})</span>}
         {perms.length === 0 && <span className="font-medium normal-case tracking-normal text-slate-200 max-lg:hidden">{attackingSide ? "Click a glowing creature to move it here and attack with it." : "Click one of your creatures, then the attacker it should block."}</span>}

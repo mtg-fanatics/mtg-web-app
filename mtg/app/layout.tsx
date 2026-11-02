@@ -1,40 +1,38 @@
 import type { Metadata } from "next";
-import { Atkinson_Hyperlegible_Next, Cinzel, Inter, Geist_Mono, Rajdhani } from "next/font/google";
+import { Alegreya_Sans, IM_Fell_English, IM_Fell_English_SC, Geist_Mono } from "next/font/google";
 import "mana-font/css/mana.css";
 import "./globals.css";
+import "./inkfall.css";
 import UserBar from "./UserBar";
 import RegisterSW from "./RegisterSW";
 import AutoFullscreen from "./AutoFullscreen";
 import Music from "./Music";
+import { InkFilters } from "./Icons";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
-// Inter: made for reading text on screens, clear at small sizes.
-const inter = Inter({
-  variable: "--font-inter",
+// Alegreya Sans: a humanist face with a calligrapher's rhythm, easy to read at small sizes. All the text you read.
+const alegreya = Alegreya_Sans({
+  variable: "--font-alegreya",
   subsets: ["latin"],
+  weight: ["400", "500", "700", "800"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 
-// Atkinson Hyperlegible Next: drawn so that similar letters (I, l, 1, O, 0) stay clearly different. Used for text in dark mode, where thin text on a dark page is hardest to read.
-const atkinson = Atkinson_Hyperlegible_Next({
-  variable: "--font-atkinson",
+// IM Fell English SC: a worn letterpress face (cut in the 1600s, photographed from a century of printing). The name and the headings.
+const fell = IM_Fell_English_SC({
+  variable: "--font-fell",
   subsets: ["latin"],
+  weight: "400",
   display: "swap",
 });
 
-// Rajdhani: a crisp, slightly squared game-interface face for labels, names and numbers.
-const rajdhani = Rajdhani({
-  variable: "--font-rajdhani",
+// IM Fell English: the same press in lower case and italic, for sub-headings and the voice of the game.
+const fellText = IM_Fell_English({
+  variable: "--font-fell-text",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  display: "swap",
-});
-
-// Cinzel: a classical, engraved-looking serif for the game's name on the home page.
-const cinzel = Cinzel({
-  variable: "--font-cinzel",
-  subsets: ["latin"],
-  weight: ["600", "800"],
+  weight: "400",
+  style: ["normal", "italic"],
   display: "swap",
 });
 
@@ -44,8 +42,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DuelRealm MTG",
-  description: "A two-player card duel game. Build a deck, join a room and play.",
+  title: "Inkfall",
+  description: "A game of two hands and a table. Write a deck, take a seat, and duel.",
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }], shortcut: "/icon.svg", apple: "/logo.svg" },
 };
 
@@ -55,7 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       data-theme="dark"
       suppressHydrationWarning
-      className={`${inter.variable} ${atkinson.variable} ${rajdhani.variable} ${cinzel.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${alegreya.variable} ${fell.variable} ${fellText.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
@@ -64,6 +62,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {process.env.NEXT_PUBLIC_SUPABASE_URL && <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="" />}
       </head>
       <body className="min-h-full flex flex-col">
+        <InkFilters />
         <RegisterSW />
         <AutoFullscreen />
         <Music />

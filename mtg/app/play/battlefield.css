@@ -44,15 +44,14 @@
     var(--bf-grain),
     radial-gradient(ellipse at 50% 45%, transparent 52%, rgba(14, 9, 5, 0.34) 82%, rgba(14, 9, 5, 0.58) 100%);
   background-size: 240px 240px, 100% 100%;
-  mix-blend-mode: multiply;
-  opacity: 0.9;
+  opacity: 0.85;
 }
 .bf-frame {
   z-index: 0;
   box-shadow:
     inset 0 0 0 2px rgba(18, 12, 7, 0.7),
     inset 0 0 0 4px color-mix(in srgb, var(--bf-trim) 38%, transparent),
-    inset 0 0 14px 2px rgba(10, 6, 3, 0.5);
+    inset 0 0 0 7px rgba(10, 6, 3, 0.22);
 }
 /* two small worn corners: the player's panel on the bottom-left, the opponent's on the top-right (a deliberate asymmetry) */
 .bf-frame::before, .bf-frame::after { content: ""; position: absolute; width: 16px; height: 16px; border: 2px solid color-mix(in srgb, var(--bf-trim) 70%, transparent); opacity: 0.85; }
@@ -105,9 +104,7 @@
   text-shadow: 0 1px 0 rgba(8, 5, 3, 0.9), 0 0 5px rgba(8, 5, 3, 0.85);
 }
 /* the rule is drawn in with one quick ink stroke, left to right (only while the Motion switch is on, and never for reduced motion) */
-@media (prefers-reduced-motion: no-preference) {
-  .bf-rule[data-draw="on"] { animation: bf-draw 0.8s ease-out 0.15s both; }
-}
+.bf-rule[data-draw="on"] { animation: bf-draw 0.8s ease-out 0.15s both; }
 @keyframes bf-draw { from { clip-path: inset(-4px 100% -4px 0); } to { clip-path: inset(-4px -4px -4px 0); } }
 
 /* ───────── the zone column: a recessed shelf with three pockets ───────── */
@@ -154,7 +151,14 @@
   border-style: solid !important;
   box-shadow: 0 0 7px rgba(232, 220, 192, 0.1), inset 0 0 9px rgba(232, 220, 192, 0.07);
 }
-.bf-pocket[data-zone="exile"]::before { content: ""; position: absolute; inset: 1px; border: 1px solid rgba(232, 220, 192, 0.14); border-radius: inherit; filter: url(#ink-rough-sm); pointer-events: none; }
+.bf-pocket[data-zone="exile"]::before { content: ""; position: absolute; inset: 1px; border: 1px solid rgba(232, 220, 192, 0.14); border-radius: inherit; pointer-events: none; }
 
 /* (the zone names hide on narrow screens, as before: the rule above must not bring them back) */
 @media (max-width: 1023px) { .bf-pocket .bf-zone-label { display: none; } }
+
+/* a computer that needs the cheaper effects (see perfTier.ts): no grain, no vignette, no texture on the pockets */
+.perf-lite .bf-vignette { display: none; }
+.perf-lite .bf-pocket, .perf-lite .bf-zones { background-image: none; box-shadow: none; outline: none; clip-path: none; }
+.perf-lite .bf-pocket[data-zone="graveyard"] { background-color: #3b3f42; }
+.perf-lite .bf-pocket[data-zone="exile"]::before { display: none; }
+.perf-lite .bf-title, .perf-lite .bf-caption, .perf-lite .bf-zone-label, .perf-lite .bf-count { text-shadow: none; }

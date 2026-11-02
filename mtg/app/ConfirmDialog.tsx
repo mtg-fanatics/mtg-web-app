@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { animationsEnabled } from "@/lib/motion";
 import { holdWallpaper } from "./LiveWallpaper";
+import { Binned, Query } from "./Icons";
 
 /**
  * A "are you sure?" pop-up in the game's own style, instead of the browser's plain box.
@@ -56,19 +57,7 @@ export default function ConfirmDialog({
     <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text" onClick={() => !busy && onCancel()} className="confirm-backdrop">
       <div onClick={(e) => e.stopPropagation()} className={`confirm-card ${danger ? "confirm-danger" : ""} ${animationsEnabled() ? "confirm-pop" : ""}`}>
         <div className="confirm-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            {danger ? (
-              <>
-                <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
-                <path d="M10 10v6M14 10v6" />
-              </>
-            ) : (
-              <>
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 8v5M12 16h.01" />
-              </>
-            )}
-          </svg>
+          {danger ? <Binned width={30} height={30} /> : <Query width={30} height={30} />}
         </div>
         <h2 id="confirm-title" className="confirm-title">
           {title}
@@ -78,7 +67,7 @@ export default function ConfirmDialog({
           {message}
         </p>
         {error && (
-          <p role="alert" className="rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm text-[#fecaca]">
+          <p role="alert" className="rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm text-[#f0bfb0]">
             {error}
           </p>
         )}

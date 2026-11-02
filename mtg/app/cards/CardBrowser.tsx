@@ -12,6 +12,7 @@ import { CardSkeletons } from "../Skeleton";
 import { usePageKeys } from "@/lib/pageKeys";
 import TypeButton from "./TypeButton";
 import { useCardSearch } from "./useCardSearch";
+import { Back, Lens } from "../Icons";
 
 type Filter = "all" | CardType;
 const TYPES: Filter[] = ["all", "creature", "land", "instant", "sorcery", "enchantment", "artifact", "planeswalker"];
@@ -39,17 +40,12 @@ export default function CardBrowser() {
       <div className="glass flex shrink-0 flex-col gap-3 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           <Link href="/" className="btn-ghost" aria-label="Back to the home page">
-            <svg viewBox="0 0 24 24" width="14" height="14" {...icon}>
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
+            <Back width={15} height={15} />
             Home
           </Link>
-          <h1 className="page-title">Cards</h1>
+          <h1 className="page-title">The library</h1>
           <label className="tool-field min-w-[15rem] flex-1 sm:max-w-sm">
-            <svg viewBox="0 0 24 24" {...icon}>
-              <circle cx="11" cy="11" r="7" />
-              <path d="M20 20l-3.5-3.5" />
-            </svg>
+            <Lens />
             <input
               value={query}
               onChange={(e) => {
@@ -93,9 +89,9 @@ export default function CardBrowser() {
       </div>
       </div>
 
-      {result?.error && <p className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#fecaca]">Could not load cards: {result.error}</p>}
+      {result?.error && <p className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#f0bfb0]">Could not load cards: {result.error}</p>}
       {result && !result.error && !loading && total === 0 && (
-        <p className="empty-note">No cards found. If the database is empty, run the card import (see the project notes).</p>
+        <p className="empty-note">Nothing by that name on these shelves. If the whole library is empty, the card import has not been run yet (see the project notes).</p>
       )}
 
       {!result && <CardSkeletons count={CARDS_PAGE_SIZE} size="md" className="glass cards-fit p-3" />}

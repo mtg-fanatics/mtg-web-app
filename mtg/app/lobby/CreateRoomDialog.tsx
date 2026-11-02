@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Cross, Padlock, Quill } from "../Icons";
 
 /** Before a room is opened: open to anyone, or locked with a password. */
 export default function CreateRoomDialog({ busy, ready, error, onCreate, onClose }: { busy: boolean; ready: boolean; error: string | null; onCreate: (password: string) => void; onClose: () => void }) {
@@ -13,35 +14,35 @@ export default function CreateRoomDialog({ busy, ready, error, onCreate, onClose
   }, [onClose]);
   const missing = locked && password.trim() === "";
   return (
-    <div role="dialog" aria-modal="true" aria-label="Create a room" className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label="Open a table" className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4" onClick={onClose}>
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
           if (!missing) onCreate(locked ? password : "");
         }}
-        className="flex w-full max-w-md flex-col gap-4 rounded-3xl border border-white/25 bg-slate-950/95 p-5 text-white shadow-2xl shadow-black/50 sm:p-6"
+        className="leather flex w-full max-w-md flex-col gap-4 p-6 text-white sm:p-7"
       >
         <header className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="font-display text-2xl font-extrabold">Create a room</h2>
-            <p className="mt-1 text-[15px] text-slate-300">Open a room, then a friend joins it or you play against the bot.</p>
+            <h2 className="flex items-center gap-2 text-3xl text-[#e8dcc0]"><Quill width={26} height={26} className="ink-icon text-[#d9694f]" />Open a table</h2>
+            <p className="italic-note mt-1 text-[17px] text-slate-300">Set the cloth. A friend pulls up a chair, or the clockwork opponent takes the other seat.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/10 text-2xl leading-none">
-            ×
+          <button type="button" onClick={onClose} aria-label="Close" className="btn-ghost !h-10 !w-10 !px-0">
+            <Cross width={18} height={18} />
           </button>
         </header>
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="sr-only">Who can join</legend>
+          <legend className="sr-only">Who may sit down</legend>
           {[
-            { value: false, title: "Open room", text: "Anyone can see it and join." },
-            { value: true, title: "Password room", text: "Only people who know the password can join." },
+            { value: false, title: "An open table", text: "Anyone who walks past may take the other chair." },
+            { value: true, title: "A locked table", text: "Only those who know the word at the door may sit." },
           ].map((o) => (
-            <label key={String(o.value)} className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3 ${locked === o.value ? "border-amber-300 bg-amber-400/15" : "border-white/20 bg-white/5 hover:bg-white/10"}`}>
-              <input type="radio" name="room-lock" checked={locked === o.value} onChange={() => setLocked(o.value)} className="mt-1 h-4 w-4 accent-amber-400" />
+            <label key={String(o.value)} className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 px-4 py-3 ${locked === o.value ? "border-[#d9694f] bg-[#b3392b]/20" : "border-[#c8b28a]/30 bg-white/5 hover:bg-white/10"}`}>
+              <input type="radio" name="room-lock" checked={locked === o.value} onChange={() => setLocked(o.value)} className="mt-1 h-4 w-4 accent-[#b3392b]" />
               <span>
-                <span className="block font-bold">{o.value ? "🔒 " : ""}{o.title}</span>
+                <span className="flex items-center gap-1.5 font-bold">{o.value && <Padlock width={16} height={16} />}{o.title}</span>
                 <span className="block text-sm text-slate-300">{o.text}</span>
               </span>
             </label>
@@ -50,29 +51,29 @@ export default function CreateRoomDialog({ busy, ready, error, onCreate, onClose
 
         {locked && (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-semibold text-slate-200">Password</span>
+            <span className="text-[15px] font-bold text-slate-200">The word at the door</span>
             <input
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               maxLength={40}
               autoFocus
               autoComplete="off"
-              placeholder="Choose a password"
+              placeholder="Pick a word"
               aria-label="Room password"
-              className="w-full rounded-xl border border-white/25 bg-white/10 px-3.5 py-2.5 text-white placeholder:text-slate-400 focus:border-amber-300 focus:outline-none"
+              className="auth-input"
             />
           </label>
         )}
 
         {error && (
-          <p role="alert" className="rounded-xl border border-red-300/40 bg-red-950/70 px-3 py-2 text-[15px] text-[#fecaca]">
+          <p role="alert" className="rounded-lg border-2 border-[#b3392b] bg-[#b3392b]/20 px-3 py-2 text-[15px] text-[#f0bfb0]">
             {error}
           </p>
         )}
-        {!ready && <p className="text-sm text-amber-200">Connecting to the game server…</p>}
+        {!ready && <p className="italic-note text-[15px] text-[#d8c8a2]">Waking the innkeeper…</p>}
 
-        <button type="submit" disabled={!ready || busy || missing} aria-busy={busy} className="btn-gold !w-full !rounded-2xl !py-3.5 !text-base">
-          {busy ? "Opening your room…" : locked ? "Create password room" : "Create room"}
+        <button type="submit" disabled={!ready || busy || missing} aria-busy={busy} className="btn-gold !w-full !py-3 !text-lg">
+          {busy ? "Laying the cloth…" : locked ? "Set a locked table" : "Set the table"}
         </button>
       </form>
     </div>

@@ -131,7 +131,7 @@ export default function ProfileButton() {
             {me.nickname || me.name}
           </span>
           <span className="block text-xs text-slate-300">
-            Profile · record · decks
+            Your papers · record · decks
           </span>
         </span>
       </button>
@@ -271,7 +271,7 @@ function ProfilePopup({
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-display text-xs font-bold uppercase tracking-[0.3em] text-[#ffe29a]">
+              <p className="font-display text-xs font-bold uppercase tracking-[0.3em] text-[#e8dcc0]">
                 Profile
               </p>
               <h2 className="page-title truncate !text-3xl !tracking-wide" style={{ textTransform: "none" }}>{me.nickname || me.name}</h2>
@@ -305,7 +305,7 @@ function ProfilePopup({
           {/* the saved decks, seven to a page */}
           <section aria-label="Your decks" className="flex flex-col gap-2.5">
             <div className="flex items-center gap-3">
-              <h3 className="flex flex-1 items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[#ffe29a] after:h-px after:flex-1 after:bg-gradient-to-r after:from-[#f4b43d]/50 after:to-transparent after:content-['']">
+              <h3 className="flex flex-1 items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[#e8dcc0] after:h-px after:flex-1 after:bg-gradient-to-r after:from-[#d9694f]/50 after:to-transparent after:content-['']">
                 Saved decks
               </h3>
               <Link href="/decks" className="btn-ghost !px-3 !py-1.5">
@@ -321,7 +321,7 @@ function ProfilePopup({
           <div className="min-w-0">
           {/* the record */}
           <section aria-label="Your record">
-            <h3 className="mb-2.5 lg:pr-12 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[#ffe29a] after:h-px after:flex-1 after:bg-gradient-to-r after:from-[#f4b43d]/50 after:to-transparent after:content-['']">
+            <h3 className="mb-2.5 lg:pr-12 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[#e8dcc0] after:h-px after:flex-1 after:bg-gradient-to-r after:from-[#d9694f]/50 after:to-transparent after:content-['']">
               Record
             </h3>
             {stats === "error" ? (
@@ -359,7 +359,7 @@ function ProfilePopup({
                   <Tile
                     label="Win rate"
                     value={rate === null ? "–" : `${rate}%`}
-                    tone="text-[#fde68a]"
+                    tone="text-[#e8d9b5]"
                   />
                 </div>
                 {total > 0 && (
@@ -386,8 +386,7 @@ function ProfilePopup({
                   <MatchList me={me.id} total={total} />
                 ) : (
                   <p className="mt-3 text-sm text-slate-300">
-                    No finished matches yet. Games against the bot are not
-                    counted.
+                    Nothing in the ledger yet. Duels against the clockwork are not written down.
                   </p>
                 )}
               </>
@@ -430,7 +429,7 @@ function DeckPages({ decks, onOpen }: { decks: DeckLine[] | "error" | null; onOp
               {...onIntent(() => void loadDeckPreview(d.id).catch(() => undefined))}
               title="Look at the cards of this deck"
               className="deck-row w-full !flex-nowrap !gap-3 !py-2 text-left"
-              style={{ "--accent": d.ready ? "#34d399" : "#f4b43d" } as React.CSSProperties}
+              style={{ "--accent": d.ready ? "#6b9a7f" : "#d9694f" } as React.CSSProperties}
             >
               <span className="deck-name min-w-0 flex-1 truncate !text-[15px]">{d.name}</span>
               <span className="text-sm text-slate-300">{d.cards}</span>
@@ -461,9 +460,9 @@ function MatchRowItem({ m }: { m: MatchLine }) {
   return (
     <li
       className="deck-row !flex-nowrap !gap-3 !py-2 text-[15px]"
-      style={{ "--accent": m.result === "win" ? "#34d399" : m.result === "loss" ? "#fb7185" : "#94a3b8" } as React.CSSProperties}
+      style={{ "--accent": m.result === "win" ? "#6b9a7f" : m.result === "loss" ? "#d9694f" : "#94a3b8" } as React.CSSProperties}
     >
-      <span className={`chip w-16 justify-center ${m.result === "win" ? "chip-ok" : m.result === "loss" ? "!border-rose-400/40 !bg-rose-400/15 !text-[#fecdd3]" : "chip-meta"}`}>
+      <span className={`chip w-16 justify-center ${m.result === "win" ? "chip-ok" : m.result === "loss" ? "!border-rose-400/40 !bg-rose-400/15 !text-[#f0bfb0]" : "chip-meta"}`}>
         {m.result === "win" ? "Win" : m.result === "loss" ? "Loss" : "Draw"}
       </span>
       <span className="min-w-0 flex-1 truncate">vs {m.opponent}</span>
@@ -577,7 +576,7 @@ function NicknameEditor({ me, onMe }: { me: Me; onMe: (m: Me) => void }) {
 
   return (
     <section aria-label="Nickname">
-      <h3 className="mb-2.5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[#ffe29a] after:h-px after:flex-1 after:bg-gradient-to-r after:from-[#f4b43d]/50 after:to-transparent after:content-['']">Nickname</h3>
+      <h3 className="mb-2.5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-[#e8dcc0] after:h-px after:flex-1 after:bg-gradient-to-r after:from-[#d9694f]/50 after:to-transparent after:content-['']">Nickname</h3>
       <form
         onSubmit={(e) => {
           e.preventDefault();

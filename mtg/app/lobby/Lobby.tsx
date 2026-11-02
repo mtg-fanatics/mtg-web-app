@@ -109,7 +109,7 @@ export default function Lobby() {
           </p>
         )}
         {online.error && (
-          <p role="alert" className="rounded-xl border border-red-300/40 bg-red-950/70 px-3 py-2 text-[15px] text-[#fecaca]">
+          <p role="alert" className="rounded-xl border border-red-300/40 bg-red-950/70 px-3 py-2 text-[15px] text-[#f0bfb0]">
             {online.error}
           </p>
         )}

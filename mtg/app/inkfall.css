@@ -1,0 +1,531 @@
+@import "./inkfall-palette.css";
+
+/*
+ * INKFALL: worn parchment and ink.
+ *
+ * One art direction, applied through tokens first (every Tailwind color, radius, shadow and blur in the app is redrawn here, so
+ * nothing needs a per-component recolor), then through a handful of physical materials:
+ *
+ *   desk      the dark wooden table the whole site sits on: flat brown, a little grain, nothing moving
+ *   leather   panels: dark worn hide, a stitched seam just inside the edge, grain, a hard cast shadow (no glow, no blur)
+ *   paper     slips and plaques: aged parchment, fibres, a stain or two, torn-ish corners, ink-black text
+ *   wax       the one accent: a sealing-wax red. Moss green is its only companion ("you", "ready", "ok")
+ *
+ * Palette (5): paper #e8dcc0, ink #1f1710, tan #8c7455, wax #b3392b, moss #4f7a62.
+ * Type: IM Fell English (display: a worn letterpress face) for the name and headings, Alegreya Sans for everything you read.
+ * Tracked capitals exist in exactly two places: the little label over the title (.caps) and the ledger headings in the room (.caps).
+ */
+
+html[data-theme="dark"] {
+  --paper: #e8dcc0;
+  --paper-2: #d8c8a2;
+  --paper-3: #bfa97c;
+  --ink: #1f1710;
+  --ink-2: #2a2018;
+  --ink-3: #3a2d21;
+  --tan: #8c7455;
+  --wax: #b3392b;
+  --wax-hi: #d9694f;
+  --moss: #6b9a7f;
+  --desk: #241b14;
+
+  /* paper grain (dark flecks) and leather grain (pale flecks): SVG noise, so no image files */
+  --grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .22 0 0 0 0 .15 0 0 0 0 .08 0 0 0 .5 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --grain-pale: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .95 0 0 0 0 .85 0 0 0 0 .65 0 0 0 .16 -.03'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --fibres: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.035 .05' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .27 0 0 0 0 .12 0 0 0 .5 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+
+  color-scheme: dark;
+  --foreground: #ece2c9;
+  --surface: var(--ink-2);
+  --color-white: #f1e8d0;
+  --color-black: #0f0a06;
+
+  /* Tailwind's own tokens: corners are cut by hand, never the same twice; shadows are hard cast shadows; nothing is blurred */
+  --radius-xs: 2px 3px 2px 4px;
+  --radius-sm: 3px 5px 3px 4px;
+  --radius-md: 4px 6px 3px 7px;
+  --radius-lg: 5px 8px 4px 9px;
+  --radius-xl: 7px 4px 9px 5px;
+  --radius-2xl: 9px 5px 11px 6px;
+  --radius-3xl: 12px 7px 13px 6px;
+  --radius-4xl: 14px 8px 15px 9px;
+  --shadow-2xs: 1px 1px 0 rgb(8 5 3 / 0.45);
+  --shadow-xs: 1px 2px 0 rgb(8 5 3 / 0.5);
+  --shadow-sm: 2px 2px 0 rgb(8 5 3 / 0.5);
+  --shadow-md: 2px 3px 0 rgb(8 5 3 / 0.55);
+  --shadow-lg: 3px 4px 0 rgb(8 5 3 / 0.55);
+  --shadow-xl: 4px 5px 0 rgb(8 5 3 / 0.6);
+  --shadow-2xl: 5px 7px 0 rgb(8 5 3 / 0.6);
+  --blur-xs: 0px;
+  --blur-sm: 0px;
+  --blur-md: 0px;
+  --blur-lg: 0px;
+  --blur-xl: 0px;
+  --blur-2xl: 0px;
+  --blur-3xl: 0px;
+  --drop-shadow-sm: 1px 1px 0 rgb(8 5 3 / 0.5);
+  --drop-shadow-md: 2px 2px 0 rgb(8 5 3 / 0.5);
+  --drop-shadow-lg: 2px 3px 0 rgb(8 5 3 / 0.5);
+  --drop-shadow-xl: 3px 4px 0 rgb(8 5 3 / 0.5);
+  --drop-shadow-2xl: 4px 6px 0 rgb(8 5 3 / 0.5);
+
+  --font-sans: var(--font-alegreya), "Alegreya Sans", Georgia, system-ui, sans-serif;
+  --font-display: var(--font-alegreya), "Alegreya Sans", Georgia, system-ui, sans-serif;
+  --font-rajdhani: var(--font-alegreya);
+  --font-cinzel: var(--font-fell);
+  --font-atkinson: var(--font-alegreya);
+}
+
+/* ───────── the desk ───────── */
+html[data-theme="dark"] body {
+  font-family: var(--font-alegreya), "Alegreya Sans", Georgia, sans-serif;
+  font-weight: 500;
+  font-size: 1.03rem;
+  letter-spacing: 0;
+  word-spacing: 0.17em;
+  color: var(--foreground);
+  background-color: var(--desk);
+  background-image: var(--grain-pale), radial-gradient(ellipse at 50% 18%, rgba(255, 226, 170, 0.06), transparent 62%), radial-gradient(ellipse at 50% 120%, rgba(0, 0, 0, 0.35), transparent 60%);
+  background-size: 240px 240px, 100% 100%, 100% 100%;
+}
+html[data-theme="dark"] .battlefield-bg {
+  /* the play table: a worn paper cloth (your own art goes in --bf-image) */
+  background-color: #b9a67e;
+  background-image: linear-gradient(rgba(36, 27, 20, var(--bf-dim, 0.32)), rgba(36, 27, 20, var(--bf-dim, 0.32))), var(--bf-image, var(--fibres)), var(--grain-dark);
+  background-size: auto, 300px 300px, 240px 240px;
+  background-attachment: local;
+}
+
+/* ───────── type ───────── */
+h1, h2, .font-title, .page-title, .hero-title, .confirm-title, .victory-title, .enter-title, .topbar .brand {
+  font-family: var(--font-fell), "IM Fell English SC", Georgia, serif;
+  font-weight: 400;
+}
+h3 { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font-weight: 400; }
+.font-display { font-family: var(--font-alegreya), Georgia, sans-serif; font-weight: 700; letter-spacing: 0.01em; }
+/* No more tracked small caps on every label: sentence case, a hair of space. The two places that keep them say .caps */
+.uppercase { text-transform: none; }
+.tracking-wide, .tracking-wider, .tracking-widest, .tracking-\[0\.12em\], .tracking-\[0\.16em\], .tracking-\[0\.2em\], .tracking-\[0\.25em\], .tracking-\[0\.28em\], .tracking-\[0\.3em\] { letter-spacing: 0.004em; }
+.caps { text-transform: uppercase !important; letter-spacing: 0.17em !important; font-size: 0.78em; }
+.italic-note { font-family: var(--font-fell-text), Georgia, serif; font-style: italic; }
+.ink-rough { filter: url(#ink-rough); }
+
+/* ───────── materials ───────── */
+/* leather: dark worn hide with a stitched seam */
+.leather, .panel-glass, .confirm-card, .glass-flat {
+  color: var(--color-white);
+  background-color: var(--ink-2);
+  background-image: var(--grain-pale), radial-gradient(ellipse at 12% 6%, rgba(255, 220, 160, 0.07), transparent 50%), radial-gradient(ellipse at 95% 100%, rgba(0, 0, 0, 0.3), transparent 55%);
+  background-size: 240px 240px, 100% 100%, 100% 100%;
+  border: 2px solid #120c07;
+  border-radius: 6px 9px 5px 10px / 9px 5px 10px 6px;
+  box-shadow: 4px 6px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 1px rgba(232, 220, 192, 0.08);
+  outline: 1.5px dashed rgba(200, 178, 138, 0.38);
+  outline-offset: -7px;
+}
+/* variations, so a row of panels doesn't look stamped out */
+.leather:nth-child(even), .panel-glass:nth-child(even) { border-radius: 9px 5px 10px 6px / 6px 10px 5px 9px; }
+
+/* paper: a slip of aged parchment */
+.paper {
+  position: relative;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image: var(--fibres), radial-gradient(ellipse at 10% 8%, rgba(150, 100, 40, 0.2), transparent 38%), radial-gradient(ellipse at 94% 92%, rgba(120, 70, 25, 0.28), transparent 46%), var(--grain-dark);
+  background-size: 300px 300px, 100% 100%, 100% 100%, 240px 240px;
+  border: 2px solid #2a1d12;
+  border-radius: 3px 7px 4px 9px / 8px 3px 7px 4px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.55), inset 0 0 14px rgba(120, 80, 30, 0.35);
+}
+.paper h1, .paper h2, .paper h3 { color: var(--ink); }
+
+/* a hand-inked line under a heading (wobbly: it is an SVG path, see Scribble in Icons.tsx) */
+.scribble { display: block; color: var(--wax-hi); }
+
+/* ───────── the heavy hitters: glass, blur and gold are gone ───────── */
+.glass, .glass-tile {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-color: var(--ink-3);
+  background-image: var(--grain-pale);
+  background-size: 240px 240px;
+  border: 1.5px solid #120c07;
+  box-shadow: 2px 3px 0 rgba(8, 5, 3, 0.55), inset 0 0 0 1px rgba(232, 220, 192, 0.08);
+  border-radius: 5px 8px 4px 9px;
+}
+.glass-tile:hover { border-color: var(--wax-hi); }
+.backdrop-blur-md, .backdrop-blur-xl, .backdrop-blur-none { -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* any dark panel built from utilities gets the leather grain too */
+.bg-slate-900\/60, .bg-slate-900\/70, .bg-slate-950\/55, .bg-slate-950\/60, .bg-slate-950\/65, .bg-slate-950\/70, .bg-slate-950\/75, .bg-slate-950\/80, .bg-slate-950\/85, .bg-slate-950\/90, .bg-slate-950\/95 {
+  background-image: var(--grain-pale);
+  background-size: 240px 240px;
+}
+.shadow-black\/20, .shadow-black\/30, .shadow-black\/40, .shadow-black\/50 { --tw-shadow-color: rgb(8 5 3 / 0.6); }
+/* glows are lamplight now, not neon: tone the arbitrary glow shadows down to a cast shadow */
+
+/* ───────── the home page ───────── */
+.hero-scrim { background: radial-gradient(closest-side, rgba(20, 14, 9, 0.55), rgba(20, 14, 9, 0) 100%); }
+.hero-title {
+  font-size: clamp(3.4rem, 10vw, 7.2rem);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--paper);
+  text-shadow: 2px 3px 0 rgba(8, 5, 3, 0.7), 0 0 2px rgba(232, 220, 192, 0.55);
+  filter: url(#ink-rough);
+  transform: rotate(-1.4deg);
+}
+.hero-mtg { display: none; }
+.hero-eyebrow {
+  font-family: var(--font-fell-text), Georgia, serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--paper-3);
+  text-shadow: 1px 1px 0 rgba(8, 5, 3, 0.7);
+}
+.hero-sub {
+  font-family: var(--font-fell-text), Georgia, serif;
+  font-size: 1.3rem;
+  color: var(--paper-2);
+  text-shadow: 1px 2px 0 rgba(8, 5, 3, 0.75);
+}
+.hero-btn, .btn-ghost, .topbar .bar-btn, .pager-btn, .icon-seg button, .seg button {
+  font-family: var(--font-alegreya), sans-serif;
+  letter-spacing: 0.005em;
+}
+/* secondary buttons: a leather patch with a stitched edge */
+.hero-btn, .btn-ghost, .topbar .bar-btn, .pager-btn {
+  color: var(--color-white);
+  text-shadow: none;
+  background-color: var(--ink-3);
+  background-image: var(--grain-pale), linear-gradient(180deg, rgba(255, 230, 180, 0.07), rgba(0, 0, 0, 0.12));
+  background-size: 240px 240px, 100% 100%;
+  border: 2px solid #120c07;
+  border-radius: 4px 7px 4px 8px / 7px 4px 8px 5px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 1px rgba(200, 178, 138, 0.2), inset 0 0 0 4px var(--ink-3), inset 0 0 0 5px rgba(200, 178, 138, 0.26);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.12s ease;
+}
+.hero-btn:hover, .btn-ghost:hover:not(:disabled), .topbar .bar-btn:hover, .pager-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px) rotate(-0.3deg);
+  background-color: #46352a;
+  border-color: #120c07;
+  box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 1px rgba(200, 178, 138, 0.3), inset 0 0 0 4px #46352a, inset 0 0 0 5px rgba(217, 105, 79, 0.55);
+}
+.hero-btn:active, .btn-ghost:active:not(:disabled), .topbar .bar-btn:active, .pager-btn:active:not(:disabled) {
+  transform: translate(2px, 3px);
+  box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.6), inset 2px 3px 6px rgba(0, 0, 0, 0.45), inset 0 0 0 4px #2c2118, inset 0 0 0 5px rgba(200, 178, 138, 0.2);
+  background-color: #2c2118;
+}
+.hero-btn svg, .btn-ghost svg { color: var(--wax-hi); }
+/* primary buttons: a slip of paper, stamped in ink */
+.hero-btn-primary, .btn-gold, .pager-btn[aria-current="page"], .seg button[aria-pressed="true"], .icon-seg button[aria-pressed="true"] {
+  color: var(--ink);
+  font-weight: 800;
+  text-shadow: none;
+  background-color: var(--paper);
+  background-image: var(--fibres), radial-gradient(ellipse at 8% 10%, rgba(150, 100, 40, 0.22), transparent 42%), var(--grain-dark);
+  background-size: 300px 300px, 100% 100%, 240px 240px;
+  border: 2px solid #2a1d12;
+  border-radius: 3px 8px 3px 9px / 8px 3px 8px 4px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.65), inset 0 -4px 9px rgba(120, 80, 30, 0.32);
+}
+.hero-btn-primary:hover, .btn-gold:hover:not(:disabled) {
+  transform: translate(-1px, -1px) rotate(0.4deg);
+  background-color: #f0e6cd;
+  border-color: #2a1d12;
+  box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.65), inset 0 -4px 9px rgba(120, 80, 30, 0.32);
+}
+.hero-btn-primary:active, .btn-gold:active:not(:disabled) {
+  transform: translate(2px, 3px);
+  box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.65), inset 2px 3px 7px rgba(90, 55, 20, 0.5);
+  background-color: #dccdaa;
+}
+.hero-btn-primary svg { color: var(--wax); }
+.hero-btn-primary { font-size: 1.12rem; padding: 0.95rem 2rem; border-radius: 4px 9px 4px 10px / 9px 4px 9px 5px; }
+.hero-btn { border-radius: 5px 8px 5px 9px / 8px 5px 8px 6px; font-size: 1.05rem; }
+.btn-gold:disabled { color: var(--tan); background-color: #2f251c; background-image: var(--grain-pale); border-color: #120c07; box-shadow: inset 1px 2px 5px rgba(0, 0, 0, 0.5); opacity: 1; }
+/* the red button (go back to your match): a wax seal */
+.btn-live {
+  color: var(--paper);
+  font-family: var(--font-fell), serif;
+  font-weight: 400;
+  font-size: 1.15rem;
+  background-color: var(--wax);
+  background-image: var(--grain-pale), radial-gradient(circle at 30% 25%, rgba(255, 190, 150, 0.35), transparent 55%);
+  background-size: 240px 240px, 100% 100%;
+  border: 2px solid #4a120c;
+  border-radius: 14px 10px 15px 9px / 10px 14px 9px 15px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 3px #b3392b, inset 0 0 0 4px rgba(255, 220, 190, 0.35);
+  text-shadow: 1px 1px 0 rgba(60, 10, 5, 0.8);
+}
+.btn-live:hover { transform: translate(-1px, -1px) rotate(-0.4deg); }
+.btn-live:active { transform: translate(2px, 3px); box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.6); }
+.btn-danger, .btn-danger-solid {
+  color: var(--paper);
+  background-color: var(--wax);
+  background-image: var(--grain-pale);
+  background-size: 240px 240px;
+  border: 2px solid #4a120c;
+  border-radius: 4px 8px 4px 9px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6);
+}
+.btn-danger:hover:not(:disabled), .btn-danger-solid:hover:not(:disabled) { background-color: #c4473a; transform: translate(-1px, -1px); box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.6); }
+.btn-danger:active:not(:disabled), .btn-danger-solid:active:not(:disabled) { transform: translate(2px, 3px); box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.6), inset 2px 3px 6px rgba(40, 6, 3, 0.55); }
+.btn-gold, .btn-ghost, .btn-danger { font-size: 0.95rem; padding: 0.45rem 1rem; }
+
+/* ───────── top bar: a strip of tooled leather along the top of the desk ───────── */
+.topbar {
+  color: var(--paper-2);
+  background-color: #17100a;
+  background-image: var(--grain-pale);
+  background-size: 240px 240px;
+  border-bottom: 3px solid #0a0603;
+  box-shadow: 0 3px 0 rgba(200, 178, 138, 0.18), 0 6px 0 rgba(8, 5, 3, 0.55);
+  font-size: 0.95rem;
+}
+.topbar .brand {
+  font-size: 1.28rem;
+  letter-spacing: 0.02em;
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--paper);
+  text-shadow: 1px 2px 0 rgba(8, 5, 3, 0.8);
+}
+.topbar .bar-btn { padding: 0.26rem 0.8rem; font-weight: 600; box-shadow: 2px 3px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 3px var(--ink-3), inset 0 0 0 4px rgba(200, 178, 138, 0.22); }
+
+/* ───────── fields: ruled lines written on paper laid into the leather ───────── */
+.auth-input, .tool-field {
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image: var(--fibres), var(--grain-dark);
+  background-size: 300px 300px, 240px 240px;
+  border: 2px solid #2a1d12;
+  border-radius: 3px 6px 3px 7px / 6px 3px 6px 4px;
+  box-shadow: inset 2px 3px 6px rgba(90, 55, 20, 0.35);
+}
+.auth-input:focus, .tool-field:focus-within {
+  background-color: #f2e8cf;
+  border-color: var(--wax);
+  box-shadow: inset 2px 3px 6px rgba(90, 55, 20, 0.3), 0 0 0 2px rgba(179, 57, 43, 0.35);
+}
+.tool-field input, .tool-field select { color: var(--ink); }
+.tool-field input::placeholder, .auth-input::placeholder { color: #8a7656; font-style: italic; }
+.tool-field svg { color: var(--wax); }
+
+/* ───────── switches, chips, ticks ───────── */
+.switch i { background: #120c07; border: 2px solid #120c07; border-radius: 6px 4px 7px 4px; box-shadow: inset 1px 2px 4px rgba(0, 0, 0, 0.6); }
+.switch i::after { background: var(--paper-3); border-radius: 3px 5px 3px 5px; }
+.switch input:checked + i { background: var(--moss); border-color: #1d3328; }
+.switch input:checked + i::after { background: var(--paper); }
+.switch input:focus-visible + i, .tick:focus-visible { outline: 2px solid var(--wax-hi); }
+.chip, .count-chip { border-radius: 3px 7px 3px 6px; font-family: var(--font-alegreya), sans-serif; border: 1.5px solid rgba(200, 178, 138, 0.35); background: rgba(232, 220, 192, 0.08); color: var(--paper-2); }
+.chip-ok { color: #a9d4b9; background: rgba(107, 154, 127, 0.15); border-color: rgba(107, 154, 127, 0.55); }
+.chip-warn { color: #efb59f; background: rgba(217, 105, 79, 0.14); border-color: rgba(217, 105, 79, 0.5); }
+.tick { border-radius: 2px 4px 2px 5px; border: 2px solid var(--tan); background: #120c07; }
+.tick:checked { background: var(--paper); border-color: var(--paper-3); }
+.tick:checked::after { border-color: var(--wax); }
+
+/* ───────── lists, pages, empty notes ───────── */
+.page-title {
+  font-size: 2.2rem;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--paper);
+  filter: url(#ink-rough);
+  text-shadow: 2px 3px 0 rgba(8, 5, 3, 0.7);
+}
+.deck-row { border-radius: 4px 8px 4px 9px / 8px 4px 9px 5px; border: 2px solid #120c07; background-color: var(--ink-3); background-image: var(--grain-pale); background-size: 240px 240px; box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.55); }
+.deck-row:hover { transform: translate(-1px, -1px); border-color: var(--wax-hi); }
+.deck-row[data-picked="true"] { border-color: var(--wax-hi); box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 1px rgba(217, 105, 79, 0.5); }
+.deck-row::before { background: var(--wax); }
+.deck-name { font-family: var(--font-fell-text), Georgia, serif; font-size: 1.2rem; font-weight: 400; letter-spacing: 0; }
+.empty-note { border: 2px dashed rgba(200, 178, 138, 0.4); background: rgba(232, 220, 192, 0.04); border-radius: 7px 4px 8px 5px; font-family: var(--font-fell-text), Georgia, serif; font-style: italic; color: var(--paper-3); }
+.seg, .icon-seg { background: #120c07; border: 2px solid #0a0603; border-radius: 6px 4px 7px 5px; box-shadow: inset 1px 2px 5px rgba(0, 0, 0, 0.6); }
+.seg button, .icon-seg button { color: var(--paper-3); border-radius: 3px 5px 3px 4px; }
+.seg button:hover, .icon-seg button:hover { color: var(--color-white); }
+.field-label { font-family: var(--font-alegreya), sans-serif; font-size: 0.86rem; font-weight: 700; letter-spacing: 0.01em; text-transform: none; color: var(--paper-3); }
+.seat-card { border-radius: 8px 5px 9px 6px; }
+.page-atmosphere, .page-atmosphere::before, .page-atmosphere::after { background: none !important; }
+
+/* ───────── the sheet that asks "are you sure?" ───────── */
+.confirm-backdrop { background: rgba(14, 9, 5, 0.72); backdrop-filter: none; }
+.confirm-card { border-radius: 8px 12px 7px 13px / 12px 7px 13px 8px; }
+.confirm-title { color: var(--paper); text-transform: none; letter-spacing: 0.01em; font-size: 1.55rem; }
+.confirm-icon { color: var(--paper); background: var(--wax); border: 2px solid #4a120c; border-radius: 50% 46% 52% 48%; box-shadow: 2px 3px 0 rgba(8, 5, 3, 0.55), inset 0 0 0 3px var(--wax), inset 0 0 0 4px rgba(255, 220, 190, 0.35); }
+.confirm-text { color: var(--paper-2); font-size: 1.02rem; }
+.confirm-subject { background: rgba(232, 220, 192, 0.1); border: 1.5px solid rgba(200, 178, 138, 0.4); border-radius: 4px 8px 4px 7px; font-family: var(--font-fell-text), serif; font-weight: 400; }
+
+/* ───────── the wallpaper is just the desk now ───────── */
+.live-wallpaper, .live-wallpaper-sky, .live-glow, .live-wheel, .live-ember, .live-wallpaper-vignette, .live-custom { display: none !important; }
+
+/* ───────── the loading screen and the result sheet: still ink on paper ───────── */
+.enter-overlay { background-color: #17100a; background-image: var(--grain-pale); }
+.enter-fog, .enter-fog-b { display: none; }
+.enter-eyebrow { font-family: var(--font-fell-text), serif; font-style: italic; letter-spacing: 0.02em; text-transform: none; color: var(--paper-3); }
+.enter-title { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--paper); text-shadow: 2px 3px 0 rgba(8, 5, 3, 0.7); text-transform: none; letter-spacing: 0.01em; filter: url(#ink-rough); }
+.victory-card { border-radius: 10px 6px 12px 7px; }
+.victory-title { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--paper); text-shadow: 3px 4px 0 rgba(8, 5, 3, 0.7); text-transform: none; letter-spacing: 0.01em; filter: url(#ink-rough); }
+.victory-card[data-result="lose"] .victory-title { color: var(--wax-hi); background: none; }
+.victory-card[data-result="draw"] .victory-title { color: var(--paper-3); background: none; }
+
+/* a dialog that sits in the middle of the page: stitched leather by default */
+[role="dialog"] > form, [role="dialog"] > div { border-width: 2px; border-color: #120c07; }
+
+/* buttons feel pressed everywhere */
+button:not(:disabled):active { transition-duration: 0.04s; }
+
+/* the hand-drawn icons share one ragged print */
+.ink-icon { overflow: visible; }
+
+/* the chosen tab / segment is a slip of paper: its text is ink, not the leather's pale */
+.seg button.paper, .seg button[aria-selected="true"], .seg button[aria-pressed="true"] { color: var(--ink); }
+
+/* the game's own "do this now" buttons (they were gold gradients written in utilities): slips of paper, pressed in ink */
+button.from-amber-300, a.from-amber-300, button.bg-amber-500, button.bg-amber-400:not(.rounded-full) {
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image: var(--fibres), var(--grain-dark);
+  background-size: 300px 300px, 240px 240px;
+  border: 2px solid #2a1d12;
+  border-radius: 3px 8px 3px 9px / 8px 3px 8px 4px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.65), inset 0 -4px 9px rgba(120, 80, 30, 0.3);
+}
+button.from-amber-300:hover:not(:disabled), a.from-amber-300:hover, button.bg-amber-500:hover:not(:disabled), button.bg-amber-400:hover:not(:disabled):not(.rounded-full) {
+  transform: translate(-1px, -1px);
+  background-color: #f0e6cd;
+  box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.65), inset 0 -4px 9px rgba(120, 80, 30, 0.3);
+}
+button.from-amber-300:active:not(:disabled), button.bg-amber-500:active:not(:disabled), button.bg-amber-400:active:not(:disabled) {
+  transform: translate(2px, 3px);
+  box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.65), inset 2px 3px 7px rgba(90, 55, 20, 0.5);
+}
+
+/* the old gold glow bars on top of the pop-up cards are gone */
+.confirm-card::before, .victory-card::before, .seat-card::before { display: none; }
+
+/* Alegreya Sans sits smaller on the line than the old faces did: lift the small sizes so the game's labels, hints and numbers stay easy to read */
+html[data-theme="dark"] body { font-size: 1.08rem; line-height: 1.45; }
+.text-xs { font-size: 0.875rem; line-height: 1.25rem; }
+.text-sm { font-size: 1rem; line-height: 1.4rem; }
+.text-base { font-size: 1.1rem; }
+.text-\[10px\] { font-size: 13px !important; }
+.text-\[11px\] { font-size: 14px !important; }
+.text-\[13px\] { font-size: 15px !important; }
+.text-\[8px\] { font-size: 11px !important; }
+[class*="text-[8px]"] { font-size: 11px !important; }
+
+/* the cheaper way of drawing, for a computer that needs it (perfTier.ts sets html.perf-lite): flat surfaces, no grain, no filters */
+.perf-lite body { background-image: none; }
+.perf-lite .leather, .perf-lite .panel-glass, .perf-lite .confirm-card, .perf-lite .hero-btn, .perf-lite .btn-ghost, .perf-lite .btn-gold, .perf-lite .paper, .perf-lite .auth-input, .perf-lite .tool-field, .perf-lite .deck-row, .perf-lite .topbar { background-image: none; }
+.perf-lite .hero-title, .perf-lite .page-title, .perf-lite .enter-title, .perf-lite .victory-title { filter: none; }
+.perf-lite .battlefield-bg { background-image: none; }
+
+/* ───────── the result screen: a scroll that unrolls ─────────
+   A wooden roll at the top and one at the bottom; the parchment between them opens downwards (the grid row grows from 0 to its height, once).
+   No blur behind it, no filters, no glows: a flat dark scrim and flat shapes, so it costs almost nothing to draw. */
+.victory-backdrop::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(14, 9, 5, 0.82); }
+.victory-scroll { --accent: #b3392b; position: relative; width: 100%; max-width: 27rem; color: var(--ink); }
+.victory-scroll[data-result="lose"] { --accent: #7d2219; }
+.victory-scroll[data-result="draw"] { --accent: #4f7a62; }
+/* The two ends of the scroll: the parchment wound round a wooden rod, with a turned knob sticking out at each side. They overlap the sheet a little,
+   so there is never a gap between them and the paper, however far it has opened. */
+.scroll-roll {
+  position: relative;
+  z-index: 2;
+  height: 2.1rem;
+  margin: 0 -0.5rem;
+  border: 2px solid #1c120a;
+  border-radius: 1.05rem;
+  background:
+    linear-gradient(90deg, rgba(60, 38, 16, 0.5) 0, transparent 1.4rem, transparent calc(100% - 1.4rem), rgba(60, 38, 16, 0.5) 100%),
+    linear-gradient(180deg, #f6edd3 0 14%, #e8dab4 14% 50%, #cdb88a 50% 82%, #a88f5f 82%);
+  box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.6);
+}
+/* the knobs: a plain turned cap of dark wood at each end, the same on both sides (no round ornament, nothing mirrored) */
+.scroll-roll::before, .scroll-roll::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 1.5rem;
+  height: 1.3rem;
+  margin-top: -0.65rem;
+  border: 2px solid #1c120a;
+  background: linear-gradient(180deg, #8f6a3f 0 30%, #6b4a28 30% 70%, #4a321a 70%);
+}
+.scroll-roll::before { left: -1.3rem; border-radius: 0.65rem 0.2rem 0.2rem 0.65rem; border-right: 0; }
+.scroll-roll::after { right: -1.3rem; border-radius: 0.2rem 0.65rem 0.65rem 0.2rem; border-left: 0; }
+.scroll-lower { position: relative; padding-bottom: 1.4rem; }
+.scroll-roll-bottom { position: absolute; left: 0; right: 0; top: calc(var(--open) * 100% - 0.7rem); margin-top: 0; }
+.scroll-body { display: block; position: relative; }
+.scroll-sheet {
+  margin: -0.7rem 0.2rem 0;
+  background-color: var(--paper);
+  background-image: var(--fibres), linear-gradient(180deg, rgba(60, 38, 16, 0.4), transparent 1.2rem, transparent calc(100% - 1.2rem), rgba(60, 38, 16, 0.4)), linear-gradient(90deg, rgba(110, 70, 25, 0.28), transparent 7%, transparent 93%, rgba(110, 70, 25, 0.28)), radial-gradient(ellipse at 12% 6%, rgba(150, 100, 40, 0.2), transparent 42%), var(--grain-dark);
+  background-size: 300px 300px, 100% 100%, 100% 100%, 100% 100%, 240px 240px;
+  border-inline: 2px solid #2a1d12;
+}
+.scroll-inner { padding: 2.1rem 1.6rem 2rem; text-align: center; }
+.victory-scroll[data-result="lose"] .scroll-sheet { background-color: #cdbb94; }
+.victory-scroll[data-result="draw"] .scroll-sheet { background-color: #d6cdb4; }
+/* --open runs from 0 (rolled up) to 1 (open). The sheet is revealed from the top by it, and the bottom roll sits at the same edge, so the two cannot come apart:
+   both are worked out from the one number, with no measuring in script. */
+@property --open { syntax: "<number>"; inherits: true; initial-value: 1; }
+.victory-scroll { --open: 1; }
+.scroll-sheet { clip-path: inset(0 0 calc((1 - var(--open)) * 100%) 0); }
+/* (only the game's own Motion switch decides: the scroll waits a moment so the eye is on it, then opens) */
+.scroll-unroll { animation: scroll-open 1.7s cubic-bezier(0.3, 0.7, 0.35, 1) 0.4s both; }
+/* (the writing is already on the sheet: it comes into view line by line as the edge of the paper passes it, like a real scroll opening) */
+@keyframes scroll-open { from { --open: 0; } to { --open: 1; } }
+.victory-medal { width: auto; height: auto; margin: 0 auto 0.1rem; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.victory-emblem { display: block; margin: 0 auto; }
+.victory-title { font-size: clamp(2.8rem, 11vw, 4rem); letter-spacing: 0.005em; text-transform: none; background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--ink); filter: none; text-shadow: 2px 2px 0 rgba(120, 80, 30, 0.3); }
+.victory-scroll[data-result="lose"] .victory-title { color: #6a1a12; }
+.victory-scroll[data-result="draw"] .victory-title { color: #2f4a3b; }
+.victory-rule { margin: -0.15rem auto 0.4rem; color: var(--accent); filter: none !important; }
+.victory-sub { margin: 0.2rem auto 0; max-width: 21rem; font-family: var(--font-fell-text), Georgia, serif; font-style: italic; font-weight: 400; font-size: 1.2rem; line-height: 1.3; color: #3a2d21; }
+.victory-reason { margin-top: 0.8rem; padding: 0.25rem 0.9rem; border-radius: 3px 8px 3px 7px; font-size: 1rem; color: #2a1d12; background: rgba(42, 29, 18, 0.08); border: 1.5px dashed rgba(42, 29, 18, 0.4); }
+.victory-actions { margin-top: 1.4rem; gap: 0.9rem; }
+/* buttons on parchment: the main one is a wax-red slip, the other a leather patch */
+.victory-scroll .btn-gold { color: var(--paper); text-shadow: 1px 1px 0 rgba(40, 8, 4, 0.8); background-color: #b3392b; background-image: var(--grain-pale); background-size: 240px 240px; border-color: #3a0f0a; box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6), inset 0 -3px 8px rgba(40, 8, 4, 0.35); }
+.victory-scroll .btn-gold:hover:not(:disabled) { background-color: #c4473a; }
+.victory-scroll .btn-gold:active:not(:disabled) { box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.6), inset 2px 3px 7px rgba(40, 8, 4, 0.6); }
+.victory-scroll .victory-leave { color: var(--color-white); text-shadow: none; background-color: var(--ink-3); background-image: var(--grain-pale); background-size: 240px 240px; border-color: #120c07; box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 3px var(--ink-3), inset 0 0 0 4px rgba(200, 178, 138, 0.26); }
+.victory-scroll .victory-leave:hover:not(:disabled) { background-color: #46352a; }
+.perf-lite .scroll-sheet { background-image: none; }
+
+/* a list that scrolls inside its panel: a slim leather-coloured scrollbar */
+.deck-scroll { scrollbar-width: thin; scrollbar-color: #8c7455 transparent; }
+.deck-scroll::-webkit-scrollbar { width: 9px; }
+.deck-scroll::-webkit-scrollbar-thumb { background: #8c7455; border-radius: 4px 6px 4px 6px; border: 2px solid transparent; background-clip: padding-box; }
+.deck-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* the Cards page: the glass panels are leather too (these selectors are what the old blue glass was written with) */
+.cards-glass .page-atmosphere { display: none; }
+.cards-glass .glass {
+  background-color: var(--ink-2);
+  background-image: var(--grain-pale), radial-gradient(ellipse at 12% 6%, rgba(255, 220, 160, 0.06), transparent 50%);
+  background-size: 240px 240px, 100% 100%;
+  border: 2px solid #120c07;
+  border-radius: 6px 10px 5px 11px / 10px 5px 11px 6px;
+  box-shadow: 3px 5px 0 rgba(8, 5, 3, 0.55), inset 0 0 0 1px rgba(232, 220, 192, 0.07);
+  outline: 1.5px dashed rgba(200, 178, 138, 0.3);
+  outline-offset: -6px;
+}
+.cards-glass .glass.\!rounded-full { border-radius: 8px 12px 7px 11px !important; }
+.cards-fit .glass-tile { border-radius: 4px 8px 4px 9px; border-width: 1.5px; box-shadow: 2px 3px 0 rgba(8, 5, 3, 0.45); }
+.card-tile.glass-tile:hover { border-color: var(--wax-hi); }
+.perf-lite .cards-glass .glass, .perf-lite .glass-tile { background-image: none; }
+
+.perf-lite .victory-medal, html.perf-lite .victory-medal { box-shadow: none; background: none; }
+
+/* the scroll is a child of the result dialog, which the general dialog rule gives a dark 2px border: the scroll draws its own edges */
+[role="dialog"] > .victory-scroll { border: 0; }

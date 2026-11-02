@@ -44,7 +44,7 @@ export default function LibraryReveal({ reveal, onContinue }: { reveal: RevealPa
             <div className="flex items-center gap-4 rounded-xl border border-amber-300/50 bg-amber-400/10 p-3">
               <Face card={next} zoom={zoom} className="h-36 w-[6.3rem] ring-2 ring-amber-300" />
               <div className="min-w-0">
-                <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: "#fde68a" }}>You would have drawn next</p>
+                <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: "#e8d9b5" }}>You would have drawn next</p>
                 <p className="text-xl font-extrabold">{next?.name ?? "?"}</p>
                 {next?.typeLine && <p className="text-sm text-slate-300">{next.typeLine}</p>}
               </div>
