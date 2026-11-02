@@ -357,6 +357,8 @@ interface Card {
   body: Body;
   /** Void Collapse: where the pull began for it. */
   pull?: { d0: number; t0: number };
+  /** Void Collapse: how far it is stretched (0 to 1) by the hole's tide: the end nearest the hole is pulled out into a long thin strand. */
+  spag?: number;
   hidden: boolean;
   /** Drawn on the canvas from its art (the real card is hidden): moving a real card costs the browser a lot in every frame; a picture on the canvas costs almost nothing. */
   sprite?: boolean;
@@ -642,6 +644,87 @@ let tint: { rgb: string; a: number; start: number } | null = null;
 function setTint(rgb: string, a: number): void {
   tint = { rgb, a, start: performance.now() };
 }
+/** Void Collapse: the hole's edge, which stretched cards must not be drawn over (the part of a strand that has gone in is hidden). */
+let holeClip: { x: number; y: number; r: number } | null = null;
+
+/**
+ * A card pulled by the black hole's tide, drawn as it would be if the tide were real: the card turns to point at the hole and is cut into slices along its length, and each
+ * slice is stretched by how near it is to the hole, so the near end is drawn out into a long thin strand (and bent a little, as it swirls) while the far end is still a card.
+ */
+const STRIPS = 18;
+function drawStrand(c: Card, px: number, py: number, scale: number): void {
+  const g = c.spag as number;
+  const art = c.art as HTMLImageElement;
+  const hx = holeClip ? holeClip.x : T.x;
+  const hy = holeClip ? holeClip.y : T.y;
+  const toHole = Math.atan2(hy - py, hx - px) - Math.PI / 2; // (the card's "down" points at the hole)
+  const own = ((c.base.rot + c.rot) * Math.PI) / 180;
+  let diff = toHole - own;
+  diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+  const ang = own + diff * clamp(g * 1.6);
+  const S = 3.5 * g * g + 2 * g; // how much longer the near end gets
+  const squeeze = 0.86 * g;
+  const bend = c.h * 0.35 * g;
+  const iw = art.naturalWidth || art.width;
+  const ih = art.naturalHeight || art.height;
+  const k = Math.max(c.w / iw, c.h / ih);
+  const srcW = c.w / k;
+  const srcH = c.h / k;
+  const sx0 = (iw - srcW) / 2;
+  const sy0 = (ih - srcH) / 2;
+  ctx.save();
+  if (holeClip && holeClip.r > 2) {
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.arc(holeClip.x, holeClip.y, holeClip.r * 0.94, 0, TAU, true);
+    ctx.clip("evenodd");
+  }
+  ctx.globalAlpha = c.op;
+  ctx.translate(px, py);
+  ctx.rotate(ang);
+  ctx.scale(scale, scale);
+  ctx.translate(0, -(c.h / 2) * S); // (the head stays where the card was going, the tail is drawn out away from the hole)
+  const P = (v: number): number => (c.h / 2) * (v + S * Math.pow((v + 1) / 2, 3));
+  const Wd = (v: number): number => (c.w / 2) * (1 - squeeze * Math.pow((v + 1) / 2, 1.4));
+  const L = (v: number): number => bend * Math.pow((v + 1) / 2, 2);
+  const ta = tint ? tint.a * Math.min(1, (performance.now() - tint.start) / 220) : 0;
+  for (let i = 0; i < STRIPS; i++) {
+    const v0 = -1 + (2 * i) / STRIPS;
+    const v1 = -1 + (2 * (i + 1)) / STRIPS;
+    const vm = (v0 + v1) / 2;
+    const p0 = P(v0);
+    const p1 = P(v1);
+    const wd = Wd(vm);
+    const x = L(vm) - wd;
+    ctx.drawImage(art, sx0, sy0 + (i / STRIPS) * srcH, srcW, srcH / STRIPS + 0.5, x, p0, wd * 2, p1 - p0 + 0.8);
+    if (ta) {
+      ctx.fillStyle = `rgba(${tint!.rgb},${ta})`;
+      ctx.fillRect(x, p0, wd * 2, p1 - p0 + 0.8);
+    }
+  }
+  // the near end glows white-violet as it is torn thin and heated
+  const gl = ctx.createLinearGradient(0, P(0), 0, P(1));
+  gl.addColorStop(0, "rgba(190,120,255,0)");
+  gl.addColorStop(1, `rgba(255,225,255,${0.75 * g})`);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = gl;
+  const q0 = P(0);
+  ctx.beginPath();
+  ctx.moveTo(L(0) - Wd(0), q0);
+  for (let i = 1; i <= STRIPS / 2; i++) {
+    const v = i / (STRIPS / 2);
+    ctx.lineTo(L(v) - Wd(v), P(v));
+  }
+  for (let i = STRIPS / 2; i >= 0; i--) {
+    const v = i / (STRIPS / 2);
+    ctx.lineTo(L(v) + Wd(v), P(v));
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
 /**
  * Draws the cards that have left the table's DOM: each is its own art (cut to the card's shape, as the page shows it), with its shadow on the table (which stays under it as it
  * flies up: the higher, the fainter and wider), tipped on its edge when it tumbles, and the scorch colour over it. A card that has no art to draw (it is a plain frame) stays a
@@ -664,6 +747,10 @@ function drawCards(): void {
       ctx.beginPath();
       ctx.ellipse(px, py + c.h * 0.08, (c.w / 2) * (1 + c.z * 0.002) * 0.95, (c.h / 2) * 0.9 * (1 + c.z * 0.002), 0, 0, TAU);
       ctx.fill();
+    }
+    if (c.spag && c.sprite && c.art) {
+      drawStrand(c, px, py - c.z * 0.25, c.base.scale * c.sc * lift);
+      continue;
     }
     ctx.save();
     ctx.globalAlpha = c.op;
@@ -881,6 +968,7 @@ function voidCollapse(): Fx {
     setup() {
       st = { disk: [], boom: false, flash: 0 };
       voidNow = 0;
+      holeClip = null;
       if (world) {
         // the hole's pull on every card that has started to fall, applied in every fixed step
         world.onStep = () => {
@@ -1002,6 +1090,7 @@ function voidCollapse(): Fx {
       // the cards: they tremble and rise off the table (held up by the script), then the hole's PULL takes them. The pull is a real force (grows, swirls, drag) applied to their
       // bodies in the physics engine, so they curve in, knock into each other, spin as they fall, and are stretched thin as they come close.
       voidNow = t;
+      holeClip = t < 4300 ? { x: T.x, y: T.y, r: R } : null;
       for (let i = 0; i < cards.length; i++) {
         const c = cards[i];
         const b = c.body;
@@ -1051,10 +1140,10 @@ function voidCollapse(): Fx {
           c.z = b.z;
           c.tx = pose.tx * (1 - e);
           c.ty = pose.ty * (1 - e);
-          c.sc = 1 - e2 * 0.92;
-          c.sy = 1 + e2 * 1.1; // stretched as it is pulled in
-          c.sx = 1 - e2 * 0.5;
-          c.op = 1 - sm(0.8, 1, e);
+          // spaghettified: the tide stretches it into a thin strand as it falls in (see drawStrand)
+          c.spag = sm(0.12, 0.85, e);
+          c.sc = 1 - e2 * 0.35;
+          c.op = 1 - sm(0.9, 1, e);
           if (Math.random() < 0.5) emit({ x: pose.x, y: pose.y, life: 0.5, r: rnd(14, 26), pal: "violet", a: 0.8, kind: "puff", vx: rnd(-20, 20), vy: rnd(-20, 20), drag: 0, drop: true });
           if (d < R * 0.9 + 6 && t - c.pull.t0 > 900) c.hidden = true; // (gone into the hole)
           else if (t > 3700) c.hidden = true;
