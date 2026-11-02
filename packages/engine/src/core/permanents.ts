@@ -132,6 +132,9 @@ export function yardCardTypes(s: GameState, player: PlayerId): string[] {
   return CARD_TYPE_WORDS.filter((t) => seen.has(t));
 }
 
+/** Metalcraft: the artifacts a player controls. */
+export const artifactCount = (s: GameState, player: PlayerId): number => s.players[player].battlefield.filter((p) => isArtifactDef(getCard(s, p.card.defId)) || (p.crewed === true && !p.tempNonartifact)).length;
+
 /** Delirium: four or more card types among the cards in the player's graveyard. */
 export const hasDelirium = (s: GameState, player: PlayerId): boolean => yardCardTypes(s, player).length >= 4;
 
@@ -158,6 +161,9 @@ export function staticEffectsOn(s: GameState, target: Permanent): StaticEffect[]
         if (st.targetCounteredThisTurn && !(target.countersThisTurn ?? 0)) continue;
         if (st.cond?.yardCreatures !== undefined && yardCreatureCards(s, owner.id) < st.cond.yardCreatures) continue;
         if (st.cond?.delirium && !hasDelirium(s, owner.id)) continue;
+        if (st.cond?.yardAtLeast !== undefined && s.players[owner.id].graveyard.length < st.cond.yardAtLeast) continue; // threshold
+        if (st.cond?.handEmpty && s.players[owner.id].hand.length > 0) continue; // hellbent
+        if (st.cond?.artifactsAtLeast !== undefined && artifactCount(s, owner.id) < st.cond.artifactsAtLeast) continue; // metalcraft
         if (st.cond?.enteredThisTurn && source.enteredTurn !== s.turn) continue;
         if (st.cond?.controls && !s.players[owner.id].battlefield.some((p) => subtypesOf(s, p).includes(st.cond!.controls!))) continue;
         if (st.cond?.attacking && !s.combat?.attackers.some((a) => a.attacker === source.card.iid)) continue;

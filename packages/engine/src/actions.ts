@@ -385,6 +385,13 @@ export function applyAction(state: GameState, player: PlayerId, action: Action):
         const attackerDef = getCard(next, attackerPerm.card.defId);
         const blockerDef = getCard(next, perm.card.defId);
         const isArtifact = (blockerDef.typeLine ?? "").split("—")[0].includes("Artifact") || blockerDef.type === "artifact";
+        // Shadow: a creature with shadow can block or be blocked only by creatures with shadow. Horsemanship: it can't be blocked except by creatures with horsemanship.
+        if (kw(next, attackerPerm, "shadow") !== kw(next, perm, "shadow")) {
+          return fail(`${nameOf(next, perm)} can't block ${nameOf(next, attackerPerm)}: creatures with shadow can block and be blocked only by creatures with shadow.`);
+        }
+        if (kw(next, attackerPerm, "horsemanship") && !kw(next, perm, "horsemanship")) {
+          return fail(`${nameOf(next, perm)} can't block ${nameOf(next, attackerPerm)}: it has horsemanship (only creatures with horsemanship can block it).`);
+        }
         if (kw(next, attackerPerm, "fear") && !isArtifact && !(blockerDef.colors ?? []).includes("B")) {
           return fail(`${nameOf(next, perm)} can't block ${nameOf(next, attackerPerm)}: it has fear (only artifact and black creatures can block it).`);
         }

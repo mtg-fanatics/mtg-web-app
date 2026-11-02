@@ -17,6 +17,8 @@ export interface DamageSource {
   lifelink: boolean;
   /** Infect: damage to players is poison counters, damage to creatures is -1/-1 counters. */
   infect: boolean;
+  /** Wither: damage to creatures is -1/-1 counters (damage to players is ordinary damage). */
+  wither?: boolean;
   /** The permanent that deals it, when it is one (Spirit Link looks at what a creature deals). */
   perm?: Permanent;
 }
@@ -89,7 +91,7 @@ export function dealDamage(
     const needed = source.deathtouch ? Math.min(1, lethal) : lethal;
     state.lastExcess = Math.max(0, amount - needed); // "you gain life equal to the excess damage dealt this way"
     if (amount > needed && victim) excessDamageDealt(state, victim);
-    if (source.infect) {
+    if (source.infect || source.wither) {
       target.perm.minusCounters = (target.perm.minusCounters ?? 0) + amount;
       target.perm.infected = true;
     } else target.perm.damage += amount;

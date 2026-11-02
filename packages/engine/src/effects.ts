@@ -69,6 +69,7 @@ export type Effect =
   | { type: "setBase"; what: Ref; power: number; toughness: number } // becomes N/N until end of turn
   | { type: "loseDefender"; what: Ref }
   | { type: "winGame" }
+  | { type: "unlessPay"; cost: string; otherwise: Effect[]; echo?: boolean; cumulative?: boolean } // "sacrifice ~ unless you pay {1}": the controller pays or `otherwise` happens (echo: only the first upkeep; cumulative: the cost once for each age counter)
   | { type: "mayPay"; prompt?: string; cost: string; life?: number; then: Effect[]; thenSpecs?: TargetSpec[]; thenText?: string } // "When you do, ... target ...": the targets are chosen after paying // "you may pay {1}. If you do, ..." (`life`: "pay 2 life")
   | { type: "mayDiscard"; then: Effect[]; thenSpecs?: TargetSpec[] } // "you may discard a card. When you do, ..."
   | { type: "drawUnlessPay"; cost: string } // "you may draw a card unless that player pays {1}" (the opponent who cast the spell)
@@ -121,7 +122,7 @@ export type Effect =
   | { type: "becomeCreatureNow"; what: Ref; subtypes?: string[]; color?: string; nonartifact?: boolean } // until end of turn it is an artifact creature (of these creature types, of this color; `nonartifact`: just a creature)
   | { type: "loseSubtype"; what: Ref; subtype: string } // "... and isn't a Human" until end of turn
   | { type: "untargetable"; what: Ref } // "can't be the target of spells or abilities your opponents control this turn"
-  | { type: "ifNow"; cond: "yourMainPhase" | "landEntered" | "ferocious" | "delirium" | "instantAndSorcery" | "lessLife" | "fewerCreatures"; then: Effect[]; otherwise?: Effect[] } // "if you cast ~ during your main phase, ... instead", landfall "... instead", ferocious "... if you control a creature with power 4 or greater", delirium "if there are four or more card types among cards in your graveyard, ...", "if there is an instant card and a sorcery card in your graveyard, instead ...", "if you have less life than an opponent", "if you control fewer creatures than an opponent"
+  | { type: "ifNow"; cond: "yourMainPhase" | "landEntered" | "ferocious" | "delirium" | "threshold" | "hellbent" | "metalcraft" | "morbid" | "instantAndSorcery" | "lessLife" | "fewerCreatures"; then: Effect[]; otherwise?: Effect[] } // "if you cast ~ during your main phase, ... instead", landfall "... instead", ferocious "... if you control a creature with power 4 or greater", delirium "if there are four or more card types among cards in your graveyard, ...", "if there is an instant card and a sorcery card in your graveyard, instead ...", "if you have less life than an opponent", "if you control fewer creatures than an opponent"
   | { type: "ifControlledTarget"; i: number; then: Effect[] } // "if you controlled that permanent, draw a card"
   | { type: "attachToCreated" } // "you may attach ~ to it": this Equipment goes on the token the same ability just created
   | { type: "exileGraveyard"; who: Ref } // "exile target player's graveyard"
@@ -351,7 +352,7 @@ export interface StaticEffect {
   /** "Other Goblin creatures you control attack each combat if able." */
   mustAttack?: boolean;
   /** "As long as you've drawn two or more cards this turn" / "as long as this Aura entered this turn". */
-  cond?: { artifactCreatureOrPlan?: boolean; powerAtMost?: number; selfCounteredThisTurn?: boolean; yardCreatures?: number; drawnAtLeast?: number; lifeAtLeast?: number; yourTurn?: boolean; enteredThisTurn?: boolean; controls?: string; attacking?: boolean; lostLife?: boolean; /** Four or more card types among the cards in its controller's graveyard. */ delirium?: boolean };
+  cond?: { artifactCreatureOrPlan?: boolean; powerAtMost?: number; selfCounteredThisTurn?: boolean; yardCreatures?: number; drawnAtLeast?: number; lifeAtLeast?: number; yourTurn?: boolean; enteredThisTurn?: boolean; controls?: string; attacking?: boolean; lostLife?: boolean; /** Four or more card types among the cards in its controller's graveyard. */ delirium?: boolean; /** Threshold: this many cards in its controller's graveyard. */ yardAtLeast?: number; /** Hellbent: its controller has no cards in hand. */ handEmpty?: boolean; /** Metalcraft: its controller controls this many artifacts. */ artifactsAtLeast?: number };
   /** "Tapped creatures you control have hexproof." */
   tappedOnly?: boolean;
   /** "Other untapped creatures you control have hexproof." */
@@ -470,6 +471,11 @@ export interface TriggeredAbility {
     selfEquipped?: boolean;
     /** "If you have fewer than ten cards in hand". */
     handBelow?: number;
+    /** Threshold (seven or more cards in your graveyard), hellbent (no cards in hand), metalcraft (three or more artifacts) and morbid (a creature died this turn). */
+    yardAtLeast?: number;
+    handEmpty?: boolean;
+    artifactsAtLeast?: number;
+    creatureDied?: boolean;
     /** "If it has greater power or toughness than ~": the creature that entered. */
     enteringGreater?: boolean;
     /** A Case's "if unsolved, solve at the beginning of your end step". */
@@ -615,6 +621,8 @@ export interface ActivatedAbility {
 /** Everything the engine understood on a card. `ok` is false if any printed text was not understood. */
 export interface ParsedCard {
   ok: boolean;
+  /** Echo: the permanent owes its echo cost at its controller's next upkeep. */
+  echo?: boolean;
   spell?: SpellAbility;
   triggers: TriggeredAbility[];
   activated: ActivatedAbility[];
@@ -902,6 +910,8 @@ export interface PendingPick {
   attachHolder?: string;
   /** Hand to field: if the player declines, they draw a card. */
   elseDraw?: boolean;
+  /** MayPay ("unless you pay"): what happens when the cost isn't paid. */
+  elseEffects?: Effect[];
   /** Cards the chooser looks at that can't be chosen (the lands in a hand being looked at). */
   seen?: string[];
   /** Hand exile: the permanent that keeps the card until it leaves the battlefield. */

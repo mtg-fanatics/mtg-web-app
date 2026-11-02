@@ -181,6 +181,12 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
         return null;
       }
     }
+    // "Sacrifice ~ unless you pay {1}": not paid.
+    if (pick.elseEffects && pick.thenCtx) {
+      state.pendingPick = null;
+      runEffects(state, pick.elseEffects, pick.thenCtx, events);
+      checkStateBasedActions(state, events);
+    }
     finish();
     return null;
   }

@@ -22,7 +22,7 @@ const HANDLERS: Required<EffectHandlers> = { ...DAMAGE_EFFECTS, ...PERMANENT_EFF
 /** Runs a spell's or ability's effects in order. State-based actions are checked by the caller afterwards. */
 export function runEffects(state: GameState, effects: Effect[], ctx: RunContext, events: GameEvent[]): void {
   const source = findPermanentOrNull(state, ctx.sourceId)?.perm;
-  const trait = { name: ctx.sourceName, controller: ctx.controller, deathtouch: source ? kw(state, source, "deathtouch") : false, lifelink: source ? kw(state, source, "lifelink") : false, infect: source ? kw(state, source, "infect") : false, ...(source ? { perm: source } : {}) };
+  const trait = { name: ctx.sourceName, controller: ctx.controller, deathtouch: source ? kw(state, source, "deathtouch") : false, lifelink: source ? kw(state, source, "lifelink") : false, infect: source ? kw(state, source, "infect") : false, wither: source ? kw(state, source, "wither") : false, ...(source ? { perm: source } : {}) };
   const say = (text: string) => events.push({ type: "effect", text });
   const value = (amount: Amount): number => {
     if (amount === "X") return ctx.x ?? 0;

@@ -198,6 +198,8 @@ function duel(s: GameState, a: Permanent, b: Permanent): { aDies: boolean; bDies
 /** Can this creature block that attacker at all (the engine has the final say)? */
 function canBlock(s: GameState, b: Permanent, a: Permanent): boolean {
   if (has(s, a, "flying") && !has(s, b, "flying") && !has(s, b, "reach")) return false;
+  if (has(s, a, "shadow") !== has(s, b, "shadow")) return false;
+  if (has(s, a, "horsemanship") && !has(s, b, "horsemanship")) return false;
   if (has(s, a, "menace")) return false; // needs two blockers: handled as a pair
   return true;
 }

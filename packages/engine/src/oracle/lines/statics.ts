@@ -265,3 +265,18 @@ export function readLord(line: string, out: ParsedCard): boolean {
   }
   return false;
 }
+
+// Threshold, hellbent, metalcraft: "as long as there are seven or more cards in your graveyard, ~ gets +2/+2", "~ has double strike as long as you have no cards in hand"
+const STATIC_COND = "there are seven or more cards in your graveyard|you have no cards in hand|you control three or more artifacts";
+const STATIC_COND_OF = (text: string): NonNullable<StaticEffect["cond"]> => (/graveyard/.test(text) ? { yardAtLeast: 7 } : /no cards in hand/.test(text) ? { handEmpty: true } : { artifactsAtLeast: 3 });
+export function readAbilityWordStatic(line: string, out: ParsedCard): boolean {
+  const m = new RegExp(`^(?:(?:threshold|hellbent|metalcraft) — )?(?:as long as (${STATIC_COND}), (.+)|(.+?) as long as (${STATIC_COND}))$`).exec(line);
+  if (!m) return false;
+  const cond = STATIC_COND_OF(m[1] ?? m[4]);
+  // ("an additional +2/+0" is just +2/+0 on top)
+  const body = (m[2] ?? m[3]).replace(" gets an additional ", " gets ").replace(" get an additional ", " get ");
+  const st = body.startsWith("~ ") ? selfStatic(body) : parseStatic(body);
+  if (!st) return false;
+  (out.statics ??= []).push({ ...st, cond });
+  return true;
+}

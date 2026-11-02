@@ -180,6 +180,7 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
         if (amount <= 0) continue;
       }
       const infect = kw(state, source, "infect");
+      const shrink = infect || (!toPlayer && kw(state, source, "wither")); // wither: damage to a creature is -1/-1 counters (to a player it is ordinary damage)
       if (toPlayer && !infect) {
         target.life -= amount;
         target.lifeLostThisTurn = (target.lifeLostThisTurn ?? 0) + amount;
@@ -188,7 +189,7 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
       } else if (getCard(state, target.card.defId).type === "planeswalker") {
         target.loyalty = (target.loyalty ?? 0) - amount; // damage to a planeswalker removes loyalty
       } else {
-        if (infect) {
+        if (shrink) {
           target.minusCounters = (target.minusCounters ?? 0) + amount;
           target.infected = true;
         } else target.damage += amount;

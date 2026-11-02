@@ -178,6 +178,10 @@ export interface Permanent {
   tappedThisTurn?: boolean;
   /** Invasion counters (Alien Invasion). */
   invasion?: number;
+  /** Echo: its echo cost is still to be paid at the next upkeep. */
+  echoDue?: boolean;
+  /** Cumulative upkeep: the age counters on it. */
+  age?: number;
   /** Lore counters on a Saga. */
   lore?: number;
   /** Plan counters (Marvel's Plan enchantments). */
@@ -297,6 +301,8 @@ export interface GameState {
   pendingChoice: PendingChoice | null;
   /** Additional combat phases still to come this turn. */
   extraCombats?: number;
+  /** A creature died this turn (morbid). */
+  creatureDied?: boolean;
   /**
    * Relentless Assault: "After this main phase, there is an additional combat phase followed by an additional main phase." `extraCombatMain`: how many are still to start,
    * `extraStep`: the additional combat has begun, so the next main phase is the additional one, `extraResume`: what the turn goes on with after it.

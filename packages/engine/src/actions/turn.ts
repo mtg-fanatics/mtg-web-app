@@ -142,6 +142,7 @@ export function startNextTurn(state: GameState, events: GameEvent[]): void {
   state.extraStep = undefined;
   state.extraResume = undefined;
   // Rule 514.2: damage wears off for everyone at end of turn.
+  state.creatureDied = undefined;
   for (const p of Object.values(state.players)) {
     p.drawnThisTurn = 0;
     p.costLessThisTurn = undefined;

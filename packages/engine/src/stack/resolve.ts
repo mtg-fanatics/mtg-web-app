@@ -43,6 +43,7 @@ export function enterBattlefield(state: GameState, card: CardInstance, controlle
     ...(x > 0 && parsed.triggers.some((t) => t.xTargets || (t.event === "enters" && JSON.stringify(t.effects).includes('"X"'))) ? { xPaid: x } : {}), // ("Tap X target creatures", "When this enters, draw X cards")
     ...(parsed.entersPrepared && parsed.prepare ? { prepared: parsed.prepare.id } : {}),
   };
+  if (parsed.echo) (remembered as { echoDue?: boolean }).echoDue = true; // echo: the cost is due at the next upkeep
   if (remembered.prepared) state.cards[remembered.prepared] ??= parsed.prepare!; // the copy of its spell, waiting to be cast
   state.players[controller].battlefield.push({ ...(attachedTo ? { attachedTo } : {}), ...(loyalty !== undefined ? { loyalty } : {}), ...(minus > 0 ? { minusCounters: minus } : {}), ...(stun > 0 ? { stun } : {}), ...(kicked ? { kicked } : {}), ...(cast ? { cast } : {}), ...(haste ? { tempKeywords: ["haste" as const] } : {}), ...(warped ? { warped } : {}), ...remembered, card, tapped: entersTappedNow(state, controller, getCard(state, card.defId)), summoningSick: getCard(state, card.defId).type === "creature" || parsed.crew !== undefined, damage: 0 });
   events.push({ type: "permanentEntered", player: controller, iid: card.iid });
@@ -77,6 +78,7 @@ function whyIllegal(state: GameState, target: TargetChoice, spec: TargetSpec, co
   if (!found) return "its target has left the battlefield";
   const name = getCard(state, found.perm.card.defId).name;
   if (found.owner.id !== controller && kw(state, found.perm, "hexproof")) return `${name} has hexproof`;
+  if (kw(state, found.perm, "shroud")) return `${name} has shroud`;
   if (found.perm.untargetableBy?.includes(controller)) return `${name} can't be the target of ${playerLabel(controller)}'s spells or abilities this turn`;
   if (spec.source && isProtectedFrom(state, found.perm, spec.source)) return `${name} has protection from it`;
   return `${name} is no longer a legal target`;

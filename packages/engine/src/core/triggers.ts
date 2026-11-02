@@ -5,6 +5,7 @@ import { parseCard } from "../oracle.js";
 import { OPPONENT } from "../types.js";
 import type { CardDef, CardInstance, GameState, Permanent, PlayerId } from "../types.js";
 import {
+  artifactCount,
   bindSpecs,
   findPermanentOrNull,
   isArtifactDef,
@@ -35,6 +36,10 @@ function triggerCondHolds(state: GameState, controller: PlayerId, trigger: Trigg
   if (c?.lifeGainedAtLeast !== undefined && (p.lifeGainedThisTurn ?? 0) < c.lifeGainedAtLeast) return false;
   if (c?.lifeAtLeast !== undefined && p.life < c.lifeAtLeast) return false;
   if (c?.handBelow !== undefined && p.hand.length >= c.handBelow) return false;
+  if (c?.yardAtLeast !== undefined && p.graveyard.length < c.yardAtLeast) return false;
+  if (c?.handEmpty && p.hand.length > 0) return false;
+  if (c?.artifactsAtLeast !== undefined && artifactCount(state, controller) < c.artifactsAtLeast) return false;
+  if (c?.creatureDied && !state.creatureDied) return false;
   if (c?.selfPowerAtLeast !== undefined) {
     const me = sourceIid ? findPermanentOrNull(state, sourceIid)?.perm : undefined;
     if (!me || powerOf(state, me) < c.selfPowerAtLeast) return false;

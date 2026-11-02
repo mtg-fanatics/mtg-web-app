@@ -20,6 +20,10 @@ export const SUPPORTED_KEYWORDS = [
   "fear",
   "intimidate",
   "infect",
+  "shroud",
+  "shadow",
+  "horsemanship",
+  "wither",
 ] as const;
 
 export type Keyword = (typeof SUPPORTED_KEYWORDS)[number];
@@ -45,6 +49,10 @@ export const KEYWORD_RULES: Record<Keyword, string> = {
   prowess: "Whenever you cast a noncreature spell, this gets +1/+1 until end of turn.",
   fear: "Can't be blocked except by artifact creatures and/or black creatures.",
   intimidate: "Can't be blocked except by artifact creatures and/or creatures that share a color with it.",
+  shroud: "Can't be the target of spells or abilities (even its controller's).",
+  shadow: "Can block or be blocked by only creatures with shadow.",
+  horsemanship: "Can't be blocked except by creatures with horsemanship.",
+  wither: "Deals damage to creatures in the form of -1/-1 counters.",
   infect: "Deals damage to creatures in the form of -1/-1 counters and to players in the form of poison counters. A player with ten or more poison counters loses the game.",
 };
 
@@ -58,7 +66,7 @@ const LABELS = new Set([
   "heal", "fight", "swampwalk", "islandwalk", "forestwalk", "mountainwalk", "plainswalk",
   "eerie", "prepared", "raid",
   "explore", "solved", "infusion", "warp", "blight", "offspring", "toxic", "exalted", "delve", "ferocious", "delirium", "plot", "flurry", "replicate",
-  "opus", "harmonize",
+  "opus", "harmonize", "echo", "cumulative upkeep", "threshold", "hellbent", "metalcraft", "morbid",
   // Jund Sacrifice and its sideboard
   "revolt", "learn", "channel", "waterbend", "firebending", "paradigm", "blood",
   // Mono-Black Infect

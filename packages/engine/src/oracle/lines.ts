@@ -1,10 +1,11 @@
 import type { ParsedCard } from "../effects.js";
 import { readWard, readToxic, readProtection, readKeywordLine, readNoRulesEffect, readLandwalk, readAttacksEachCombat, readBlockedOnlyBy, readBlockedByOneAtMost, readCantBlock, readBlockedByPower, readAttackOnlyIfDefenderHas, readAttackOnlyWithMoreCreatures, readBlockOnlyWithMoreCreatures, readUnblockableByColor, readCreaturesAttackEachCombat, readTypeAttacksEachCombat, readAllMustBlock, readBlocksOnlyFlyers, readCantAttackOrBlockAlone, readUnblockable } from "./lines/keywords.js";
-import { readStatsEqualToCount, readAuraTarget, readDeliriumStatic, readStaticAbility, readCostLessIfYouControl, readIfDrawnCards, readTypedSpellsCostLess, readSpellTax, readCheaperOnOtherTurns, readBigSpellsCostLess, readDuringYourTurn, readAsLongAsYouControl, readWhileAttacking, readAttackingAnthem, readPowerEqualToCount, readTargetingTax, readEnteredThisTurnStatic, readGrantedLandMana, readHostBecomes, readTappedCreaturesHave, readLifeTotalStatic, readTwoTypeLord, readLord, readIgnoresHexproof } from "./lines/statics.js";
+import { readStatsEqualToCount, readAuraTarget, readDeliriumStatic, readAbilityWordStatic, readStaticAbility, readCostLessIfYouControl, readIfDrawnCards, readTypedSpellsCostLess, readSpellTax, readCheaperOnOtherTurns, readBigSpellsCostLess, readDuringYourTurn, readAsLongAsYouControl, readWhileAttacking, readAttackingAnthem, readPowerEqualToCount, readTargetingTax, readEnteredThisTurnStatic, readGrantedLandMana, readHostBecomes, readTappedCreaturesHave, readLifeTotalStatic, readTwoTypeLord, readLord, readIgnoresHexproof } from "./lines/statics.js";
 import { readEntersWithCounters, readEntersWithMinusCounters, readKickedCounters, readChooseColorOnEnter, readOthersEnterWithCounters, readEntersTappedUnless, readPreventNoncombatDamage, readGrantsLifeGainCounters, readDrawsTwoInstead, readGainLifePlusOne, readGainTwiceLife, readEntersPrepared, readEntersTapped, readShockLand } from "./lines/entering.js";
 import { readOpponentTapped, readLifeGainedTrigger, readLandfall, readAttackWithOthers, readBecomesTarget, readCastSpellTrigger, readDrawCardTrigger, readEnchantedDealsDamage, readPackTactics, readBeginningOfStep, readAnySpellCast, readCastKindSpell, readAllyDies, readCountersPutOnAlly, readAnotherCreatureEntersOrLeaves, readBlocksOrBlocked, readDamagedCreatureDies, readDamageAndAnyDies, readEerie, readReturnWhenHostDies, readTapXOnEnter, readDiesReturnsToBattlefield, readAllyEnters, readYouAttack, readYouDiscard, readExcessDamage, readSelfTrigger, readTrigger, readAllyAttacks, readToSolve } from "./lines/triggers.js";
 import { readLoyaltyAbility, readCrew, readEquip, readSacrificeForMana, readLandcycling, readActivatedAbility, readRestrictedMana, readSolvedAbility } from "./lines/activated.js";
 
+import { readCumulativeUpkeep, readEcho } from "./upkeepParts.js";
 import { readDiscardedByOpponent, readGoblinKing, readHostControl, readHostDamageLife, readReduceDamage } from "./lines/theme.js";
 import { readSacrificeTrigger, readFirebending, readCreatureLandWithTrigger, readTappedIfMoreLands } from "./lines/sacrifice.js";
 import { readKeywordLord, readCreatureSpellCast } from "./lines/infect.js";
@@ -20,6 +21,8 @@ import { MARVEL_ABILITY_WORD, readAttacksAlone, readExalted, readChapter, readEq
 const READERS: ((line: string, out: ParsedCard) => boolean)[] = [
   readLoyaltyAbility,
   readReduceDamage,
+  readEcho,
+  readCumulativeUpkeep,
   readHostDamageLife,
   readHostControl,
   readGoblinKing,
@@ -41,6 +44,7 @@ const READERS: ((line: string, out: ParsedCard) => boolean)[] = [
   readChapter,
   readYardCondition,
   readDeliriumStatic,
+  readAbilityWordStatic,
   readNoOneDies,
   readGrimReaper,
   readHostUpkeep,
@@ -183,7 +187,7 @@ export function parseCreatureLine(rawLine: string, out: ParsedCard): void {
     return;
   }
   // "When The Sackville-Bagginses enter": a name that is plural
-  const line = rawLine.replace(/\.$/, "").replace(/^(?:raid|opus|channel|undergrowth) — /, "").replace(/^when ~ enter,/, "when ~ enters,").replace(MARVEL_ABILITY_WORD, "");
+  const line = rawLine.replace(/\.$/, "").replace(/^(?:raid|opus|channel|undergrowth|threshold|hellbent|metalcraft|morbid) — /, "").replace(/^when ~ enter,/, "when ~ enters,").replace(MARVEL_ABILITY_WORD, "");
 
   for (const read of READERS) if (read(line, out)) return;
   out.unsupported.push(line);

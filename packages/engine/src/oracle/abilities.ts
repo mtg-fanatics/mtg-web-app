@@ -23,6 +23,10 @@ export function interveningCond(text: string): TriggerCond | null {
   if ((m = /^you control (two|three|four|five|\d+) or more creatures$/.exec(text))) return { creaturesAtLeast: toNumber(m[1]) ?? 0 };
   if ((m = /^an? ([a-z]+) and an? ([a-z]+) attacked this combat$/.exec(text))) return { attackersInclude: [m[1], m[2]] };
   if (text === "you cast it") return { cast: true };
+  if (/^(?:there are seven or more cards in your graveyard|seven or more cards are in your graveyard)$/.test(text)) return { yardAtLeast: 7 };
+  if (text === "you have no cards in hand") return { handEmpty: true };
+  if (text === "you control three or more artifacts") return { artifactsAtLeast: 3 };
+  if (text === "a creature died this turn") return { creatureDied: true };
   return null;
 }
 

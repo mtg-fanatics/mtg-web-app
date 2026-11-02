@@ -221,6 +221,12 @@ export function parseModes(bullets: string[], allowSelf: boolean): ModeSpec[] | 
 }
 
 /** Several sentences. Null if any one of them is not understood. */
+const WORD_COND = "there are seven or more cards in your graveyard|seven or more cards are in your graveyard|you have no cards in hand|you control three or more artifacts|a creature died this turn";
+/** "<effect>, if <cond>" / "<effect> instead if <cond>" / "if <cond>, <effect>", after an optional "threshold — " style ability word. */
+const ABILITY_WORD_COND = new RegExp(`^(?:(?:threshold|hellbent|metalcraft|morbid) — )?(?:(.+?) (?:instead )?if (${WORD_COND})|if (${WORD_COND}), (.+))$`);
+const NOW_COND_OF = (text: string | undefined): "threshold" | "hellbent" | "metalcraft" | "morbid" | null =>
+  !text ? null : /graveyard/.test(text) ? "threshold" : /no cards in hand/.test(text) ? "hellbent" : /artifacts/.test(text) ? "metalcraft" : /creature died/.test(text) ? "morbid" : null;
+
 export function parseEffectText(rawText: string, ctx: Ctx): Effect[] | null {
   // "You may discard a card. If you do, draw a card." is one effect: the draw depends on the discard.
   const text = rawText
@@ -349,6 +355,26 @@ export function parseEffectText(rawText: string, ctx: Ctx): Effect[] | null {
       if (!then || previous.length === 0) return null;
       effects.splice(lastGroup, previous.length, { type: "ifNow", cond: nowIf[1].startsWith("you cast") ? "yourMainPhase" : "landEntered", then, otherwise: previous });
       continue;
+    }
+    // Threshold, hellbent, metalcraft, morbid: "..., if you control three or more artifacts", "... instead if you have no cards in hand", "If a creature died this turn, ..."
+    const wordy = ABILITY_WORD_COND.exec(sentence);
+    if (wordy) {
+      const cond = NOW_COND_OF(wordy[2] ?? wordy[3]);
+      const body = wordy[1] ?? wordy[4];
+      if (cond && body) {
+        const instead = sentence.includes(" instead if ");
+        const clause = parseClause(body, ctx);
+        if (!clause) return null;
+        if (instead) {
+          const previous = effects.slice(lastGroup);
+          if (previous.length === 0) return null;
+          effects.splice(lastGroup, previous.length, { type: "ifNow", cond, then: clause, otherwise: previous });
+        } else {
+          lastGroup = effects.length;
+          effects.push({ type: "ifNow", cond, then: clause });
+        }
+        continue;
+      }
     }
     // Ferocious: "That creature also gains trample until end of turn if you control a creature with power 4 or greater." (or the condition first)
     const ferocious = /^(?:ferocious — )?(?:if you control a creature with power 4 or greater, (.+)|(.+) if you control a creature with power 4 or greater)$/.exec(sentence);

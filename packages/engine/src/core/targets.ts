@@ -40,6 +40,7 @@ export function isLegalTarget(state: GameState, spec: TargetSpec, choice: Target
       if (spec.source && isProtectedFrom(state, found.perm, spec.source)) return false;
       // Hexproof: only its controller can target it (unless the targeting player has Nowhere to Run).
       if (found.owner.id !== controller && kw(state, found.perm, "hexproof") && !ignoresHexproof(state, controller)) return false;
+      if (kw(state, found.perm, "shroud")) return false; // shroud: nobody can target it, not even its controller
       if (found.perm.untargetableBy?.includes(controller)) return false; // "can't be the target of spells or abilities your opponents control this turn"
       if (spec.except && spec.except === choice.iid) return false; // "another target creature"
       if (spec.crewOf && !findPermanentOrNull(state, spec.crewOf)?.perm.crewedBy?.includes(choice.iid)) return false;

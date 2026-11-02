@@ -122,7 +122,10 @@ export function putIntoGraveyard(state: GameState, perm: Permanent, controller: 
     // "Whenever a creature an opponent controls dies"
     for (const watcher of state.players[OPPONENT[controller]].battlefield) queueTriggers(state, watcher.card, OPPONENT[controller], "oppCreatureDies");
   }
-  if (creature) queueDeathLife(state);
+  if (creature) {
+    state.creatureDied = true; // morbid
+    queueDeathLife(state);
+  }
   if (perm.diesReturn) {
     const text = "When this creature dies, return it to the battlefield tapped under its owner's control with a +1/+1 counter on it.";
     state.triggerQueue.push({ specs: [], item: { kind: "ability", id: newId(state), controller, source: perm.card.iid, sourceName: nameOf(state, perm), effects: [{ type: "returnSelfToBattlefield", tapped: true, counters: 1 }], targets: [], specs: [], text } });
