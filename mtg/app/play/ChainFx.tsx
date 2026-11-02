@@ -42,7 +42,7 @@ const MIN_SHOW_MS = 4800; // a card (and what it says) is on screen at least thi
 const EXIT_GAP_MS = 2000; // cards that leave together leave one after the other, newest first, slowly
 const LEAVE_MS = 2000; // (the fade-out below takes this long)
 const STAGGER_MS = 260;
-const MAX_SHOWN = 12; // (everything on the chain is shown: the cards get smaller the more there are; a card is never left out and then brought back)
+const MAX_SHOWN = 12; // (everything on the chain is shown: the cards overlap more the more there are; a card is never left out and then brought back)
 const MAX_PHONE = 8; // a phone lists them one under the other, each with its text beside it
 const TILT = [-7, 4, -3, 6, -5, 3, -4, 5];
 
@@ -270,12 +270,11 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
   const shown = links.slice(-(phone ? MAX_PHONE : MAX_SHOWN));
   const m = shown.length;
   const rowH = Math.round(Math.min(vh * 0.17, 122, (vh * 0.62) / Math.max(1, m)));
-  // (more than six on a wide screen: smaller cards, so that they all fit and none has to leave)
-  const H = phone ? Math.round(rowH * 0.9) : Math.round(Math.min(vh * 0.36, 320) * (m > 6 ? Math.max(0.55, 6 / m) : 1));
+  const H = phone ? Math.round(rowH * 0.9) : Math.round(Math.min(vh * 0.36, 320)); // (the cards keep their size: the more there are, the more they overlap, like cards spread on a table)
   const cw = Math.round(H * 0.716);
   const wide = Math.round(Math.min(vw * 0.94, 440)); // (phone) the width the card and its text share
   const stepX = m > 1 ? Math.min(H * 0.64, (vw * 0.8 - cw) / (m - 1)) : 0;
-  const stepY = H * 0.24;
+  const stepY = m > 1 ? Math.max(8, Math.min(H * 0.24, (vh * 0.6 - H) / (m - 1))) : 0;
   // A wide screen: the cards cascade, each with its text under it. A phone: one under the other, each with its text beside it.
   const at = shown.map((_, i) =>
     phone ? { x: Math.round(-wide / 2 + cw / 2), y: Math.round((i - (m - 1) / 2) * rowH) } : { x: Math.round((i - (m - 1) / 2) * stepX), y: Math.round((i - (m - 1) / 2) * stepY) },
