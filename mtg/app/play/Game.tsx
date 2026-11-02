@@ -46,7 +46,7 @@ import { GraveyardDialog, Pile } from "./Piles";
 import ShuffleStage from "./ShuffleStage";
 import { shufflePending } from "./shuffleStep";
 import { primeAudio } from "@/lib/sound";
-import { playFinisher, warmFinisher } from "./finisher";
+import { playChosenFinisher, warmFinishers } from "./finishers";
 import { handDraws, hideDrawn, holdLibraryCounts, holdPiles, isPileBusy, playDeal, playDraws, playOpponentDiscards, playOpponentDraws, playToGraveyard, untilBattlefieldShown } from "./pileFx";
 import type { Draw } from "./pileFx";
 import { announcementsFrom, describeEvents, endReason, mergeAnnouncements, playerName, worthTelling } from "./log";
@@ -268,16 +268,16 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   const [abilityFocus, setAbilityFocus] = useState<string | null>(null); // a battlefield card clicked to see only its abilities
   const [viewingYard, setViewingYard] = useState<{ owner: PlayerId; zone: "graveyard" | "exile" } | null>(null); // whose graveyard or exile is open
   const [endNote, setEndNote] = useState<string | null>(null); // how the game ended, for the win popup
-  // The finishing move: the Grim Reaper slashes the loser's mat once the last blow has landed, and the result comes up after it.
+  // The finishing move (the one this player picked): it hits the loser's mat once the last blow has landed, and the result comes up after it.
   const finisherWinner = game?.winner === "p1" || game?.winner === "p2" ? game.winner : null;
   const finisherOn = !!finisherWinner && liveSeen && !(endNote ?? "").includes("resigned");
   const resultReady = endShown && (!finisherOn || finisherDone);
   const finisherPlayed = useRef(false);
-  useEffect(() => warmFinisher(), []);
+  useEffect(() => warmFinishers(), []);
   useEffect(() => {
     if (!endShown || !finisherOn || !finisherWinner || finisherDone || finisherPlayed.current) return;
     finisherPlayed.current = true;
-    void playFinisher(finisherWinner, OPPONENT[finisherWinner]).finally(() => setTimeout(() => setFinisherDone(true), 300));
+    void playChosenFinisher(finisherWinner, OPPONENT[finisherWinner]).finally(() => setTimeout(() => setFinisherDone(true), 300));
   }, [endShown, finisherOn, finisherWinner, finisherDone]);
   useEffect(() => {
     if (!won) finisherPlayed.current = false;

@@ -6,7 +6,8 @@ import { holdWallpaper } from "../LiveWallpaper";
 import { CoinDisplay } from "../play/CoinFlip";
 import LookPicker from "../play/LookPicker";
 import { myLook, randomLook } from "@/lib/playmat";
-import { playFinisher, warmFinisher } from "../play/finisher";
+import { FINISHERS, getFinisher, playChosenFinisher, setFinisher, warmFinishers } from "../play/finishers";
+import type { FinisherId } from "../play/finishers";
 import { listPlayableDecks } from "@/lib/decks";
 import type { DeckChoice } from "@/lib/decks";
 import DeckPicker from "../decks/DeckPicker";
@@ -77,13 +78,14 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
   const [sleeve, setSleeve] = useState(() => myLook.read("sleeve"));
   const [mat, setMat] = useState(() => myLook.read("mat"));
   const [previewing, setPreviewing] = useState(false);
-  useEffect(() => warmFinisher(), []);
+  const [finisher, setFinisherState] = useState<FinisherId>(() => getFinisher());
+  useEffect(() => warmFinishers(finisher), [finisher]);
   // the finishing move is shown once, on the table behind this window, so the player sees what happens to the loser
   async function preview() {
     if (previewing) return;
     setPreviewing(true);
     try {
-      await playFinisher(null, null);
+      await playChosenFinisher(null, null, finisher);
     } finally {
       setPreviewing(false);
     }
@@ -180,7 +182,19 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
         />
         <div className="mt-4 border-t border-white/15 pt-4">
           <h3 className="mb-1 text-base font-bold uppercase tracking-widest text-[#ffe29a]">Finishing move</h3>
-          <p className="mb-3 text-sm text-slate-300">The Grim Reaper slashes your opponent&apos;s mat when you win.</p>
+          <p className="mb-3 text-sm text-slate-300">{FINISHERS.find((f) => f.id === finisher)?.blurb} It plays on your opponent&apos;s mat when you win.</p>
+          <div className="mb-3 flex flex-wrap justify-center gap-2">
+            {FINISHERS.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => (setFinisherState(f.id), setFinisher(f.id))}
+                aria-pressed={finisher === f.id}
+                className={`rounded-xl border px-3 py-1.5 text-sm font-bold ${finisher === f.id ? "border-amber-300 bg-amber-300/25 text-amber-100" : "border-white/25 bg-white/5 text-white hover:bg-white/15"}`}
+              >
+                {f.name}
+              </button>
+            ))}
+          </div>
           <button onClick={() => void preview()} disabled={previewing} className="rounded-xl border border-white/30 bg-white/10 px-4 py-1.5 text-sm font-bold text-white hover:bg-white/20 disabled:opacity-40">
             {previewing ? "Playing…" : "Preview"}
           </button>

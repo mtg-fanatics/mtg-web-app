@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Finisher Lab</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #07060d; overflow: hidden; font-family: system-ui, "Segoe UI", sans-serif; color: #e8e4f5; }
+  #board { position: fixed; inset: 0; will-change: transform; }
+  .mat { position: absolute; left: 50%; width: min(780px, 74vw); height: 33vh; transform: translateX(-50%); border-radius: 18px; border: 2px solid rgba(160,140,255,.35);
+    background: radial-gradient(ellipse at 50% 40%, #2a2150 0%, #17122e 60%, #0f0b20 100%); box-shadow: inset 0 0 60px rgba(120,90,255,.18), 0 10px 40px rgba(0,0,0,.6);
+    display: flex; align-items: center; justify-content: center; gap: 2.2%; }
+  #opp { top: 6vh; } #me { bottom: 15vh; }
+  .mat .tag { position: absolute; top: 8px; left: 14px; font-size: 11px; letter-spacing: .2em; opacity: .45; }
+  .card { width: min(96px, 11vw); aspect-ratio: 5/7; border-radius: 8px; border: 2px solid rgba(255,255,255,.55); position: relative; flex: none; will-change: transform;
+    box-shadow: 0 6px 14px rgba(0,0,0,.55); background: linear-gradient(160deg, var(--c1), var(--c2)); }
+  .card::before { content: ""; position: absolute; inset: 7% 8% 42% 8%; border-radius: 4px; background: radial-gradient(circle at 40% 40%, rgba(255,255,255,.55), rgba(255,255,255,.05)); }
+  .card::after { content: ""; position: absolute; left: 10%; right: 10%; bottom: 12%; height: 22%; border-radius: 3px; background: repeating-linear-gradient(0deg, rgba(255,255,255,.28) 0 2px, transparent 2px 6px); }
+  #fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 5; }
+  #panel { position: fixed; z-index: 9; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; width: min(920px, 94vw); }
+  #btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  button { font: inherit; font-weight: 600; color: #f2eeff; background: #261f4a; border: 1px solid #6a58c8; padding: 9px 16px; border-radius: 10px; cursor: pointer; }
+  button:hover { background: #3a2f78; } button.on { background: #6a4cff; }
+  #desc { font-size: 13px; opacity: .75; text-align: center; min-height: 1.3em; }
+  #title { position: fixed; z-index: 9; top: 8px; left: 14px; font-size: 12px; letter-spacing: .15em; opacity: .5; }
+</style>
+</head>
+<body>
+<div id="title">FINISHER LAB &mdash; press 1-4, or click. Space replays.</div>
+<div id="board">
+  <div class="mat" id="opp"><span class="tag">OPPONENT</span></div>
+  <div class="mat" id="me"><span class="tag">YOU</span></div>
+</div>
+<canvas id="fx"></canvas>
+<div id="panel"><div id="btns"></div><div id="desc"></div></div>
+
+<script>
+"use strict";
+// ───────────────────────────── helpers
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const sm = (a, b, x) => { x = clamp((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+const lerp = (a, b, k) => a + (b - a) * k;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const TAU = Math.PI * 2;
+
+const cv = document.getElementById("fx");
+const ctx = cv.getContext("2d");
+const board = document.getElementById("board");
+const oppEl = document.getElementById("opp");
+let W = 0, H = 0, RES = 0.85;
+function resize() {
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * RES); cv.height = Math.round(H * RES);
+}
+addEventListener("resize", resize); resize();
+
+// ── the faux board: cards on both mats
+const COLS = [["#ff9a5a", "#a8232b"], ["#6ec6ff", "#1f4e9c"], ["#9be36f", "#1e6b3a"], ["#e0b4ff", "#5a2a9a"], ["#ffe27a", "#9a6a12"]];
+function fillMat(el, n) {
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement("div"); c.className = "card";
+    c.style.setProperty("--c1", COLS[i % 5][0]); c.style.setProperty("--c2", COLS[i % 5][1]);
+    el.appendChild(c);
+  }
+}
+fillMat(oppEl, 5); fillMat(document.getElementById("me"), 4);
+
+// ───────────────────────────── glow sprites, particles
+const sprites = {};
+function spr(col, core = true) {
+  const key = col + core;
+  if (sprites[key]) return sprites[key];
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d");
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, core ? "rgba(255,255,255,1)" : `rgba(${col},1)`);
+  gr.addColorStop(core ? 0.2 : 0.35, `rgba(${col},${core ? 0.9 : 0.8})`);
+  gr.addColorStop(0.6, `rgba(${col},0.25)`);
+  gr.addColorStop(1, `rgba(${col},0)`);
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return (sprites[key] = c);
+}
+function glow(x, y, r, col, a = 1) { ctx.globalAlpha = a; ctx.drawImage(spr(col), x - r, y - r, r * 2, r * 2); }
+
+let P = [];
+function emit(o) { P.push(Object.assign({ x: 0, y: 0, vx: 0, vy: 0, g: 0, drag: 0, age: 0, life: 1, r: 4, r1: null, col: "255,255,255", a: 1, kind: "glow", fade: 1 }, o)); }
+function stepP(dt) {
+  for (let i = P.length - 1; i >= 0; i--) {
+    const p = P[i]; p.age += dt;
+    if (p.age >= p.life) { P[i] = P[P.length - 1]; P.pop(); continue; }
+    const dr = Math.exp(-p.drag * dt);
+    p.vx *= dr; p.vy = p.vy * dr + p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+  }
+}
+function drawP() {
+  ctx.globalCompositeOperation = "source-over";
+  for (const p of P) {
+    if (p.kind !== "blob") continue;
+    const k = p.age / p.life, r = lerp(p.r, p.r1 ?? p.r, k);
+    glow(p.x, p.y, r, p.col, p.a * Math.pow(1 - k, p.fade) * Math.min(1, k * 8));
+  }
+  ctx.globalCompositeOperation = "lighter";
+  for (const p of P) {
+    if (p.kind === "blob") continue;
+    const k = p.age / p.life, a = p.a * Math.pow(1 - k, p.fade), r = lerp(p.r, p.r1 ?? p.r, k);
+    if (p.kind === "streak") {
+      ctx.globalAlpha = a; ctx.strokeStyle = `rgb(${p.col})`; ctx.lineWidth = r; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.045, p.y - p.vy * 0.045); ctx.stroke();
+    } else glow(p.x, p.y, r, p.col, a);
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+}
+
+// jagged lightning-style path between two points
+function jag(x0, y0, x1, y1, disp, depth) {
+  let pts = [[x0, y0], [x1, y1]];
+  for (let d = 0; d < depth; d++) {
+    const out = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      out.push(a, [(a[0] + b[0]) / 2 + rnd(-disp, disp), (a[1] + b[1]) / 2 + rnd(-disp, disp)]);
+    }
+    out.push(pts[pts.length - 1]); pts = out; disp *= 0.56;
+  }
+  return pts;
+}
+function strokePath(pts, widths, alphas, col, core = "255,255,255") {
+  ctx.globalCompositeOperation = "lighter"; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  for (let k = 0; k < widths.length; k++) {
+    ctx.globalAlpha = alphas[k]; ctx.lineWidth = widths[k];
+    ctx.strokeStyle = k === widths.length - 1 ? `rgb(${core})` : `rgb(${col})`;
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+}
+function flashRect(a, col = "255,255,255") { if (a <= 0.003) return; ctx.fillStyle = `rgba(${col},${a})`; ctx.fillRect(0, 0, W, H); }
+function ellipseRing(x, y, r, sy, w, col, a) {
+  if (a <= 0.003 || r < 1) return;
+  ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = a; ctx.strokeStyle = `rgb(${col})`; ctx.lineWidth = Math.max(0.5, w);
+  ctx.beginPath(); ctx.ellipse(x, y, r, r * sy, 0, 0, TAU); ctx.stroke();
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+}
+
+// ───────────────────────────── cards on the loser's mat (moved by script, then put back)
+let cards = [], mat = { x: 0, y: 0, w: 0, h: 0 }, T = { x: 0, y: 0 };
+function capture() {
+  board.style.transform = ""; oppEl.style.visibility = "";
+  const r = oppEl.getBoundingClientRect();
+  mat = { x: r.left, y: r.top, w: r.width, h: r.height };
+  T = { x: r.left + r.width / 2, y: r.top + r.height * 0.52 };
+  cards = [...oppEl.querySelectorAll(".card")].map((el) => {
+    el.style.transform = ""; el.style.opacity = ""; el.style.filter = ""; el.style.transition = ""; el.style.visibility = "";
+    const b = el.getBoundingClientRect();
+    return { el, cx: b.left + b.width / 2, cy: b.top + b.height / 2, w: b.width, h: b.height, ox: 0, oy: 0, rot: 0, sc: 1, op: 1, vx: 0, vy: 0, vr: 0, col: COLS[[...oppEl.querySelectorAll(".card")].indexOf(el) % 5] };
+  });
+}
+function applyCards() {
+  for (const c of cards) {
+    c.el.style.transform = `translate(${c.ox.toFixed(1)}px,${c.oy.toFixed(1)}px) rotate(${c.rot.toFixed(1)}deg) scale(${c.sc.toFixed(3)})`;
+    c.el.style.opacity = c.op.toFixed(2);
+  }
+}
+function cardsPhys(dt, drag) {
+  const k = Math.exp(-drag * dt);
+  for (const c of cards) { c.vx *= k; c.vy *= k; c.vr *= k; c.ox += c.vx * dt; c.oy += c.vy * dt; c.rot += c.vr * dt; }
+}
+function blast(strength, squash = 0.6) {
+  for (const c of cards) {
+    const dx = c.cx - T.x, dy = c.cy - T.y, d = Math.hypot(dx, dy) || 1;
+    const sp = strength / (1 + d / 260) + strength * 0.12;
+    c.vx = (dx / d) * sp; c.vy = (dy / d) * sp * squash - strength * 0.1; c.vr = rnd(-260, 260) * (strength / 900);
+  }
+}
+let shake = 0;
+function kick(a) { shake = Math.max(shake, a); }
+
+// ───────────────────────────── sound (made on the spot, no files)
+let AC = null, OUT = null, REV = null, NB = null;
+function audio() {
+  if (!AC) {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    OUT = AC.createGain(); OUT.gain.value = 0.85;
+    const comp = AC.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 5;
+    OUT.connect(comp).connect(AC.destination);
+    NB = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+    const d = NB.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const len = Math.floor(AC.sampleRate * 2.4), ir = AC.createBuffer(2, len, AC.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const x = ir.getChannelData(ch); for (let i = 0; i < len; i++) x[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.7); }
+    const conv = AC.createConvolver(); conv.buffer = ir;
+    const dark = AC.createBiquadFilter(); dark.type = "lowpass"; dark.frequency.value = 3400;
+    REV = AC.createGain(); REV.connect(conv).connect(dark).connect(OUT);
+  }
+  if (AC.state === "suspended") AC.resume();
+}
+function env(t, dur, gain, wet, att = 0.01) {
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(gain, 0.0002), t + att);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.connect(OUT);
+  if (wet) { const s = AC.createGain(); s.gain.value = wet; g.connect(s).connect(REV); }
+  return g;
+}
+function tone(f, to, dur, gain, at = 0, type = "sine", wet = 0, att = 0.01) {
+  const t = AC.currentTime + at, o = AC.createOscillator();
+  o.type = type; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(Math.max(to, 1), t + dur);
+  o.connect(env(t, dur, gain, wet, att)); o.start(t); o.stop(t + dur + 0.05);
+}
+function noise(f, to, dur, gain, at = 0, type = "bandpass", q = 1, wet = 0, att = 0.01) {
+  const t = AC.currentTime + at, s = AC.createBufferSource();
+  s.buffer = NB; s.loop = true;
+  const fl = AC.createBiquadFilter(); fl.type = type; fl.Q.value = q;
+  fl.frequency.setValueAtTime(f, t); fl.frequency.exponentialRampToValueAtTime(Math.max(to, 20), t + dur);
+  s.connect(fl).connect(env(t, dur, gain, wet, att)); s.start(t, Math.random()); s.stop(t + dur + 0.05);
+}
+
+// ───────────────────────────── the finishers
+const F = [];
+
+// 1 ── HEAVEN'S JUDGMENT: the sky darkens, power gathers overhead, one huge bolt hits the opponent's mat, and lightning crawls over it
+F.push((() => {
+  let st;
+  return {
+    name: "Heaven's Judgment", dur: 5400,
+    desc: "The sky goes dark, power gathers above the opponent's mat, and one giant bolt of lightning crashes down. Shockwave, scorch, cards thrown, electricity crawling over everything.",
+    setup() {
+      st = { bolt: null, bolt2: null, lastBolt: 0, branches: [], arcs: [], nextArc: 1050, hit: false, hit2: false, ring: 0, flash: 0, orb: { x: T.x, y: -40 } };
+    },
+    sounds() {
+      tone(48, 120, 0.95, 0.14, 0, "sawtooth", 0.4, 0.4); tone(72, 180, 0.95, 0.1, 0, "triangle", 0.4, 0.4);
+      noise(200, 3500, 0.9, 0.22, 0, "bandpass", 1, 0.5, 0.5);
+      noise(7000, 1500, 0.2, 0.75, 0.9, "highpass"); tone(2400, 90, 0.2, 0.2, 0.9, "sawtooth");
+      noise(500, 60, 2.6, 0.85, 0.92, "lowpass", 0.7, 0.6); tone(115, 26, 1.9, 0.8, 0.9, "sine", 0.4);
+      noise(1800, 200, 1.4, 0.35, 1.0, "bandpass", 0.8, 0.8);
+      noise(6000, 1200, 0.15, 0.4, 1.18, "highpass"); noise(300, 50, 1.2, 0.4, 1.2, "lowpass", 0.7, 0.5);
+      noise(3500, 2600, 2.4, 0.07, 1.0, "bandpass", 4); tone(120, 118, 2.6, 0.05, 1.0, "square");
+      for (let i = 0; i < 26; i++) noise(rnd(2500, 7000), rnd(500, 1500), rnd(0.03, 0.09), rnd(0.12, 0.38), 1.05 + Math.pow(Math.random(), 1.3) * 2.6, "bandpass", 3, 0.3);
+    },
+    frame(t, dt) {
+      const sec = t / 1000;
+      // the sky goes dark and cold
+      const sky = sm(0, 800, t) * (1 - sm(3200, 4800, t));
+      ctx.fillStyle = `rgba(5,4,24,${0.66 * sky})`; ctx.fillRect(0, 0, W, H);
+      if (sky > 0.01) { // low storm glow along the top
+        const g = ctx.createLinearGradient(0, 0, 0, H * 0.5); g.addColorStop(0, `rgba(110,80,255,${0.28 * sky})`); g.addColorStop(1, "rgba(110,80,255,0)");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * 0.5);
+      }
+      // power gathers: sparks fly in to a ball above the target
+      if (t < 920) {
+        const k = sm(0, 900, t);
+        for (let i = 0; i < 3; i++) { const a = rnd(0, TAU), r = rnd(160, 340) * (1.1 - k * 0.2); emit({ x: st.orb.x + Math.cos(a) * r, y: 40 + Math.sin(a) * r * 0.6, life: 0.5, r: rnd(3, 7), col: "150,170,255", a: 0.9, kind: "glow" }); P[P.length - 1].tx = st.orb.x; P[P.length - 1].ty = 40; P[P.length - 1].pull = true; }
+        const rr = lerp(6, 70, k * k) * (0.9 + 0.1 * Math.sin(t * 0.09));
+        ctx.globalCompositeOperation = "lighter";
+        glow(st.orb.x, 40, rr * 2.6, "120,100,255", 0.6); glow(st.orb.x, 40, rr * 1.3, "200,210,255", 0.9); glow(st.orb.x, 40, rr * 0.6, "255,255,255", 1);
+        ctx.globalCompositeOperation = "source-over";
+        // a thin ground marker
+        ellipseRing(T.x, T.y, 70 + 30 * Math.sin(t * 0.012), 0.5, 2, "160,170,255", 0.5 * k);
+      }
+      for (const p of P) if (p.pull) { const k = p.age / p.life; p.x = lerp(p.x, p.tx, 0.12 + k * 0.1); p.y = lerp(p.y, p.ty, 0.12 + k * 0.1); }
+
+      // the strike
+      if (!st.hit && t >= 900) {
+        st.hit = true; st.flash = 1; kick(26); st.ring = 1;
+        blast(1100);
+        for (let i = 0; i < 90; i++) { const a = rnd(0, TAU), s = rnd(120, 800); emit({ x: T.x, y: T.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.7 - 260, g: 700, drag: 0.6, life: rnd(0.5, 1.5), r: rnd(2, 5), col: i % 3 ? "170,200,255" : "255,255,255", kind: "streak", a: 1 }); }
+        for (let i = 0; i < 20; i++) emit({ x: T.x + rnd(-30, 30), y: T.y + rnd(-10, 10), vy: -rnd(30, 120), vx: rnd(-80, 80), drag: 1, life: rnd(0.8, 1.8), r: 40, r1: 90, col: "60,55,90", a: 0.35, kind: "blob" });
+      }
+      if (!st.hit2 && t >= 1180) { st.hit2 = true; st.flash = Math.max(st.flash, 0.6); kick(14); }
+      if (t >= 900 && t < 1500) { // the bolt flickers: it is made again every few frames
+        if (t - st.lastBolt > 40) {
+          st.lastBolt = t;
+          const x0 = T.x + rnd(-40, 40), pts = jag(x0, -30, T.x, T.y, 130, 6);
+          st.bolt = pts; st.branches = [];
+          for (let b = 0; b < 4; b++) { const i = Math.floor(rnd(0.15, 0.85) * pts.length), a = rnd(-1, 1) + (Math.random() < 0.5 ? 0.6 : -0.6) + Math.PI / 2; const [bx, by] = pts[i]; st.branches.push(jag(bx, by, bx + Math.cos(a) * rnd(130, 280), by + Math.sin(a) * rnd(120, 240), 40, 4)); }
+        }
+        const a = t < 1150 ? 1 : Math.max(0.25, 1 - (t - 1150) / 350) * (1 - sm(1300, 1500, t));
+        strokePath(st.bolt, [34, 14, 5], [0.16 * a, 0.5 * a, a], "120,130,255");
+        for (const br of st.branches) strokePath(br, [14, 6, 2.2], [0.14 * a, 0.5 * a, a], "130,150,255");
+      }
+      if (st.hit) {
+        const k = (t - 900) / 1000;
+        // the ground: a scorch that spreads, and a bright core that cools
+        const sr = lerp(0, 190, sm(0, 0.35, k));
+        ctx.save(); ctx.translate(T.x, T.y); ctx.scale(1, 0.55);
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, sr + 1);
+        const fade = 1 - sm(3000, 4600, t);
+        g.addColorStop(0, `rgba(0,0,0,${0.85 * fade})`); g.addColorStop(0.7, `rgba(8,6,16,${0.55 * fade})`); g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, sr + 1, 0, TAU); ctx.fill(); ctx.restore();
+        glow(T.x, T.y, 130 * (1 - sm(0, 1.6, k)) + 8, "160,180,255", 0.8 * (1 - sm(0, 1.6, k)));
+        // shockwaves
+        ellipseRing(T.x, T.y, sm(0, 0.9, k) * 520, 0.5, lerp(26, 2, sm(0, 0.9, k)), "170,190,255", 1 - sm(0.1, 0.9, k));
+        ellipseRing(T.x, T.y, sm(0.08, 1, k) * 340, 0.5, lerp(14, 1, sm(0.08, 1, k)), "255,255,255", 0.8 * (1 - sm(0.2, 1, k)));
+        // electricity crawling over the mat
+        if (t >= st.nextArc && t < 3700) {
+          st.nextArc = t + rnd(35, 75);
+          const hop = Math.random() < 0.45 && cards.length;
+          const c = cards[Math.floor(Math.random() * cards.length)], a = rnd(0, TAU), L = rnd(100, 300);
+          const sx = hop ? c.cx + c.ox : T.x, sy = hop ? c.cy + c.oy : T.y;
+          st.arcs.push({ pts: jag(sx, sy, hop ? T.x : T.x + Math.cos(a) * L, hop ? T.y : T.y + Math.sin(a) * L * 0.55, 26, 4), age: 0, life: rnd(0.1, 0.2) });
+        }
+        for (let i = st.arcs.length - 1; i >= 0; i--) {
+          const A = st.arcs[i]; A.age += dt; if (A.age > A.life) { st.arcs.splice(i, 1); continue; }
+          const a = 1 - A.age / A.life; strokePath(A.pts, [10, 3.5, 1.4], [0.18 * a, 0.6 * a, a], "100,190,255");
+        }
+        cardsPhys(dt, 3.2);
+        // the cards crackle
+        if (t < 3600 && Math.random() < 0.6) for (const c of cards) if (Math.random() < 0.15) emit({ x: c.cx + c.ox + rnd(-30, 30), y: c.cy + c.oy + rnd(-45, 45), life: 0.18, r: rnd(5, 12), col: "130,200,255", a: 0.9 });
+      }
+      stepP(dt); drawP();
+      st.flash *= Math.exp(-6 * dt); flashRect(st.flash * 0.9, "230,235,255");
+    },
+  };
+})());
+
+// 2 ── VOID COLLAPSE: a black hole opens over the opponent's mat, swallows the cards, then implodes and blasts outward
+F.push((() => {
+  let st;
+  return {
+    name: "Void Collapse", dur: 6400,
+    desc: "A singularity opens over the opponent's mat. A glowing ring of matter spirals in, the cards are dragged into it one by one, it collapses to a point... and detonates.",
+    setup() { st = { disk: [], R: 0, boom: false, flash: 0, rings: [], dark: 0, pull: cards.map(() => 0) }; },
+    sounds() {
+      tone(40, 62, 4.4, 0.22, 0.2, "sawtooth", 0.4, 1.2); tone(60, 480, 3.4, 0.08, 0.6, "triangle", 0.9, 1.8);
+      noise(200, 2400, 2.8, 0.2, 1.1, "bandpass", 0.8, 0.5, 1.6);
+      noise(4000, 150, 0.8, 0.34, 3.5, "bandpass", 1, 0.2, 0.5);
+      tone(95, 22, 2.4, 0.95, 4.3, "sine", 0.5); noise(1900, 80, 2.2, 0.8, 4.3, "lowpass", 0.7, 0.7); noise(6000, 900, 0.25, 0.6, 4.3, "highpass");
+      for (let i = 0; i < 9; i++) tone(1000 + i * 360, 500 + i * 160, 1.1, 0.045, 4.36 + i * 0.05, "triangle", 1.2);
+      noise(150, 80, 1.6, 0.25, 4.9, "lowpass", 0.6, 0.6);
+    },
+    frame(t, dt) {
+      // the world darkens round it
+      const dk = sm(500, 2400, t) * (1 - sm(4700, 6100, t));
+      if (dk > 0.01) {
+        const g = ctx.createRadialGradient(T.x, T.y, 80, T.x, T.y, Math.max(W, H) * 0.7);
+        g.addColorStop(0, `rgba(10,0,20,${0.15 * dk})`); g.addColorStop(1, `rgba(2,0,8,${0.78 * dk})`);
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      }
+      // the hole's size: born small, swells, then crushes down just before it blows
+      const R = t < 3600 ? lerp(2, 78, sm(300, 3000, t)) * (1 + 0.03 * Math.sin(t * 0.03)) : lerp(78, 3, Math.pow(sm(3600, 4300, t), 2.2));
+      st.R = R;
+      if (t < 4300) kick(sm(500, 3600, t) * 3.2 * (t > 3600 ? 2 : 1));
+
+      // matter spirals in (a flattened disc, tilted)
+      const tilt = -0.2, sq = 0.36, crush = t > 3600 ? 1 + 4 * sm(3600, 4300, t) : 1;
+      if (t > 500 && t < 4250) for (let i = 0; i < 6; i++) st.disk.push({ a: rnd(0, TAU), r: rnd(150, 340) * (0.5 + 0.5 * sm(500, 2200, t)), s: rnd(0.8, 1.2) });
+      for (let i = st.disk.length - 1; i >= 0; i--) {
+        const d = st.disk[i];
+        d.a += (320 / Math.pow(d.r, 1.12)) * dt * 1.6 * d.s * crush;
+        d.r -= (28 + 150 * Math.pow(1 - clamp(d.r / 340), 1.4)) * dt * crush;
+        if (d.r < R * 0.7) st.disk.splice(i, 1);
+      }
+      const place = (d) => { const x = Math.cos(d.a) * d.r, y = Math.sin(d.a) * d.r * sq; return [T.x + x * Math.cos(tilt) - y * Math.sin(tilt), T.y + x * Math.sin(tilt) + y * Math.cos(tilt)]; };
+      const dots = (back) => {
+        ctx.globalCompositeOperation = "lighter";
+        for (const d of st.disk) {
+          const sinA = Math.sin(d.a); if ((sinA < 0) !== back) continue;
+          const [x, y] = place(d), near = 1 - clamp((d.r - R) / 260);
+          glow(x, y, 2 + near * 5, near > 0.55 ? "255,190,120" : "170,100,255", 0.35 + near * 0.65);
+        }
+        ctx.globalCompositeOperation = "source-over";
+      };
+      if (t > 450 && t < 4400) {
+        const vis = sm(450, 1100, t) * (1 - sm(4200, 4380, t));
+        ctx.globalAlpha = 1;
+        // halo behind
+        ctx.globalCompositeOperation = "lighter"; glow(T.x, T.y, R * 3.4, "130,60,230", 0.45 * vis); ctx.globalCompositeOperation = "source-over";
+        dots(true);
+        // the hole itself and its bright edge
+        ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(T.x, T.y, R, 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.strokeStyle = "rgb(255,215,170)"; ctx.globalAlpha = 0.9 * vis; ctx.lineWidth = Math.max(1.5, R * 0.07); ctx.beginPath(); ctx.arc(T.x, T.y, R * 1.04, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = "rgb(190,110,255)"; ctx.globalAlpha = 0.4 * vis; ctx.lineWidth = Math.max(3, R * 0.22); ctx.beginPath(); ctx.arc(T.x, T.y, R * 1.12, 0, TAU); ctx.stroke();
+        // a faint lensed copy of the disc passing over the top (light bent round the hole)
+        ctx.globalAlpha = 0.28 * vis; ctx.strokeStyle = "rgb(255,200,150)"; ctx.lineWidth = Math.max(1, R * 0.05);
+        ctx.beginPath(); ctx.ellipse(T.x, T.y, R * 1.45, R * 1.2, tilt, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+        dots(false);
+      }
+      // the cards are pulled in one after another, spinning, stretched and shrinking
+      for (let i = 0; i < cards.length; i++) {
+        const c = cards[i], k = sm(1500 + i * 230, 3500 + i * 120, t), e = k * k;
+        if (k <= 0) continue;
+        const dx = T.x - c.cx, dy = T.y - c.cy, a0 = Math.atan2(c.cy - T.y, c.cx - T.x), d0 = Math.hypot(dx, dy);
+        const ang = a0 + e * 5.5, rr = d0 * (1 - e);
+        c.ox = T.x + Math.cos(ang) * rr * 1 - c.cx; c.oy = T.y + Math.sin(ang) * rr * sq * 1.6 - c.cy;
+        c.rot = e * 540; c.sc = 1 - e * 0.95; c.op = 1 - sm(0.8, 1, k);
+        if (Math.random() < 0.35 && k < 0.95) emit({ x: c.cx + c.ox, y: c.cy + c.oy, life: 0.4, r: rnd(5, 11), col: "190,130,255", a: 0.8, vx: rnd(-20, 20), vy: rnd(-20, 20) });
+      }
+      // the end of it: a flash, rings, rays, and everything thrown outward
+      if (!st.boom && t >= 4300) {
+        st.boom = true; st.flash = 1; kick(28); st.disk.length = 0;
+        for (const c of cards) c.op = 0;
+        for (let i = 0; i < 120; i++) { const a = rnd(0, TAU), s = rnd(200, 1100); emit({ x: T.x, y: T.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.7, drag: 1.3, life: rnd(0.6, 1.6), r: rnd(2, 4.5), col: i % 2 ? "220,170,255" : "255,255,255", kind: "streak", a: 1 }); }
+        for (let i = 0; i < 40; i++) { const a = rnd(0, TAU), s = rnd(60, 260); emit({ x: T.x, y: T.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6, drag: 1.5, life: rnd(1.2, 2.4), r: 30, r1: 90, col: "110,50,190", a: 0.3, kind: "blob" }); }
+      }
+      if (st.boom) {
+        const k = (t - 4300) / 1000;
+        const ray = 1 - sm(0, 0.7, k);
+        if (ray > 0.01) { // rays of light
+          ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = ray;
+          const L = 120 + 800 * sm(0, 0.5, k), rg = ctx.createRadialGradient(T.x, T.y, 0, T.x, T.y, L);
+          rg.addColorStop(0, "rgba(235,215,255,.75)"); rg.addColorStop(0.5, "rgba(190,140,255,.22)"); rg.addColorStop(1, "rgba(160,100,255,0)");
+          ctx.fillStyle = rg; ctx.beginPath();
+          for (let i = 0; i < 18; i++) { const a = (i / 18) * TAU + 0.1 + k * 0.25, w = 0.035; ctx.moveTo(T.x, T.y); ctx.lineTo(T.x + Math.cos(a - w) * L, T.y + Math.sin(a - w) * L); ctx.lineTo(T.x + Math.cos(a + w) * L, T.y + Math.sin(a + w) * L); ctx.closePath(); }
+          ctx.fill();
+          ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+        }
+        ellipseRing(T.x, T.y, sm(0, 1.0, k) * 760, 0.62, lerp(34, 2, sm(0, 1, k)), "190,130,255", 1 - sm(0.05, 1, k));
+        ellipseRing(T.x, T.y, sm(0.06, 1.1, k) * 520, 0.62, lerp(18, 1, sm(0.06, 1.1, k)), "255,255,255", 0.85 * (1 - sm(0.1, 1.1, k)));
+        ellipseRing(T.x, T.y, sm(0.14, 1.2, k) * 340, 0.62, 8 * (1 - sm(0.14, 1.2, k)) + 1, "120,70,230", 0.7 * (1 - sm(0.2, 1.2, k)));
+        // the scar left in the mat
+        const sc = sm(0, 0.3, k) * (1 - sm(1.2, 2.0, k)), g = ctx.createRadialGradient(T.x, T.y, 0, T.x, T.y, 140);
+        ctx.save(); ctx.translate(0, T.y * 0.0);
+        g.addColorStop(0, `rgba(0,0,0,${0.85 * sc})`); g.addColorStop(0.6, `rgba(20,0,40,${0.5 * sc})`); g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(T.x, T.y, 150, 85, 0, 0, TAU); ctx.fill(); ctx.restore();
+        ellipseRing(T.x, T.y, 70 + 30 * k, 0.55, 3, "200,140,255", 0.7 * (1 - sm(0.1, 1.2, k)));
+      }
+      stepP(dt); drawP();
+      st.flash *= Math.exp(-5 * dt); flashRect(st.flash * 0.9, "245,235,255");
+    },
+  };
+})());
+
+// 3 ── METEOR STRIKE: a target marks the mat, a burning meteor falls out of the sky, crater, shockwave, debris and smoke
+F.push((() => {
+  let st;
+  return {
+    name: "Meteor Strike", dur: 5800,
+    desc: "A red marker locks onto the opponent's mat, a blazing meteor streaks out of the sky, and hits. Flash, crater with glowing cracks, flying rock, a dust ring and a rising column of smoke.",
+    setup() {
+      const cracks = []; for (let i = 0; i < 11; i++) { const a = (i / 11) * TAU + rnd(-0.2, 0.2), L = rnd(140, 340); cracks.push(jag(T.x, T.y, T.x + Math.cos(a) * L, T.y + Math.sin(a) * L * 0.55, 20, 4)); }
+      st = { hit: false, flash: 0, cracks, debris: [], start: { x: T.x + W * 0.5, y: -140 }, smokeT: 0, ember: 0 };
+    },
+    sounds() {
+      for (let i = 0; i < 3; i++) tone(240, 240, 0.12, 0.1, 0.1 + i * 0.35, "square", 0.2);
+      noise(300, 3200, 0.95, 0.34, 0.4, "bandpass", 0.8, 0.2, 0.5); tone(60, 150, 0.95, 0.22, 0.4, "sawtooth", 0.2, 0.5);
+      tone(105, 20, 2.4, 0.95, 1.3, "sine", 0.4); noise(1100, 60, 2.2, 0.95, 1.3, "lowpass", 0.7, 0.6); noise(5000, 800, 0.3, 0.6, 1.3, "highpass");
+      noise(2400, 300, 0.7, 0.4, 1.34, "bandpass", 0.8, 0.8);
+      for (let i = 0; i < 16; i++) noise(rnd(300, 1400), rnd(150, 500), rnd(0.04, 0.12), rnd(0.2, 0.5), 1.5 + Math.random() * 1.8, "bandpass", 2, 0.3);
+      noise(600, 280, 3.2, 0.3, 1.6, "lowpass", 0.8, 0.3, 0.4);
+    },
+    frame(t, dt) {
+      const sky = sm(0, 700, t) * (1 - sm(2600, 5000, t));
+      ctx.fillStyle = `rgba(40,6,4,${0.42 * sky})`; ctx.fillRect(0, 0, W, H);
+      // target marker
+      if (t < 1330) {
+        const a = sm(0, 300, t), pulse = 0.55 + 0.45 * Math.sin(t * 0.02), s = 1 - sm(300, 1300, t) * 0.35;
+        ellipseRing(T.x, T.y, 150 * s, 0.5, 3, "255,60,40", a * pulse);
+        ellipseRing(T.x, T.y, 90 * s, 0.5, 2, "255,120,80", a);
+        ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgb(255,80,60)"; ctx.globalAlpha = a * 0.8; ctx.lineWidth = 2; ctx.beginPath();
+        for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { ctx.moveTo(T.x + dx * 60 * s, T.y + dy * 30 * s); ctx.lineTo(T.x + dx * 190 * s, T.y + dy * 95 * s); }
+        ctx.stroke(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+      }
+      // the meteor
+      const u = clamp((t - 420) / 880);
+      if (t >= 420 && !st.hit) {
+        const e = Math.pow(u, 1.55), x = lerp(st.start.x, T.x, e), y = lerp(st.start.y, T.y, e), r = lerp(12, 66, e);
+        for (let i = 0; i < 4; i++) {
+          emit({ x: x + rnd(-r, r) * 0.5, y: y + rnd(-r, r) * 0.5, vx: rnd(-30, 60), vy: rnd(-60, 20), life: rnd(0.4, 0.75), r: r * 0.9, r1: 4, col: "255,130,30", a: 0.9 });
+          if (i < 2) emit({ x: x + rnd(-r, r) * 0.5, y: y + rnd(-r, r) * 0.5, vx: rnd(-10, 40), vy: rnd(-30, 10), life: rnd(0.9, 1.5), r: r * 0.9, r1: r * 2.4, col: "50,38,34", a: 0.4, kind: "blob" });
+        }
+        st.mx = x; st.my = y; st.mr = r;
+      }
+      if (st.mx !== undefined && !st.hit) {
+        const { mx: x, my: y, mr: r } = st;
+        ctx.globalCompositeOperation = "lighter";
+        glow(x, y, r * 3.4, "255,70,20", 0.5); glow(x, y, r * 2.1, "255,150,50", 0.8); ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "#2b130b"; ctx.beginPath(); ctx.arc(x, y, r * 0.62, 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = "lighter"; glow(x - r * 0.1, y + r * 0.05, r * 1.1, "255,230,180", 0.9);
+        ctx.strokeStyle = "rgb(255,120,40)"; ctx.globalAlpha = 0.8; ctx.lineWidth = r * 0.1; ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0.3, 4.2); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+      }
+      // impact
+      if (!st.hit && t >= 1300) {
+        st.hit = true; st.flash = 1; kick(30);
+        blast(1300, 0.7);
+        for (let i = 0; i < 55; i++) { const a = rnd(0, TAU), s = rnd(120, 640); emit({ x: T.x, y: T.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.55 - 120, drag: 2.2, life: rnd(0.5, 1.2), r: rnd(30, 56), r1: 8, col: "255,140,40", a: 0.85 }); }
+        for (let i = 0; i < 34; i++) { const a = rnd(0, TAU), s = rnd(60, 360); emit({ x: T.x, y: T.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.5 - rnd(20, 100), drag: 1.2, life: rnd(1.6, 3), r: 36, r1: rnd(90, 150), col: "46,36,34", a: 0.42, kind: "blob" }); }
+        for (let i = 0; i < 110; i++) { const a = rnd(0, TAU), s = rnd(160, 900); emit({ x: T.x, y: T.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6 - rnd(200, 600), g: 900, drag: 0.5, life: rnd(0.8, 2), r: rnd(2, 4.5), col: "255,170,70", kind: "streak", a: 1 }); }
+        for (let i = 0; i < 22; i++) { const a = rnd(0, TAU), s = rnd(200, 760); st.debris.push({ x: T.x, y: T.y, z: 0, vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.45, vz: rnd(300, 900), rot: rnd(0, TAU), vr: rnd(-8, 8), sz: rnd(6, 18), age: 0 }); }
+        st.mx = undefined;
+      }
+      if (st.hit) {
+        const k = (t - 1300) / 1000;
+        // the crater
+        const cr = sm(0, 0.25, k), fadeC = 1 - sm(3800, 5500, t);
+        ctx.save(); ctx.translate(T.x, T.y); ctx.scale(1, 0.5);
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 150 * cr + 1);
+        g.addColorStop(0, `rgba(8,3,2,${0.95 * fadeC})`); g.addColorStop(0.6, `rgba(20,8,4,${0.75 * fadeC})`); g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 150 * cr + 1, 0, TAU); ctx.fill(); ctx.restore();
+        const hot = 1 - sm(0, 2.6, k);
+        ellipseRing(T.x, T.y, 88 * cr, 0.5, 9 * hot + 1, "255,110,30", (0.55 + 0.45 * hot) * fadeC);
+        glow(T.x, T.y, 130 * cr, "255,80,20", (0.35 + 0.55 * hot) * fadeC * (0.85 + 0.15 * Math.sin(t * 0.03)));
+        // cracks
+        const cg = sm(0, 0.35, k) * (1 - sm(2, 3.8, k));
+        if (cg > 0.01) for (const c of st.cracks) { const n = Math.max(2, Math.floor(c.length * sm(0, 0.35, k))); strokePath(c.slice(0, n), [9, 3.2, 1.2], [0.2 * cg, 0.7 * cg, cg], "255,100,25", "255,220,150"); }
+        // dust ring
+        ellipseRing(T.x, T.y, sm(0, 1.0, k) * 600, 0.5, lerp(46, 6, sm(0, 1, k)), "190,150,110", 0.55 * (1 - sm(0.05, 1, k)));
+        ellipseRing(T.x, T.y, sm(0, 0.8, k) * 420, 0.5, lerp(22, 2, sm(0, 0.8, k)), "255,190,120", 0.9 * (1 - sm(0.05, 0.8, k)));
+        // flying rock
+        for (const d of st.debris) {
+          d.age += dt; d.vz -= 1500 * dt; d.z += d.vz * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.rot += d.vr * dt;
+          if (d.z < 0) { d.z = 0; d.vz *= -0.3; d.vx *= 0.6; d.vy *= 0.6; d.vr *= 0.5; }
+          const a = 1 - sm(1.4, 2.4, d.age);
+          if (a <= 0.01) continue;
+          ctx.save(); ctx.globalAlpha = a * 0.5; ctx.fillStyle = "#000"; ctx.beginPath(); ctx.ellipse(d.x, d.y + 3, d.sz * 0.8, d.sz * 0.35, 0, 0, TAU); ctx.fill(); ctx.restore();
+          ctx.save(); ctx.globalAlpha = a; ctx.translate(d.x, d.y - d.z * 0.55); ctx.rotate(d.rot);
+          ctx.fillStyle = "#2a1a14"; ctx.strokeStyle = "rgba(255,140,60,.8)"; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(-d.sz, -d.sz * 0.3); ctx.lineTo(-d.sz * 0.2, -d.sz); ctx.lineTo(d.sz, -d.sz * 0.2); ctx.lineTo(d.sz * 0.5, d.sz); ctx.lineTo(-d.sz * 0.7, d.sz * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+        }
+        // the column of smoke and embers that keep rising off the crater
+        if (t < 3800) {
+          st.smokeT += dt; if (st.smokeT > 0.04) { st.smokeT = 0; emit({ x: T.x + rnd(-40, 40), y: T.y + rnd(-10, 10), vx: rnd(-20, 20), vy: -rnd(70, 150), drag: 0.4, life: rnd(1.4, 2.4), r: 30, r1: rnd(80, 130), col: "46,36,34", a: 0.34, kind: "blob" }); }
+          if (Math.random() < 0.7) emit({ x: T.x + rnd(-80, 80), y: T.y + rnd(-20, 20), vx: rnd(-30, 30), vy: -rnd(60, 220), drag: 0.8, life: rnd(0.6, 1.4), r: rnd(2, 5), col: "255,150,50", a: 1 });
+        }
+        cardsPhys(dt, 2.4);
+      }
+      stepP(dt); drawP();
+      st.flash *= Math.exp(-6.5 * dt); flashRect(st.flash * 0.95, "255,240,215");
+    },
+  };
+})());
+
+// 4 ── ABSOLUTE ZERO: frost crawls across the opponent's mat, freezes the cards, cracks, and the whole mat shatters
+F.push((() => {
+  let st;
+  function frost(out, x, y, ang, len, depth, t0) {
+    const dur = len * 4.2, x1 = x + Math.cos(ang) * len, y1 = y + Math.sin(ang) * len * 0.8;
+    out.push({ x0: x, y0: y, x1, y1, t0, dur, w: 1 + depth * 0.7 });
+    if (depth <= 0) return;
+    const bx = lerp(x, x1, 0.55), by = lerp(y, y1, 0.55), bt = t0 + dur * 0.55;
+    frost(out, bx, by, ang + (Math.random() < 0.5 ? -1 : 1) * rnd(0.6, 1.1), len * 0.5, depth - 1, bt);
+    frost(out, x1, y1, ang + rnd(-0.45, -0.15), len * 0.74, depth - 1, t0 + dur);
+    frost(out, x1, y1, ang + rnd(0.15, 0.45), len * 0.74, depth - 1, t0 + dur);
+  }
+  function tris(rect, cols, rows, colorFn) { // a jittered grid of triangles
+    const pts = [];
+    for (let j = 0; j <= rows; j++) { pts.push([]); for (let i = 0; i <= cols; i++) { const edge = i === 0 || j === 0 || i === cols || j === rows; pts[j].push([rect.x + (i / cols) * rect.w + (edge ? 0 : rnd(-0.35, 0.35) * rect.w / cols), rect.y + (j / rows) * rect.h + (edge ? 0 : rnd(-0.35, 0.35) * rect.h / rows)]); } }
+    const out = [];
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const a = pts[j][i], b = pts[j][i + 1], c = pts[j + 1][i], d = pts[j + 1][i + 1];
+      for (const tri of Math.random() < 0.5 ? [[a, b, c], [b, d, c]] : [[a, b, d], [a, d, c]]) {
+        const cx = (tri[0][0] + tri[1][0] + tri[2][0]) / 3, cy = (tri[0][1] + tri[1][1] + tri[2][1]) / 3;
+        out.push({ p: tri, cx, cy, ox: 0, oy: 0, rot: 0, vx: 0, vy: 0, vr: rnd(-4, 4), col: colorFn(), sc: 1 });
+      }
+    }
+    return out;
+  }
+  return {
+    name: "Absolute Zero", dur: 6200,
+    desc: "The temperature plummets. Frost crystals crawl over the opponent's mat and freeze the cards in place, ice cracks through it... and the whole mat shatters into glittering shards.",
+    setup() {
+      const segs = [];
+      for (let i = 0; i < 7; i++) frost(segs, T.x, T.y, (i / 7) * TAU + rnd(-0.2, 0.2), 78, 4, 500 + rnd(0, 150));
+      const corners = [[mat.x, mat.y, 0.7], [mat.x + mat.w, mat.y, 2.4], [mat.x, mat.y + mat.h, -0.7], [mat.x + mat.w, mat.y + mat.h, -2.4]];
+      for (const [x, y, a] of corners) { frost(segs, x, y, a, 70, 4, 400 + rnd(0, 300)); frost(segs, x, y, a + rnd(-0.6, 0.6), 60, 3, 500 + rnd(0, 300)); }
+      const cracks = []; for (let i = 0; i < 9; i++) { const a = (i / 9) * TAU + rnd(-0.25, 0.25); cracks.push(jag(T.x, T.y, T.x + Math.cos(a) * rnd(180, 420), T.y + Math.sin(a) * rnd(110, 210), 24, 4)); }
+      const shards = tris(mat, 10, 5, () => `hsla(${rnd(188, 204)},${rnd(60, 85)}%,${rnd(52, 84)}%,${rnd(0.82, 0.96)})`);
+      const cshards = [];
+      for (const c of cards) cshards.push(...tris({ x: c.cx - c.w / 2, y: c.cy - c.h / 2, w: c.w, h: c.h }, 3, 4, () => `hsla(${rnd(185, 205)},60%,${rnd(60, 92)}%,.92)`));
+      for (const s of shards.concat(cshards)) { const dx = s.cx - T.x, dy = s.cy - T.y, d = Math.hypot(dx, dy) || 1, sp = 620 / (1 + d / 200) + rnd(60, 200); s.vx = (dx / d) * sp; s.vy = (dy / d) * sp * 0.6 - rnd(100, 300); s.dz = rnd(0.4, 1.6); }
+      st = { segs, cracks, shards: shards.concat(cshards), snowT: 0, shattered: false, flash: 0, filtered: false };
+    },
+    sounds() {
+      noise(380, 900, 5.6, 0.2, 0, "bandpass", 0.5, 0.4, 0.8);
+      for (let i = 0; i < 7; i++) tone(rnd(1800, 3300), rnd(1500, 2800), 0.8, 0.045, 0.3 + i * 0.32, "sine", 1.2);
+      for (let i = 0; i < 34; i++) noise(rnd(4500, 9000), rnd(3000, 6000), rnd(0.02, 0.05), rnd(0.07, 0.2), 0.6 + Math.random() * 2.3, "bandpass", 5, 0.5);
+      tone(700, 3600, 0.75, 0.08, 2.6, "sine", 0.6, 0.4);
+      noise(3500, 700, 0.3, 0.6, 2.9, "highpass", 1, 0.4); tone(90, 55, 0.5, 0.35, 2.9, "sine");
+      for (let i = 0; i < 4; i++) noise(rnd(4000, 8000), 1500, 0.1, 0.4, 3.0 + i * 0.1, "highpass");
+      noise(5200, 2200, 0.55, 0.85, 3.4, "highpass", 1, 0.5); tone(80, 26, 1.5, 0.75, 3.4, "sine", 0.3);
+      for (let i = 0; i < 50; i++) noise(rnd(3000, 9500), rnd(2000, 6000), rnd(0.03, 0.08), rnd(0.12, 0.34), 3.42 + Math.pow(Math.random(), 1.4) * 1.1, "bandpass", 6, 0.6);
+      for (let i = 0; i < 12; i++) tone(rnd(2200, 4200), rnd(1800, 3500), 0.7, 0.04, 3.6 + Math.random() * 1.4, "sine", 1.3);
+    },
+    frame(t, dt) {
+      const cold = sm(0, 700, t) * (1 - sm(4600, 6000, t));
+      ctx.fillStyle = `rgba(10,40,80,${0.3 * cold})`; ctx.fillRect(0, 0, W, H);
+      // the mat is covered: ice over it, frost growing in feathery crystals
+      if (!st.shattered) {
+        if (t > 800 && !st.filtered) { st.filtered = true; for (const c of cards) { c.el.style.transition = "filter 1.8s"; c.el.style.filter = "saturate(.35) brightness(1.2) hue-rotate(155deg)"; } }
+        const ice = sm(700, 2700, t);
+        ctx.save(); ctx.beginPath(); ctx.rect(mat.x, mat.y, mat.w, mat.h); ctx.clip();
+        const g = ctx.createRadialGradient(T.x, T.y, 20, T.x, T.y, mat.w * 0.55);
+        g.addColorStop(0, `rgba(175,225,255,${0.55 * ice})`); g.addColorStop(1, `rgba(90,170,235,${0.62 * ice})`);
+        ctx.fillStyle = g; ctx.fillRect(mat.x, mat.y, mat.w, mat.h);
+        ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
+        for (const [w, a, col] of [[7, 0.16, "120,200,255"], [2.2, 0.9, "225,248,255"]]) {
+          ctx.globalAlpha = a; ctx.strokeStyle = `rgb(${col})`; ctx.beginPath();
+          for (const s of st.segs) { const k = clamp((t - s.t0) / s.dur); if (k <= 0) continue; ctx.lineWidth = s.w * (w > 3 ? 3 : 1); ctx.moveTo(s.x0, s.y0); ctx.lineTo(lerp(s.x0, s.x1, k), lerp(s.y0, s.y1, k)); }
+          ctx.stroke();
+        }
+        ctx.restore();
+        // the cracks that run through it just before it goes
+        const ck = sm(2850, 3350, t);
+        if (ck > 0.01) for (const c of st.cracks) { const n = Math.max(2, Math.floor(c.length * ck)); strokePath(c.slice(0, n), [10, 3.5, 1.3], [0.25, 0.7, 1], "150,220,255"); }
+        if (t > 2800 && t < 3400) kick(2 + (t - 2800) / 200);
+        for (const c of cards) { c.ox = Math.sin(t * 0.09 + c.cx) * (t > 2800 ? 1.5 : 0); }
+      }
+      if (!st.shattered && t >= 3400) {
+        st.shattered = true; st.flash = 0.9; kick(22);
+        oppEl.style.visibility = "hidden"; for (const c of cards) { c.el.style.visibility = "hidden"; c.ox = 0; }
+        for (let i = 0; i < 150; i++) { const a = rnd(0, TAU), s = rnd(100, 900); emit({ x: T.x + rnd(-mat.w * 0.3, mat.w * 0.3), y: T.y + rnd(-mat.h * 0.3, mat.h * 0.3), vx: Math.cos(a) * s, vy: Math.sin(a) * s * 0.6 - rnd(100, 300), g: 380, drag: 0.8, life: rnd(0.8, 2.2), r: rnd(3, 8), col: "200,235,255", a: 1, fade: 0.6 }); }
+        for (let i = 0; i < 24; i++) emit({ x: T.x + rnd(-mat.w * 0.4, mat.w * 0.4), y: T.y + rnd(-mat.h * 0.3, mat.h * 0.3), vx: rnd(-60, 60), vy: -rnd(10, 80), drag: 1, life: rnd(1.2, 2.2), r: 40, r1: 100, col: "170,215,245", a: 0.25, kind: "blob" });
+      }
+      if (st.shattered) {
+        const k = (t - 3400) / 1000;
+        ellipseRing(T.x, T.y, sm(0, 0.9, k) * 700, 0.55, lerp(24, 2, sm(0, 0.9, k)), "190,235,255", 1 - sm(0.05, 0.9, k));
+        const a = 1 - sm(1.4, 2.5, k);
+        for (const s of st.shards) {
+          s.vy += 760 * dt; s.ox += s.vx * dt; s.oy += s.vy * dt; s.rot += s.vr * dt; s.vx *= Math.exp(-0.9 * dt);
+          s.sc = 1 + 0.35 * Math.min(1, k * 2) * s.dz * (1 - sm(0.6, 2, k));
+          const al = a * (s.cy + s.oy < H + 60 ? 1 : 0); if (al <= 0.01) continue;
+          const cs = Math.cos(s.rot), sn = Math.sin(s.rot);
+          ctx.globalAlpha = al; ctx.fillStyle = s.col; ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 1.4; ctx.lineJoin = "round";
+          ctx.beginPath();
+          for (let i = 0; i < 3; i++) { const px = (s.p[i][0] - s.cx) * s.sc, py = (s.p[i][1] - s.cy) * s.sc, x = s.cx + s.ox + px * cs - py * sn, y = s.cy + s.oy + px * sn + py * cs; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+          ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+      // snow and drifting ice glitter all the while
+      st.snowT += dt;
+      if (st.snowT > 0.02 && t < 5200) { st.snowT = 0; for (let i = 0; i < 2; i++) emit({ x: rnd(-100, W + 100), y: -20, vx: rnd(-120, -40), vy: rnd(80, 190), life: rnd(4, 6), r: rnd(1.5, 3.6), col: "225,245,255", a: 0.85, fade: 0.4 }); }
+      stepP(dt); drawP();
+      st.flash *= Math.exp(-6 * dt); flashRect(st.flash * 0.85, "225,245,255");
+    },
+  };
+})());
+
+// ───────────────────────────── running one
+let cur = null;
+function restore() {
+  board.style.transform = ""; oppEl.style.visibility = "";
+  for (const el of oppEl.querySelectorAll(".card")) { el.style.transform = ""; el.style.opacity = ""; el.style.filter = ""; el.style.transition = ""; el.style.visibility = ""; }
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+}
+function stop() {
+  cur = null; restore(); P = []; shake = 0;
+  if (AC) { AC.close(); AC = null; }
+}
+function play(i) {
+  stop(); audio(); capture();
+  document.querySelectorAll("#btns button").forEach((b, j) => b.classList.toggle("on", i === j));
+  const f = F[i];
+  document.getElementById("desc").textContent = f.desc;
+  f.setup(); f.sounds();
+  cur = { f, i, start: performance.now(), last: performance.now() };
+  requestAnimationFrame(tick);
+}
+function tick(now) {
+  if (!cur) return;
+  const t = Math.max(0, now - cur.start), dt = clamp((now - cur.last) / 1000, 0, 1 / 30);
+  cur.last = now;
+  ctx.setTransform(RES, 0, 0, RES, 0, 0); ctx.clearRect(0, 0, W, H);
+  ctx.save(); cur.f.frame(t, dt); ctx.restore();
+  shake *= Math.exp(-5.5 * dt);
+  board.style.transform = shake > 0.15 ? `translate(${(rnd(-1, 1) * shake).toFixed(1)}px,${(rnd(-1, 1) * shake).toFixed(1)}px)` : "";
+  applyCards();
+  window.__t = t;
+  if (t > cur.f.dur) { const i = cur.i; cur = null; setTimeout(() => { restore(); P = []; }, 50); void i; return; }
+  requestAnimationFrame(tick);
+}
+const btns = document.getElementById("btns");
+F.forEach((f, i) => { const b = document.createElement("button"); b.textContent = `${i + 1}. ${f.name}`; b.onclick = () => play(i); btns.appendChild(b); });
+let last = 0;
+addEventListener("keydown", (e) => { if (e.key >= "1" && e.key <= String(F.length)) { last = +e.key - 1; play(last); } else if (e.key === " ") { e.preventDefault(); play(last); } });
+document.getElementById("desc").textContent = "Pick a finisher.";
+window.__play = (i) => { last = i; play(i); };
+</script>
+</body>
+</html>

@@ -2,6 +2,8 @@ import type { PlayerId } from "@mtg/engine";
 import { animationsEnabled, scaled } from "@/lib/motion";
 import { playSound, primeFinisherAudio } from "@/lib/sound";
 import { liteMode } from "./perfTier";
+import { prepareFx } from "./finisherFx";
+import type { FxRun } from "./finisherFx";
 
 /**
  * The finishing move: when a game is won, the Grim Reaper's hands rise over the winner's playmat, wind the scythe back, and bring it round in one heavy
@@ -1010,6 +1012,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
   };
   let raf = 0;
   const promoted: HTMLElement[] = []; // elements made graphics layers of their own ahead of the blow (given back at the end)
+  let afterglow: FxRun | null = null; // what the cut does to the loser's table (flames, scar, thrown and burning cards), made ready ahead and started at the blow
 
   try {
     // ── where the Reaper stands: it is as wide as the winner's mat and may stand taller than it (it is a presence, not a token) ──
@@ -1113,6 +1116,12 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     // where the blade first hits (the blow's flash, shards and ring come from there)
     const cx = pts[0][0];
     const cy = pts[0][1];
+    // the aftermath of the cut (textured purple flames along the rift, the scarred mat, and the cards thrown and set alight through the physics engine) is made ready NOW
+    // the aftermath's canvas covers the loser's mat and the room round it (flames rise above it, cards are thrown a little way), not the whole screen
+    const rx0 = Math.max(0, l.left - 110);
+    const ry0 = Math.max(0, l.top - 190);
+    const afterRegion = { x: rx0, y: ry0, w: Math.min(vw, l.left + l.width + 110) - rx0, h: Math.min(vh, l.top + l.height + 150) - ry0 };
+    afterglow = await prepareFx("reaper", loser, { parent: stage, origin: [cx, cy], path: pts.filter((_, i) => i % 3 === 0), region: afterRegion });
     // the opponent's mat burns in the slash's own purple flames, from where the blade hit, and chars under them
     const T_BURN = 4000;
     const matFire = makeFlameField(stage, l, [Math.max(l.left, Math.min(l.left + l.width, cx)), Math.max(l.top, Math.min(l.top + l.height, cy))], vw, vh, lite);
@@ -1181,29 +1190,6 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
       later("hit", () => sa.play());
     }
 
-    // the cards nearest the tear on the loser's mat are dragged towards it and let go (their places are measured now, before anything moves)
-    if (matEl) {
-      const cards = Array.from(matEl.querySelectorAll<HTMLElement>("[data-card-iid]"))
-        .map((c) => {
-          const b = c.getBoundingClientRect();
-          return { c, vx: cx - (b.left + b.width / 2), vy: cy - (b.top + b.height / 2) };
-        })
-        .sort((a, b) => Math.hypot(a.vx, a.vy) - Math.hypot(b.vx, b.vy))
-        .slice(0, lite ? 4 : 8);
-      for (const { c } of cards) promoted.push(c);
-      for (const { c, vx, vy } of cards) {
-        const d = Math.hypot(vx, vy) || 1;
-        const amp = Math.min(30, 10 + 2600 / (d + 60));
-        const ux = (vx / d) * amp;
-        const uy = (vy / d) * amp;
-        // (made paused, and played at the blow)
-        const a = c.animate([{ transform: "translate(0px,0px)" }, { transform: `translate(${ux}px,${uy}px)`, offset: 0.18 }, { transform: `translate(${ux * 0.7}px,${uy * 0.7}px)`, offset: 0.7 }, { transform: "translate(0px,0px)" }], { duration: 1500, composite: "add", easing: "ease-in-out" });
-        a.pause();
-        run.push(a);
-        later("hit", () => a.play());
-      }
-    }
-
     // letterbox bars: it is a scene
     const barH = Math.round(vh * 0.075);
     const barTop = el(stage, { left: "-40px", top: "0", width: "calc(100% + 80px)", height: `${barH}px`, background: "#000", transform: "translateY(-100%)" });
@@ -1227,7 +1213,11 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
       // the mat reels (it is only moved a little: that is done by the graphics chip, and the mat is not drawn again)
       if (matEl) go(matEl, [{ transform: "none" }, { transform: "translate(-8px,4px)", offset: 0.1 }, { transform: "translate(7px,-3px)", offset: 0.25 }, { transform: "translate(-4px,2px)", offset: 0.45 }, { transform: "translate(1px,-1px)", offset: 0.7 }, { transform: "none" }], { duration: 1400, easing: "ease-out" });
       go(aura, [{ opacity: 1 }, { opacity: 0 }], { duration: T_SINK, easing: "ease-in", delay: T_FOLLOW });
-      if (!degraded) fire("hit"); // (on a computer that is struggling, the shards and the cards pulled to the tear are left out)
+      if (afterglow) {
+        if (degraded) afterglow.degrade();
+        void afterglow.start(rate);
+      }
+      if (!degraded) fire("hit"); // (on a computer that is struggling, the shards are left out)
     };
 
     later("intro", () => {
@@ -1309,13 +1299,16 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
         if (t >= T_RISE + 120) once("charge", () => playSound("reaperCharge"));
         if (t >= T_SWING_AT - 20) once("swingsound", () => playSound("reaperSwing"));
         // the sounds of the blow are made a moment BEFORE it (while the Reaper holds its breath) and set to start at it: making sounds takes the browser a little while
-        if (t >= T_SWING_AT - 140) {
-          once("blowsound", () => {
-            const d = Math.max(0, (T_C - t) / rate / 1000);
-            playSound("riftTear", d);
-            playSound("riftFire", d + 0.1);
-          });
-        }
+        // (the sounds of the cut and the fire are a great many audio nodes: made all at once they dropped a frame, so they are made a few at a time over the Reaper's rise, each set
+        // to start at the cut)
+        const lead = (when: number, key: string, fn: (d: number) => void) => {
+          if (t >= when) once(key, () => fn(Math.max(0, (T_C - t) / rate / 1000)));
+        };
+        lead(250, "s1", (d) => playSound("riftFire", d + 0.1));
+        lead(420, "s2", (d) => playSound("riftCrackle1", d + 0.1));
+        lead(590, "s3", (d) => playSound("riftCrackle2", d + 0.1));
+        lead(760, "s4", (d) => playSound("riftCrackle3", d + 0.1));
+        lead(930, "s5", (d) => playSound("riftTear", d));
         if (t >= T_C) {
           once("hit", () => {
             blow();
@@ -1367,6 +1360,7 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     matFire?.dispose();
   } finally {
     cancelAnimationFrame(raf);
+    afterglow?.cancel();
     for (const e of promoted) e.style.willChange = "";
     for (const a of run) {
       try {
