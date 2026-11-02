@@ -80,6 +80,7 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
   const [hiddenAt, setHiddenAt] = useState<string | null>(null); // "Show board": the chain is put away until a new card joins it
   const born = useRef(new Map<string, number>()); // when each card arrived
   const planned = useRef(new Set<string>()); // cards whose exit is already scheduled
+  const dismissed = useRef(new Set<string>()); // cards this player clicked away: they do not come back while they are on the stack
 
   // What is on the stack changed: new cards arrive; cards that are not on it any more are marked (their exit comes later).
   const ids = state.stack.map((i) => i.id).join(",");
@@ -89,7 +90,7 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
     const next: Link[] = links.map((l) => (l.gone || live.has(l.id) ? l : { ...l, gone: true }));
     let fresh = 0;
     for (const [id, { item, n }] of live) {
-      if (links.some((l) => l.id === id)) continue;
+      if (links.some((l) => l.id === id) || dismissed.current.has(id)) continue;
       next.push({
         id,
         n,
@@ -175,7 +176,9 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
     return () => clearTimeout(t);
   }, [banner]);
 
-  if (links.length === 0 || state.winner) return null;
+  // (a chain that was clicked away still leaves the buttons while something is on the stack: the player can still pass or resolve)
+  const barOnly = links.length === 0 && state.stack.length > 0 && !!state.priority;
+  if ((links.length === 0 && !barOnly) || state.winner) return null;
   const newest = links[links.length - 1]?.id ?? null;
   const choiceOpen = !!(state.pendingChoice || state.pendingPick); // a choice (what to discard, a target) must never be covered by the chain
   const cardsHidden = choiceOpen || (hiddenAt !== null && hiddenAt === newest);
@@ -201,8 +204,22 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
   // A wide screen: the notes sit in one row under the cards (each as wide as the room allows); a phone: beside each card.
   const noteW = phone ? wide - cw - 12 : Math.max(150, Math.min(270, Math.floor((vw * 0.92) / m) - 12));
   const rowY = Math.round(Math.max(...at.map((a) => a.y), 0) + H / 2 + 16);
+  // Where a chain is fastened to a card: low on its left side (a phone, with its cards one under the other: the middle), so the chain runs along the foot of the cascade
+  const hook = (p: { x: number; y: number }) => (phone ? p : { x: Math.round(p.x - cw * 0.36), y: Math.round(p.y + H * 0.4) });
   const originTop = vh * (phone ? 0.44 : 0.42);
   const live = links.some((l) => !l.leaving);
+  /** Clicking outside ends the chain for this player only: every card on screen goes at once, and none of them comes back (the opponent's screen is not touched). */
+  const dismiss = () => {
+    for (const l of links) {
+      dismissed.current.add(l.id);
+      born.current.delete(l.id);
+      planned.current.delete(l.id);
+    }
+    for (const item of state.stack) dismissed.current.add(item.id);
+    setHiddenAt(null);
+    setBanner(null);
+    setLinks([]);
+  };
   const lite = liteMode();
 
   return (
@@ -217,13 +234,15 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
           round && !choiceOpen && <span className="px-3 text-sm font-semibold text-slate-200">Waiting for {playerName(round.holder === actor ? OPPONENT[actor] : round.holder)}…</span>
         )}
         {choiceOpen && <span className="px-3 text-sm font-semibold text-amber-200">Make your choice below</span>}
-        <button
-          onClick={() => setHiddenAt(cardsHidden && !choiceOpen ? null : newest)}
-          disabled={choiceOpen}
-          className="min-h-11 rounded-xl border border-white/30 bg-white/10 px-4 text-sm font-bold text-white disabled:opacity-40"
-        >
-          {cardsHidden ? "Show chain" : "Show board"}
-        </button>
+        {!barOnly && (
+          <button
+            onClick={() => setHiddenAt(cardsHidden && !choiceOpen ? null : newest)}
+            disabled={choiceOpen}
+            className="min-h-11 rounded-xl border border-white/30 bg-white/10 px-4 text-sm font-bold text-white disabled:opacity-40"
+          >
+            {cardsHidden ? "Show chain" : "Show board"}
+          </button>
+        )}
       </div>
       <div className="contents" style={cardsHidden ? { display: "none" } : undefined}>
       <p className="sr-only" role="status">
@@ -233,15 +252,15 @@ export default function ChainFx({ state, actor, extra, onPass }: { state: GameSt
       <div
         className={`absolute inset-0 bg-black transition-opacity duration-700 ${live && !choiceOpen ? "pointer-events-auto cursor-pointer" : ""}`}
         style={{ opacity: live ? 0.3 : 0 }}
-        onClick={() => setHiddenAt(newest)}
+        onClick={dismiss}
         aria-hidden="true"
       />
       <div className="absolute" style={{ left: "50%", top: phone ? "44%" : "42%" }}>
         {/* the chains between a card and the one before it (over the older card, under the newer one) */}
         {shown.map((l, i) => {
           if (i === 0) return null;
-          const a = at[i - 1];
-          const b = at[i];
+          const a = hook(at[i - 1]);
+          const b = hook(at[i]);
           const len = Math.hypot(b.x - a.x, b.y - a.y);
           const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
           return (
