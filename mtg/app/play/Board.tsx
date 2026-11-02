@@ -1,6 +1,9 @@
 "use client";
 
 import { MatTear } from "./MatTear";
+import { InkRule, Seal } from "./BattlefieldBits";
+import { useAnimationsOn } from "@/lib/motion";
+import "./battlefield.css";
 import type { MatFocus } from "@/lib/playmat";
 import { gainedKeywords, wardOf } from "@mtg/engine";
 import type { CardDef, GameState, Permanent, PlayerId } from "@mtg/engine";
@@ -19,12 +22,14 @@ export function Side({ label, children, player, tone, grow, mat, matFx, zones, o
     return (
       <section
         data-mat={player}
-        className={`playmat relative flex flex-col gap-1 rounded-2xl border-2 border-black/60 px-1.5 py-1 text-white lg:px-3 lg:py-1.5 ${grow ? "min-h-0 flex-1 overflow-hidden" : "shrink-0"}`}
+        className={`playmat bf relative flex flex-col gap-1 overflow-hidden rounded-2xl border-2 border-black/60 px-1.5 py-1 text-white lg:px-3 lg:py-1.5 ${grow ? "min-h-0 flex-1" : "shrink-0"}`}
         style={life !== undefined ? { background: "#0b0a0f" } : { background: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), ${mat}` }}
       >
         {life !== undefined && <MatTear life={life} mat={mat} seed={player === "p2" ? 7 : 3} fx={matFx} />}
-        <h2 className="relative z-[1] flex items-center gap-2 font-display text-sm max-lg:sr-only font-bold uppercase tracking-widest text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
-          {style && <span className={`inline-block h-3 w-3 rounded-full ring-2 ring-white/70 ${style.bar}`} aria-hidden="true" />}
+        <div className="bf-vignette" aria-hidden="true" />
+        <div className="bf-frame" aria-hidden="true" />
+        <h2 className="bf-title relative z-[1] flex items-center gap-2 max-lg:sr-only">
+          {player && <Seal player={player} />}
           {label}
         </h2>
         {/* Notices (what the other player just cast) float over the mat, so they never squeeze the cards. */}
@@ -33,7 +38,7 @@ export function Side({ label, children, player, tone, grow, mat, matFx, zones, o
           <FitToHeight className="flex-1">{children}</FitToHeight>
           {zones && (
             // the library, graveyard and exile share the whole height of the mat, and scale with it (a choice panel makes the mat shorter, for example)
-            <div className="flex min-h-0 w-[4.5rem] shrink-0 flex-col gap-1 rounded-xl border-2 border-dashed border-white/30 bg-black/25 p-1 lg:w-44 lg:gap-1.5 lg:p-1.5">{zones}</div>
+            <div className="bf-zones flex min-h-0 w-[4.5rem] shrink-0 flex-col gap-1 rounded-xl border-2 border-dashed border-white/30 bg-black/25 p-1 lg:w-44 lg:gap-1.5 lg:p-1.5">{zones}</div>
           )}
         </div>
       </section>
@@ -57,11 +62,16 @@ export function Side({ label, children, player, tone, grow, mat, matFx, zones, o
 
 /** The line between a player's creatures and lands, labelled on the side where the lands are. */
 export function LandsDivider({ landsBelow, onMat }: { landsBelow: boolean; onMat?: boolean }) {
-  const label = <span className={`font-display text-[11px] font-semibold uppercase tracking-widest max-lg:hidden ${onMat ? "text-white/70 [text-shadow:0_1px_2px_rgba(0,0,0,0.7)]" : "text-zinc-500"}`}>Lands &amp; artifacts</span>;
+  const draw = useAnimationsOn();
+  const label = onMat ? (
+    <span className="bf-caption max-lg:hidden">Lands &amp; artifacts</span>
+  ) : (
+    <span className="font-display text-[11px] font-semibold uppercase tracking-widest text-zinc-500 max-lg:hidden">Lands &amp; artifacts</span>
+  );
   return (
-    <div className="flex flex-col gap-0.5" role="separator" aria-label="Lands are on this side of the line">
+    <div className={`flex flex-col gap-0.5 ${onMat ? "bf-divider" : ""}`} role="separator" aria-label="Lands are on this side of the line">
       {!landsBelow && label}
-      <div className={`h-0.5 w-full rounded ${onMat ? "bg-gradient-to-r from-transparent via-[#fde68a]/70 to-transparent" : "bg-zinc-400"}`} />
+      {onMat ? <InkRule draw={draw} seed={landsBelow ? 1 : 2} /> : <div className="h-0.5 w-full rounded bg-zinc-400" />}
       {landsBelow && label}
     </div>
   );

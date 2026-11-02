@@ -1,0 +1,160 @@
+/*
+ * INKFALL: the two battlefields.
+ *
+ * Everything here is scoped to a battlefield panel (.bf) and driven by the --bf-* tokens below, so the whole look can be changed in one
+ * place. Nothing in this file touches a card, a zone's size or position, or a hit area: borders keep their widths, and every layer that
+ * is added sits behind the cards or ignores the pointer.
+ *
+ *   mat      the picture or cloth, filling the panel (cropped to fit, never stretched), then a vignette and a frame laid over its edge
+ *   scrim    a soft darkening behind the caption, the rule and the zone pockets, so they stay readable on any mat
+ *   trim     the owner's colour: moss for the player on the near side, wax red for the opponent
+ */
+
+.bf {
+  --bf-ink: #1f1710;
+  --bf-edge: #120c07;
+  --bf-paper: #efe3c6;
+  --bf-paper-dim: #d8c8a2;
+  --bf-scrim: rgba(18, 12, 7, 0.55);
+  --bf-trim: #6b9a7f;
+  --bf-seal: #4f7a62;
+  --bf-seal-hi: #8fc4a5;
+  --bf-radius: 7px 11px 6px 12px / 11px 6px 12px 7px;
+  --bf-grain: var(--grain-dark, none);
+  --bf-font: var(--font-fell-text), "IM Fell English", Georgia, serif;
+  --bf-font-caps: var(--font-fell), "IM Fell English SC", Georgia, serif;
+  border-color: var(--bf-edge);
+  border-radius: var(--bf-radius);
+  box-shadow: 3px 5px 0 rgba(8, 5, 3, 0.55);
+}
+.bf[data-mat="p2"] {
+  --bf-trim: #d9694f;
+  --bf-seal: #b3392b;
+  --bf-seal-hi: #e8896f;
+  --bf-radius: 11px 6px 12px 7px / 6px 12px 7px 11px;
+}
+/* the old stitched edge of the mat is replaced by the frame below */
+.bf.playmat::after { display: none; }
+
+/* ───────── the mat's edge: vignette, grain, then a frame in the owner's trim ───────── */
+.bf-vignette, .bf-frame { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; }
+.bf-vignette {
+  z-index: 0;
+  background:
+    var(--bf-grain),
+    radial-gradient(ellipse at 50% 45%, transparent 52%, rgba(14, 9, 5, 0.34) 82%, rgba(14, 9, 5, 0.58) 100%);
+  background-size: 240px 240px, 100% 100%;
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+}
+.bf-frame {
+  z-index: 0;
+  box-shadow:
+    inset 0 0 0 2px rgba(18, 12, 7, 0.7),
+    inset 0 0 0 4px color-mix(in srgb, var(--bf-trim) 38%, transparent),
+    inset 0 0 14px 2px rgba(10, 6, 3, 0.5);
+}
+/* two small worn corners: the player's panel on the bottom-left, the opponent's on the top-right (a deliberate asymmetry) */
+.bf-frame::before, .bf-frame::after { content: ""; position: absolute; width: 16px; height: 16px; border: 2px solid color-mix(in srgb, var(--bf-trim) 70%, transparent); opacity: 0.85; }
+.bf[data-mat="p1"] .bf-frame::before { left: 7px; bottom: 7px; border-width: 0 0 2px 2px; border-radius: 0 0 0 6px; }
+.bf[data-mat="p1"] .bf-frame::after { right: 7px; top: 7px; border-width: 2px 2px 0 0; border-radius: 0 6px 0 0; opacity: 0.35; }
+.bf[data-mat="p2"] .bf-frame::before { right: 7px; top: 7px; border-width: 2px 2px 0 0; border-radius: 0 6px 0 0; }
+.bf[data-mat="p2"] .bf-frame::after { left: 7px; bottom: 7px; border-width: 0 0 2px 2px; border-radius: 0 0 0 6px; opacity: 0.35; }
+
+/* ───────── the caption: "<name>'s battlefield" with a wax seal ───────── */
+.bf-title {
+  align-self: flex-start;
+  font-family: var(--bf-font);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.1rem;
+  line-height: 1.2;
+  letter-spacing: 0.005em;
+  text-transform: none;
+  color: var(--bf-paper);
+  padding: 0 0.7em 0 0.15em;
+  background: radial-gradient(ellipse at 30% 50%, var(--bf-scrim), transparent 78%);
+  text-shadow: 0 1px 0 rgba(8, 5, 3, 0.9), 0 0 6px rgba(8, 5, 3, 0.85);
+}
+.bf-seal { width: 1.15rem; height: 1.15rem; flex: none; filter: drop-shadow(1px 1px 0 rgba(8, 5, 3, 0.7)); }
+.bf-seal .wax { fill: var(--bf-seal); stroke: #2a0d08; stroke-width: 1; }
+.bf-seal .ring { fill: none; stroke: var(--bf-seal-hi); stroke-width: 0.8; stroke-dasharray: 1.6 1.6; opacity: 0.85; }
+.bf-seal .mark { fill: var(--bf-paper); opacity: 0.9; }
+
+/* ───────── the rule between the lands and the creatures ───────── */
+.bf-divider { position: relative; display: flex; flex-direction: column; gap: 1px; }
+.bf-rule { display: flex; align-items: center; width: 100%; height: 12px; color: var(--bf-paper); }
+.bf-rule svg { display: block; overflow: visible; }
+.bf-rule .ends { width: 22px; height: 12px; flex: none; }
+.bf-rule .line { flex: 1; min-width: 0; height: 12px; }
+.bf-rule path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.bf-rule .shade { stroke: rgba(14, 9, 5, 0.6); stroke-width: 4.2px; }
+.bf-rule .ink { stroke: currentColor; stroke-width: 2px; }
+.bf-rule .stitch { stroke: color-mix(in srgb, var(--bf-trim) 80%, #efe3c6); stroke-width: 1.2px; stroke-dasharray: 5 4; opacity: 0.85; }
+.bf-caption {
+  align-self: flex-start;
+  font-family: var(--bf-font);
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.1;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--bf-paper);
+  padding: 0 0.9em;
+  background: radial-gradient(ellipse at 50% 50%, var(--bf-scrim), transparent 80%);
+  text-shadow: 0 1px 0 rgba(8, 5, 3, 0.9), 0 0 5px rgba(8, 5, 3, 0.85);
+}
+/* the rule is drawn in with one quick ink stroke, left to right (only while the Motion switch is on, and never for reduced motion) */
+@media (prefers-reduced-motion: no-preference) {
+  .bf-rule[data-draw="on"] { animation: bf-draw 0.8s ease-out 0.15s both; }
+}
+@keyframes bf-draw { from { clip-path: inset(-4px 100% -4px 0); } to { clip-path: inset(-4px -4px -4px 0); } }
+
+/* ───────── the zone column: a recessed shelf with three pockets ───────── */
+.bf-zones {
+  border-color: transparent !important;
+  border-style: solid !important;
+  border-radius: 8px 6px 9px 6px;
+  background: linear-gradient(180deg, rgba(14, 9, 5, 0.42), rgba(14, 9, 5, 0.3));
+  box-shadow: inset 2px 3px 7px rgba(8, 5, 3, 0.55);
+  outline: 1.5px dashed color-mix(in srgb, var(--bf-trim) 55%, transparent);
+  outline-offset: -4px;
+}
+.bf-pocket { position: relative; color: var(--bf-paper); border-radius: 6px 8px 5px 8px; transition: filter 0.15s ease; }
+.bf-pocket:not(:disabled):hover { filter: brightness(1.12); }
+.bf-pocket .bf-zone-label { font-family: var(--bf-font); font-style: italic; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--bf-paper-dim); text-shadow: 0 1px 0 rgba(8, 5, 3, 0.85); display: inline-flex; align-items: center; gap: 0.3em; }
+.bf-pocket .bf-zone-label svg { width: 1.05em; height: 1.05em; flex: none; opacity: 0.9; }
+.bf-pocket .bf-count { font-family: var(--bf-font-caps); font-weight: 400; color: var(--bf-paper); text-shadow: 1px 2px 0 rgba(8, 5, 3, 0.9); }
+.bf-pocket .bf-bare { font-family: var(--bf-font); font-style: italic; color: var(--bf-paper-dim); opacity: 0.8; }
+/* library: a leather pocket with a stitched seam */
+.bf-pocket[data-zone="library"] {
+  background-color: #2f241a;
+  background-image: var(--grain-pale, none), linear-gradient(180deg, rgba(255, 225, 170, 0.07), rgba(0, 0, 0, 0.2));
+  background-size: 240px 240px, 100% 100%;
+  border-color: #120c07 !important;
+  box-shadow: 2px 3px 0 rgba(8, 5, 3, 0.5), inset 0 0 0 1px rgba(200, 178, 138, 0.14);
+  outline: 1.4px dashed rgba(200, 178, 138, 0.4);
+  outline-offset: -4px;
+}
+/* graveyard: a slab of stone, chipped at one corner */
+.bf-pocket[data-zone="graveyard"] {
+  background-color: #3b3f42;
+  background-image: var(--grain-pale, none), repeating-linear-gradient(97deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 23px), linear-gradient(170deg, #4d5255, #2c2f31);
+  background-size: 240px 240px, 100% 100%, 100% 100%;
+  border-color: #1c1e1f !important;
+  border-style: solid !important;
+  border-radius: 9px 9px 4px 4px;
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.1), inset 0 -3px 5px rgba(0, 0, 0, 0.35);
+}
+/* exile: nothing is kept here, only the faint bleed of an ink outline */
+.bf-pocket[data-zone="exile"] {
+  background: radial-gradient(ellipse at 50% 50%, rgba(232, 220, 192, 0.04), rgba(14, 9, 5, 0.35));
+  border-color: rgba(232, 220, 192, 0.16) !important;
+  border-style: solid !important;
+  box-shadow: 0 0 7px rgba(232, 220, 192, 0.1), inset 0 0 9px rgba(232, 220, 192, 0.07);
+}
+.bf-pocket[data-zone="exile"]::before { content: ""; position: absolute; inset: 1px; border: 1px solid rgba(232, 220, 192, 0.14); border-radius: inherit; filter: url(#ink-rough-sm); pointer-events: none; }
+
+/* (the zone names hide on narrow screens, as before: the rule above must not bring them back) */
+@media (max-width: 1023px) { .bf-pocket .bf-zone-label { display: none; } }
