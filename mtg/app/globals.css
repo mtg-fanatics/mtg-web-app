@@ -1242,7 +1242,8 @@ body:has(.game-modal, .victory-backdrop) .castable-glow::after { animation-play-
 }
 .chain-link-in { animation: chain-link 1.2s ease-out backwards; }
 .chain-link-in::after { animation: chain-glint 0.9s ease-in-out calc(var(--d, 0ms) + 0.55s) backwards; }
-.chain-link-out { animation: chain-fade 2s ease-in-out forwards; }
+/* when its card goes, the chain comes loose: it swings down from where it hangs on the older card and falls away */
+.chain-link-out { animation: chain-fall 1.3s cubic-bezier(0.45, 0, 0.85, 0.55) forwards; }
 .chain-text {
   position: absolute; left: 6%; top: 34%; font-style: italic; font-weight: 700; letter-spacing: 0.04em; color: #fff;
   font-family: var(--font-rajdhani), sans-serif; font-size: clamp(44px, 12vw, 96px);
@@ -1281,6 +1282,11 @@ body:has(.game-modal, .victory-backdrop) .castable-glow::after { animation-play-
 }
 @keyframes chain-glint { 0% { opacity: 1; background-position: 100% 0; } 100% { opacity: 1; background-position: 0% 0; } }
 @keyframes chain-fade { to { opacity: 0; } }
+@keyframes chain-fall {
+  0% { opacity: 0.97; translate: 0 0; rotate: 0deg; }
+  30% { opacity: 0.97; translate: 0 6px; rotate: 16deg; }
+  100% { opacity: 0; translate: 0 340px; rotate: 62deg; }
+}
 @keyframes chain-text {
   0% { opacity: 0; transform: translateX(-60px) skewX(-14deg) scale(0.8); }
   20% { opacity: 1; transform: translateX(0) skewX(-14deg) scale(1.05); }

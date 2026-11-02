@@ -373,6 +373,12 @@ interface Card {
 
 // The state of the one finisher that is playing (only one plays at a time, so these are module-wide).
 let ctx: CanvasRenderingContext2D;
+// The cards that fly are drawn on a canvas of their own, at full size (the effects round them are soft and are drawn smaller, but a card drawn small and stretched up is blurry)
+let cardCtx: CanvasRenderingContext2D | null = null;
+let cardRes = 1;
+let cardOffX = 0; // the part of the page the card layer covers (the loser's mat and the room round it: the cards stay on that table)
+let cardOffY = 0;
+let cardsDirty = false;
 let W = 0;
 let H = 0;
 let curRes = 1;
@@ -644,25 +650,22 @@ let tint: { rgb: string; a: number; start: number } | null = null;
 function setTint(rgb: string, a: number): void {
   tint = { rgb, a, start: performance.now() };
 }
-/** Void Collapse: the hole's edge, which stretched cards must not be drawn over (the part of a strand that has gone in is hidden). */
-let holeClip: { x: number; y: number; r: number } | null = null;
-
 /**
  * A card pulled by the black hole's tide, drawn as it would be if the tide were real: the card turns to point at the hole and is cut into slices along its length, and each
  * slice is stretched by how near it is to the hole, so the near end is drawn out into a long thin strand (and bent a little, as it swirls) while the far end is still a card.
  */
-const STRIPS = 18;
+const STRIPS = 28;
 function drawStrand(c: Card, px: number, py: number, scale: number): void {
   const g = c.spag as number;
   const art = c.art as HTMLImageElement;
-  const hx = holeClip ? holeClip.x : T.x;
-  const hy = holeClip ? holeClip.y : T.y;
+  const hx = T.x;
+  const hy = T.y;
   const toHole = Math.atan2(hy - py, hx - px) - Math.PI / 2; // (the card's "down" points at the hole)
   const own = ((c.base.rot + c.rot) * Math.PI) / 180;
   let diff = toHole - own;
   diff = Math.atan2(Math.sin(diff), Math.cos(diff));
   const ang = own + diff * clamp(g * 1.6);
-  const S = 3.5 * g * g + 2 * g; // how much longer the near end gets
+  const S = 2.6 * g * g + 1.6 * g; // how much longer the near end gets (at most about four times the card's height)
   const squeeze = 0.86 * g;
   const bend = c.h * 0.35 * g;
   const iw = art.naturalWidth || art.width;
@@ -673,12 +676,6 @@ function drawStrand(c: Card, px: number, py: number, scale: number): void {
   const sx0 = (iw - srcW) / 2;
   const sy0 = (ih - srcH) / 2;
   ctx.save();
-  if (holeClip && holeClip.r > 2) {
-    ctx.beginPath();
-    ctx.rect(0, 0, W, H);
-    ctx.arc(holeClip.x, holeClip.y, holeClip.r * 0.94, 0, TAU, true);
-    ctx.clip("evenodd");
-  }
   ctx.globalAlpha = c.op;
   ctx.translate(px, py);
   ctx.rotate(ang);
@@ -695,12 +692,17 @@ function drawStrand(c: Card, px: number, py: number, scale: number): void {
     const p0 = P(v0);
     const p1 = P(v1);
     const wd = Wd(vm);
-    const x = L(vm) - wd;
-    ctx.drawImage(art, sx0, sy0 + (i / STRIPS) * srcH, srcW, srcH / STRIPS + 0.5, x, p0, wd * 2, p1 - p0 + 0.8);
+    const dp = p1 - p0 + 0.8;
+    // each slice is sheared along the bend of the strand, so that the strand curves smoothly instead of in steps
+    ctx.save();
+    ctx.translate(L(vm), (p0 + p1) / 2);
+    ctx.transform(1, 0, (L(v1) - L(v0)) / Math.max(0.5, p1 - p0), 1, 0, 0);
+    ctx.drawImage(art, sx0, sy0 + (i / STRIPS) * srcH, srcW, srcH / STRIPS + 0.5, -wd, -dp / 2, wd * 2, dp);
     if (ta) {
       ctx.fillStyle = `rgba(${tint!.rgb},${ta})`;
-      ctx.fillRect(x, p0, wd * 2, p1 - p0 + 0.8);
+      ctx.fillRect(-wd, -dp / 2, wd * 2, dp);
     }
+    ctx.restore();
   }
   // the near end glows white-violet as it is torn thin and heated
   const gl = ctx.createLinearGradient(0, P(0), 0, P(1));
@@ -732,6 +734,11 @@ function drawStrand(c: Card, px: number, py: number, scale: number): void {
  */
 function drawCards(): void {
   const ta = tint ? tint.a * Math.min(1, (performance.now() - tint.start) / 220) : 0;
+  const main = ctx;
+  if (cardCtx) {
+    ctx = cardCtx;
+    cardsDirty = true;
+  }
   for (const c of cards) {
     if (c.hidden || c.op < 0.03) continue;
     if (!c.sprite && !ta) continue;
@@ -740,7 +747,7 @@ function drawCards(): void {
     const sy = c.base.scale * c.sc * lift * c.sy;
     const px = c.cx + c.ox + c.base.x;
     const py = c.cy + c.oy + c.base.y;
-    if (c.sprite && c.z > 1) {
+    if (c.sprite && c.z > 1 && !c.spag) {
       // the shadow on the table
       ctx.globalAlpha = c.op * 0.32 * (1 - clamp(c.z / 260) * 0.7);
       ctx.fillStyle = "#000";
@@ -782,6 +789,7 @@ function drawCards(): void {
     ctx.restore();
   }
   ctx.globalAlpha = 1;
+  ctx = main;
 }
 
 // ───────────────────────────── the finishers
@@ -971,7 +979,6 @@ function voidCollapse(): Fx {
       voidNow = 0;
       hold = 0;
       fx.dur = 6400;
-      holeClip = null;
       if (world) {
         // the hole's pull on every card that has started to fall, applied in every fixed step
         world.onStep = () => {
@@ -1100,7 +1107,6 @@ function voidCollapse(): Fx {
       // the cards: they tremble and rise off the table (held up by the script), then the hole's PULL takes them. The pull is a real force (grows, swirls, drag) applied to their
       // bodies in the physics engine, so they curve in, knock into each other, spin as they fall, and are stretched thin as they come close.
       voidNow = rt;
-      holeClip = t < 4300 ? { x: T.x, y: T.y, r: R } : null;
       for (let i = 0; i < cards.length; i++) {
         const c = cards[i];
         const b = c.body;
@@ -1159,6 +1165,15 @@ function voidCollapse(): Fx {
         }
       }
       drawCards();
+      // what has gone into the hole is rubbed out of the card layer: a strand ends at the hole's edge
+      if (cardCtx && cardsDirty && R > 2) {
+        cardCtx.save();
+        cardCtx.globalCompositeOperation = "destination-out";
+        cardCtx.beginPath();
+        cardCtx.arc(T.x, T.y, R * 0.97, 0, TAU);
+        cardCtx.fill();
+        cardCtx.restore();
+      }
       // the end of it: a flash, rings, rays, and everything thrown outward
       if (!st.boom && t >= 4300) {
         st.boom = true;
@@ -1762,6 +1777,26 @@ const MAKERS: Record<FxKind, () => Fx> = { judgment, void: voidCollapse, meteor,
 
 const artCache = new Map<string, Promise<HTMLImageElement | null>>();
 /** A card's art (it is the card's background picture: the browser already has it), for cutting into shards. */
+/** The sharp picture of the card on this element (Scryfall hosts them), if it has one. */
+function scryUrl(el: HTMLElement): string | null {
+  const id = el.dataset.scry;
+  return id ? `https://cards.scryfall.io/normal/front/${id[0]}/${id[1]}/${id}.jpg` : null;
+}
+
+function loadImage(url: string): Promise<HTMLImageElement | null> {
+  let pr = artCache.get(url);
+  if (!pr) {
+    pr = new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => (img.decode ? img.decode().then(() => resolve(img), () => resolve(img)) : resolve(img));
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+    artCache.set(url, pr);
+  }
+  return pr;
+}
+
 function loadArt(el: HTMLElement): Promise<HTMLImageElement | null> {
   const m = /url\(["']?(.*?)["']?\)/.exec(getComputedStyle(el).backgroundImage);
   if (!m) return Promise.resolve(null);
@@ -1812,8 +1847,10 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
   const lite = liteMode();
   W = window.innerWidth;
   H = window.innerHeight;
-  let res = lite ? 0.5 : kind === "reaper" ? 0.55 : 0.7; // (the Reaper has a lot else to draw)
+  let res = lite ? 0.5 : kind === "reaper" ? 0.6 : 0.75; // (the Reaper has a lot else to draw)
+  const floorRes = res * 0.8; // (when the computer can't keep up, it is drawn smaller, but never much: the cards have a layer of their own and stay sharp)
   curRes = res;
+  cardRes = lite ? 1 : Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
   const reg = o.region ?? { x: 0, y: 0, w: W, h: H };
   offX = reg.x;
   offY = reg.y;
@@ -1826,6 +1863,10 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
   const c2 = cv.getContext("2d", { alpha: true });
   if (!c2) return null;
   ctx = c2;
+  // the layer of the flying cards: full size, over the effects
+  const cardCv = document.createElement("canvas");
+  cardCtx = cardCv.getContext("2d", { alpha: true });
+  cardsDirty = false;
   ensureTex();
 
   // where the loser's mat is, and its cards (measured before anything moves)
@@ -1833,6 +1874,18 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
   const r = matEl?.getBoundingClientRect();
   mat = r && r.width > 40 && r.height > 40 ? { x: r.left, y: r.top, w: r.width, h: r.height } : { x: W * 0.2, y: H * 0.1, w: W * 0.6, h: H * 0.3 };
   T = { x: mat.x + mat.w / 2, y: mat.y + mat.h * 0.52 };
+  {
+    // the card layer: only the table the cards are on, and a margin for what is thrown or drawn out (a canvas over the whole page costs the graphics chip a lot more to lay over it)
+    const x0 = o.region ? reg.x : Math.max(0, mat.x - 260);
+    const y0 = o.region ? reg.y : Math.max(0, mat.y - 220);
+    const x1 = o.region ? reg.x + reg.w : Math.min(W, mat.x + mat.w + 260);
+    const y1 = o.region ? reg.y + reg.h : Math.min(H, mat.y + mat.h + 220);
+    cardOffX = x0;
+    cardOffY = y0;
+    cardCv.width = Math.max(2, Math.round((x1 - x0) * cardRes));
+    cardCv.height = Math.max(2, Math.round((y1 - y0) * cardRes));
+    Object.assign(cardCv.style, { position: o.parent ? "absolute" : "fixed", left: `${x0}px`, top: `${y0}px`, width: `${x1 - x0}px`, height: `${y1 - y0}px`, pointerEvents: "none", ...(o.parent ? {} : { zIndex: "9991" }) });
+  }
   const found = matEl ? [...matEl.querySelectorAll<HTMLElement>("[data-card-iid]")] : [];
   cards = found
     .filter((e) => !found.some((x) => x !== e && x.contains(e)))
@@ -1859,6 +1912,11 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
   // The cards' art (it is already in the browser: this takes a moment at most): Absolute Zero cuts the cards into pieces of it, and the others draw each flying card from it
   await Promise.race([Promise.all(cards.map(async (c) => (c.art = await loadArt(c.el)))), new Promise((ok) => setTimeout(ok, 300))]);
   if (kind === "zero") for (const c of cards) c.sprite = false;
+  // the sharp pictures (488 px wide; the ones on the board are 146): drawn from them as soon as they are in, the small ones until then
+  for (const c of cards.slice(0, 16)) {
+    const url = scryUrl(c.el);
+    if (url) void loadImage(url).then((img) => { if (img) c.art = img; });
+  }
   buildWorld();
   const savedMat = matEl ? { translate: matEl.style.translate, willChange: matEl.style.willChange } : null;
   if (matEl) matEl.style.willChange = "translate";
@@ -1871,6 +1929,7 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
   const fx = kind === "reaper" ? reaperFx(o.origin ?? [mat.x + mat.w / 2, mat.y], o.path ?? []) : MAKERS[kind]();
   fx.setup();
   (o.parent ?? document.body).appendChild(cv);
+  (o.parent ?? document.body).appendChild(cardCv);
   // Every picture is drawn once, nearly invisible, and a frame is let through: the first time a picture is drawn it is sent to the graphics chip, which took a few frames' time
   // in the middle of the show (the hitches at the first flash and at the shatter). Now that happens here, before anything is shown.
   {
@@ -1896,6 +1955,8 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
     done = true;
     cancelAnimationFrame(raf);
     cv.remove();
+    cardCv.remove();
+    cardCtx = null;
     for (const c of cards) Object.assign(c.el.style, c.saved);
     if (matEl && savedMat) {
       matEl.style.translate = savedMat.translate;
@@ -1909,10 +1970,10 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
     resolveStart?.();
   };
   const degrade = () => {
-    quality = Math.min(quality, 0.5);
-    overdraw = Math.max(1, overdraw * 0.8);
-    if (res > 0.42) {
-      res = Math.max(0.42, res * 0.8);
+    quality = Math.max(0.5, quality * 0.8);
+    overdraw = Math.max(1, overdraw * 0.85);
+    if (res > floorRes) {
+      res = Math.max(floorRes, res * 0.9);
       curRes = res;
       cv.width = Math.round(regW * res);
       cv.height = Math.round(regH * res);
@@ -1927,7 +1988,8 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
       const t0 = performance.now();
       let last = t0;
       let sdt = 1 / 60; // (the frame time, eased: one slow frame does not make the motion lurch)
-      let late = 0;
+      let frames = 0;
+      let spent = 0;
       let resolved = false;
       const tick = (now: number) => {
         if (done) return;
@@ -1936,14 +1998,23 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
         sdt = lerp(sdt, clamp(raw, 0.004, 0.05), 0.4);
         const dt = sdt * rate;
         last = now;
-        if (raw > 0.026) late++;
-        else late = Math.max(0, late - 0.5);
-        if (late >= 5) {
-          late = 0;
-          degrade(); // frames are late: thinned out, and drawn smaller (it is cleared and drawn whole each frame, so this costs nothing)
+        // The effect is only thinned out and drawn smaller when the computer is really behind: the average of a stretch of frames (not one slow frame, the first play's start-up hitches or
+        // a garbage collection) says so. A step down is a small one, and it waits for the next stretch to see if it was enough.
+        frames++;
+        spent += Math.min(raw, 0.12);
+        if (frames >= 24) {
+          if (t > 700 / rate && spent / frames > 0.029) degrade(); // (slower than about 34 frames a second)
+          frames = 0;
+          spent = 0;
         }
         ctx.setTransform(res, 0, 0, res, -offX * res, -offY * res);
         ctx.clearRect(offX, offY, regW, regH);
+        if (cardCtx && cardsDirty) {
+          cardCtx.setTransform(1, 0, 0, 1, 0, 0);
+          cardCtx.clearRect(0, 0, cardCv.width, cardCv.height);
+          cardsDirty = false;
+        }
+        if (cardCtx) cardCtx.setTransform(cardRes, 0, 0, cardRes, -cardOffX * cardRes, -cardOffY * cardRes);
         ctx.save();
         fx.frame(t, dt);
         ctx.restore();

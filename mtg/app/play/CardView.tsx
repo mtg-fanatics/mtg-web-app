@@ -183,6 +183,7 @@ function Card({ combat, def, tapped, summoningSick, damage = 0, power, toughness
       <button
         type="button"
         data-card-iid={iid}
+        data-scry={def.scryfallId} // (a finishing move draws the flying cards from the sharp picture)
         data-tint={def.colors?.[0]}
         {...hold}
         onMouseEnter={onHover}

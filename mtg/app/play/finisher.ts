@@ -1264,7 +1264,8 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
     const warm: [number, HTMLElement | null][] = [[250, ring], [450, veil], [650, flash]];
     let warmed = 0;
     let lastReal = performance.now();
-    let late = 0; // how many screen refreshes in a row came late
+    let seen = 0; // the screen refreshes of the stretch being measured, and the time they took
+    let took = 0;
     const T_STOP = Math.max(T_END, T_C + T_BURN + 120);
     await new Promise<void>((resolve) => {
       const frame = () => {
@@ -1272,14 +1273,21 @@ export async function playFinisher(winner: PlayerId | null, loser: PlayerId | nu
         const realNow = performance.now();
         const gap = realNow - lastReal;
         lastReal = realNow;
-        if (clock > 250 && !degraded) {
-          late = gap > 24 ? late + 1 : Math.max(0, late - 1);
-          if (late >= 4) {
-            degraded = true;
-            for (const m of motes) m.cancel();
-            renderer?.scaleTo(0.7);
-            arcR?.scaleTo(0.7);
-            matFire?.scaleTo(0.7);
+        if (clock > 400 && !degraded) {
+          // (the average of a stretch of refreshes, not a single slow one: the first time it plays always has a few hitches, and that must not cost it its looks)
+          seen++;
+          took += Math.min(gap, 120);
+          if (seen >= 20) {
+            const slow = took / seen > 30; // (slower than about 33 frames a second)
+            seen = 0;
+            took = 0;
+            if (slow) {
+              degraded = true;
+              for (const m of motes) m.cancel();
+              renderer?.scaleTo(0.7);
+              arcR?.scaleTo(0.7);
+              matFire?.scaleTo(0.7);
+            }
           }
         }
         const now = performance.now();
