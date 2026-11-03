@@ -22,52 +22,71 @@ export function ResignDialog({ player, onConfirm, onCancel }: { player: PlayerId
   );
 }
 
-// The emblem above the result: crossed swords on a shield for a win, a skull for a loss, two seals for a draw.
-// Flat shapes only (no gradients or filters), so the screen costs next to nothing to draw.
-const INK = "#1f1710";
-const PAPER = "#e8dcc0";
+// The pictures on the result page: pen-and-ink, one stroke weight, a thin wash of the result's colour inside the lines.
+// Crossed swords for a win, a snapped blade for a loss, a pair of scales for a draw. The stamp is the wax seal that presses in over the corner.
+const STROKE = { fill: "none", stroke: "currentColor", strokeWidth: 2.2, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+const WASH = { fill: "var(--accent)", fillOpacity: 0.2 } as const;
 
 function Sword({ rotate }: { rotate: number }) {
   return (
-    <g transform={`rotate(${rotate} 48 52)`}>
-      <path d="M48 6l5 9v46h-10V15z" fill="#d9d2c0" stroke={INK} strokeWidth="2.4" strokeLinejoin="round" />
-      <path d="M48 12v46" stroke="#a79f8a" strokeWidth="1.6" />
-      <rect x="35" y="61" width="26" height="6" rx="2" fill="#8c6a3c" stroke={INK} strokeWidth="2.2" />
-      <rect x="45" y="67" width="6" height="14" fill="#5a3a22" stroke={INK} strokeWidth="2" />
-      <circle cx="48" cy="85" r="4.600" fill="#8c6a3c" stroke={INK} strokeWidth="2.2" />
+    <g transform={`rotate(${rotate} 48 50)`}>
+      <path d="M48 7.500l4.600 8.200.4 36.600h-10l.3-36.800z" {...WASH} stroke="none" />
+      <path d="M48 7.500l4.600 8.200.4 36.600h-10l.3-36.800z" {...STROKE} />
+      <path d="M48.200 17v31" {...STROKE} strokeWidth="1.400" strokeOpacity=".6" />
+      <path d="M36.500 55.200c7-1.600 15-1.700 23 0" {...STROKE} />
+      <path d="M48 56v12.500" {...STROKE} strokeWidth="3.400" />
+      <circle cx="48" cy="72" r="3.200" {...STROKE} />
     </g>
   );
 }
 
 function Emblem({ result }: { result: "win" | "lose" | "draw" }) {
+  const ragged = { filter: "url(#ink-rough-sm)", overflow: "visible" } as const;
   if (result === "win") {
     return (
-      <svg viewBox="0 0 96 96" width="116" height="116" aria-hidden="true" className="victory-emblem">
-        <path d="M48 8l30 10v28c0 18-13 30-30 38C31 76 18 64 18 46V18z" fill="#b3392b" stroke={INK} strokeWidth="3" strokeLinejoin="round" />
-        <path d="M48 15l23 7.500V46c0 14-10 24-23 30.500C35 70 25 60 25 46V22.500z" fill="none" stroke={PAPER} strokeOpacity=".55" strokeWidth="1.800" strokeDasharray="3.500 3" />
-        <Sword rotate={-42} />
-        <Sword rotate={42} />
-        <circle cx="48" cy="52" r="5" fill="#e8dcc0" stroke={INK} strokeWidth="2.200" />
+      <svg viewBox="0 0 96 90" width="112" height="105" aria-hidden="true" className="victory-emblem" style={ragged}>
+        <Sword rotate={-38} />
+        <Sword rotate={38} />
       </svg>
     );
   }
   if (result === "lose") {
     return (
-      <svg viewBox="0 0 96 96" width="112" height="112" aria-hidden="true" className="victory-emblem">
-        <path d="M48 10c-18 0-30 12-30 28 0 10 4 17 11 21v11c0 3 2 5 5 5h28c3 0 5-2 5-5V59c7-4 11-11 11-21 0-16-12-28-30-28z" fill={PAPER} stroke={INK} strokeWidth="3.200" strokeLinejoin="round" />
-        <ellipse cx="35" cy="42" rx="8" ry="9.500" fill={INK} />
-        <ellipse cx="61" cy="42" rx="8" ry="9.500" fill={INK} />
-        <path d="M48 52l-5 10h10z" fill={INK} />
-        <path d="M37 71v10M44 72v10M52 72v10M59 71v10" stroke={INK} strokeWidth="2.600" strokeLinecap="round" />
-        <path d="M65 16l-5 10 6 5-4 9" fill="none" stroke="#7d2219" strokeWidth="2.400" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="8 22 82 66" width="120" height="97" aria-hidden="true" className="victory-emblem" style={ragged}>
+        <g transform="rotate(-14 40 50)">
+          <path d="M40 31.500l-3.600 4 3.400 3.200-3.500 3.800.3 11.300h9.600l.3-22.300z" {...WASH} stroke="none" />
+          <path d="M40 31.500l-3.600 4 3.400 3.200-3.500 3.800.3 11.300h9.600l.3-22.300-2.800 2.600z" {...STROKE} />
+          <path d="M29 55.200c7-1.600 15-1.700 23 0" {...STROKE} />
+          <path d="M40.500 56v12.500" {...STROKE} strokeWidth="3.400" />
+          <circle cx="40.500" cy="72" r="3.200" {...STROKE} />
+        </g>
+        <g transform="rotate(58 70 66)">
+          <path d="M70 52l4.400 8-.4 14h-8l-.4-14z" {...WASH} stroke="none" />
+          <path d="M70 52l4.400 8-.4 14h-8l-.4-14z" {...STROKE} />
+        </g>
+        <path d="M18 80c10-1.800 22-1.200 34 .2M62 82c7-.6 13-.4 19 .3" {...STROKE} strokeWidth="1.400" strokeOpacity=".55" />
       </svg>
     );
   }
   return (
-    <svg viewBox="0 0 96 64" width="112" height="75" aria-hidden="true" className="victory-emblem">
-      <path d="M48 6v46M26 52h44M14 16h68" fill="none" stroke={INK} strokeWidth="3.400" strokeLinecap="round" />
-      <path d="M14 16l-9 22h18zM82 16l-9 22h18z" fill="#4f7a62" stroke={INK} strokeWidth="2.600" strokeLinejoin="round" />
-      <path d="M5 38c0 5 4 8 9 8s9-3 9-8M73 38c0 5 4 8 9 8s9-3 9-8" fill="none" stroke={INK} strokeWidth="2.600" />
+    <svg viewBox="0 0 96 90" width="112" height="105" aria-hidden="true" className="victory-emblem" style={ragged}>
+      <path d="M48 14v52M30 70c10-1.500 26-1.500 36 0M17 25c20-3.200 42-3.200 62 .2" {...STROKE} />
+      <path d="M17 25L8 48h18zM79 25l-9 23h18z" {...WASH} stroke="none" />
+      <path d="M17 25L8 48h18zM79 25l-9 23h18z" {...STROKE} />
+      <path d="M8 48c.4 6 4.600 9 9 9s8.600-3 9-9M70 48c.4 6 4.600 9 9 9s8.600-3 9-9" {...STROKE} />
+    </svg>
+  );
+}
+
+// The wax seal: an uneven blot of wax, a ring pressed into it, and the word in the same press.
+const WAX = "M32 4c7 .1 10 3.600 16 5 6 1.400 9.500 5.500 10.300 12 .600 5 5.200 8.400 3.800 14.500-1.300 5.700-4.300 9.500-5.300 14.500-1.200 6-5.500 10.300-11.800 12.500-5.200 1.800-8.800 6-16 5.800-7-.2-10.600-4.200-15.800-6.200C7.500 53.400 3.800 49 2.800 43c-1-5.300-5.600-8.800-4-14.800C.100 22.600 4 19 5.400 13.800 7 8.200 11.300 5.300 17 4.200 24 2.800 25 3.900 32 4z";
+function Stamp({ result }: { result: "win" | "lose" | "draw" }) {
+  const word = result === "draw" ? "Drawn" : result === "lose" ? "Lost" : "Won";
+  return (
+    <svg viewBox="-2 -2 68 70" width="92" height="96" aria-hidden="true">
+      <path d={WAX} fill="var(--seal)" stroke="var(--seal-edge)" strokeWidth="2" />
+      <circle cx="32" cy="32" r="22" fill="none" stroke="var(--seal-ink)" strokeOpacity=".6" strokeWidth="1.600" strokeDasharray="3 2.600" />
+      <text x="32" y="38" textAnchor="middle" fontSize={word === "Drawn" ? 13.5 : 17} fill="var(--seal-ink)" style={{ fontFamily: "var(--font-fell), Georgia, serif" }}>{word}</text>
     </svg>
   );
 }
@@ -101,12 +120,10 @@ export function VictoryDialog({
   return (
     <>
       <div role="dialog" aria-modal="true" aria-label={result === "win" ? "You win" : result === "lose" ? "You lost" : "Draw"} className="victory-backdrop">
-        <div data-result={result} className={`victory-scroll ${spin ? "scroll-unroll" : ""}`}>
-          <div aria-hidden="true" className="scroll-roll" />
-          <div className="scroll-lower">
-          <div className="scroll-body">
-            <div className="scroll-sheet">
-              <div className="scroll-inner">
+        <div data-result={result} className={`result-page ${spin ? "result-settle" : ""}`}>
+          <div aria-hidden="true" className="result-shadow" />
+          <div className="result-sheet">
+            <div className="result-inner">
           <div className="victory-medal"><Emblem result={result} /></div>
           <h2 className="victory-title">{title}</h2>
           <Scribble width={200} className="victory-rule" />
@@ -132,12 +149,12 @@ export function VictoryDialog({
           )}
           <div className="victory-actions">
             {rematch?.state === "none" && (
-              <button onClick={rematch.onAsk} className="btn-gold !px-7 !py-3 !text-base">
+              <button onClick={rematch.onAsk} autoFocus className="btn-gold !px-7 !py-3 !text-base">
                 Rematch
               </button>
             )}
             {rematch?.state === "sent" && (
-              <button onClick={rematch.onCancel} className="btn-ghost !px-6 !py-3 !text-base">
+              <button onClick={rematch.onCancel} className="btn-ghost result-quiet !px-6 !py-3 !text-base">
                 Cancel rematch
               </button>
             )}
@@ -146,7 +163,7 @@ export function VictoryDialog({
                 <button onClick={rematch.onAccept} autoFocus className="btn-gold !px-7 !py-3 !text-base">
                   Accept
                 </button>
-                <button onClick={rematch.onDecline} className="btn-danger !px-6 !py-3 !text-base">
+                <button onClick={rematch.onDecline} className="btn-ghost result-quiet !px-6 !py-3 !text-base">
                   Reject
                 </button>
               </>
@@ -161,16 +178,14 @@ export function VictoryDialog({
               )
             )}
             {onLeave && (
-              <button onClick={onLeave} autoFocus={!series || series.decided} className="btn-gold victory-leave !px-7 !py-3 !text-base">
+              <button onClick={onLeave} autoFocus={(!series || series.decided) && rematch?.state !== "none"} className={`!px-7 !py-3 !text-base ${rematch?.state === "none" || rematch?.state === "incoming" || (series && !series.decided) ? "btn-ghost result-quiet" : "btn-gold"}`}>
                 Back to the front room
               </button>
             )}
-          </div>
-              </div>
             </div>
-            <div aria-hidden="true" className="scroll-roll scroll-roll-bottom" />
+            </div>
           </div>
-          </div>
+          <div aria-hidden="true" className={`result-stamp ${spin ? "result-stamp-press" : ""}`}><Stamp result={result} /></div>
         </div>
       </div>
     </>

@@ -431,78 +431,49 @@ html[data-theme="dark"] body { font-size: 1.08rem; line-height: 1.45; }
 .perf-lite .hero-title, .perf-lite .page-title, .perf-lite .enter-title, .perf-lite .victory-title { filter: none; }
 .perf-lite .battlefield-bg { background-image: none; }
 
-/* ───────── the result screen: a scroll that unrolls ─────────
-   A wooden roll at the top and one at the bottom; the parchment between them opens downwards (the grid row grows from 0 to its height, once).
-   No blur behind it, no filters, no glows: a flat dark scrim and flat shapes, so it costs almost nothing to draw. */
-.victory-backdrop::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(14, 9, 5, 0.82); }
-.victory-scroll { --accent: #b3392b; position: relative; width: 100%; max-width: 27rem; color: var(--ink); }
-.victory-scroll[data-result="lose"] { --accent: #7d2219; }
-.victory-scroll[data-result="draw"] { --accent: #4f7a62; }
-/* The two ends of the scroll: the parchment wound round a wooden rod, with a turned knob sticking out at each side. They overlap the sheet a little,
-   so there is never a gap between them and the paper, however far it has opened. */
-.scroll-roll {
+/* ───────── the result screen: a loose page with a deckled edge, set into the dark table ─────────
+   The page is one sheet of paper (grain, darkened edges, a torn outline) with its own offset shadow behind it; the result is a wax seal that presses in over the corner.
+   No blur and no filters on anything large: a warm scrim, flat shapes, and one short settle and stamp. */
+.victory-backdrop::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: radial-gradient(ellipse at 50% 36%, rgba(92, 56, 26, 0.5), rgba(24, 14, 8, 0.9) 72%); }
+.result-page { --accent: #b3392b; --seal: #a8352a; --seal-edge: #3a0f0a; --seal-ink: #f0dfc2; --deckle: polygon(0.0% 0.3%, 3.85% 0.27%, 7.69% 0.16%, 11.54% 0.12%, 15.38% 0.64%, 19.23% 0.4%, 23.08% 0.48%, 26.92% 0.39%, 30.77% 0.27%, 34.62% 0.51%, 38.46% 0.4%, 42.31% 0.55%, 46.15% 0.46%, 50.0% 0.59%, 53.85% 0.31%, 57.69% 0.11%, 61.54% 0.1%, 65.38% 0.51%, 69.23% 0.12%, 73.08% 0.46%, 76.92% 0.43%, 80.77% 0.04%, 84.62% 0.55%, 88.46% 0.02%, 92.31% 0.61%, 96.15% 0.59%, 100.0% 0.3%, 99.87% 3.33%, 99.56% 6.67%, 99.56% 10.0%, 99.92% 13.33%, 99.6% 16.67%, 99.93% 20.0%, 99.45% 23.33%, 99.59% 26.67%, 99.41% 30.0%, 99.97% 33.33%, 99.81% 36.67%, 99.63% 40.0%, 99.64% 43.33%, 99.89% 46.67%, 99.47% 50.0%, 99.49% 53.33%, 99.82% 56.67%, 99.91% 60.0%, 99.6% 63.33%, 99.76% 66.67%, 99.6% 70.0%, 99.7% 73.33%, 99.76% 76.67%, 99.99% 80.0%, 99.92% 83.33%, 99.72% 86.67%, 99.56% 90.0%, 99.74% 93.33%, 99.55% 96.67%, 99.7% 100.0%, 96.15% 99.62%, 92.31% 99.38%, 88.46% 99.54%, 84.62% 99.77%, 80.77% 99.9%, 76.92% 99.95%, 73.08% 99.97%, 69.23% 99.4%, 65.38% 99.39%, 61.54% 99.47%, 57.69% 99.92%, 53.85% 99.54%, 50.0% 99.91%, 46.15% 99.38%, 42.31% 99.54%, 38.46% 99.48%, 34.62% 99.57%, 30.77% 99.71%, 26.92% 99.41%, 23.08% 99.33%, 19.23% 99.83%, 15.38% 99.69%, 11.54% 99.49%, 7.69% 99.52%, 3.85% 99.71%, 0.0% 99.7%, 0.27% 96.67%, 0.58% 93.33%, 0.17% 90.0%, 0.13% 86.67%, 0.41% 83.33%, 0.17% 80.0%, 0.54% 76.67%, 0.2% 73.33%, 0.55% 70.0%, 0.23% 66.67%, 0.53% 63.33%, 0.45% 60.0%, 0.44% 56.67%, 0.13% 53.33%, 0.1% 50.0%, 0.02% 46.67%, 0.11% 43.33%, 0.4% 40.0%, 0.04% 36.67%, 0.14% 33.33%, 0.34% 30.0%, 0.09% 26.67%, 0.2% 23.33%, 0.14% 20.0%, 0.41% 16.67%, 0.07% 13.33%, 0.6% 10.0%, 0.36% 6.67%, 0.43% 3.33%); position: relative; width: 100%; max-width: 27rem; color: var(--ink); transform: rotate(-0.6deg); }
+.result-page[data-result="lose"] { --accent: #4a4540; --seal: #3a3531; --seal-edge: #120e0b; --seal-ink: #d8ccb4; transform: rotate(0.5deg); }
+.result-page[data-result="draw"] { --accent: #4f7a62; --seal: #4a6e58; --seal-edge: #15241c; --seal-ink: #ecdfc4; }
+.result-shadow { position: absolute; inset: 0; transform: translate(6px, 8px); background: rgba(6, 3, 2, 0.62); clip-path: var(--deckle); }
+.result-sheet {
   position: relative;
-  z-index: 2;
-  height: 2.1rem;
-  margin: 0 -0.5rem;
-  border: 2px solid #1c120a;
-  border-radius: 1.05rem;
-  background:
-    linear-gradient(90deg, rgba(60, 38, 16, 0.5) 0, transparent 1.4rem, transparent calc(100% - 1.4rem), rgba(60, 38, 16, 0.5) 100%),
-    linear-gradient(180deg, #f6edd3 0 14%, #e8dab4 14% 50%, #cdb88a 50% 82%, #a88f5f 82%);
-  box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.6);
-}
-/* the knobs: a plain turned cap of dark wood at each end, the same on both sides (no round ornament, nothing mirrored) */
-.scroll-roll::before, .scroll-roll::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 1.5rem;
-  height: 1.3rem;
-  margin-top: -0.65rem;
-  border: 2px solid #1c120a;
-  background: linear-gradient(180deg, #8f6a3f 0 30%, #6b4a28 30% 70%, #4a321a 70%);
-}
-.scroll-roll::before { left: -1.3rem; border-radius: 0.65rem 0.2rem 0.2rem 0.65rem; border-right: 0; }
-.scroll-roll::after { right: -1.3rem; border-radius: 0.2rem 0.65rem 0.65rem 0.2rem; border-left: 0; }
-.scroll-lower { position: relative; padding-bottom: 1.4rem; }
-.scroll-roll-bottom { position: absolute; left: 0; right: 0; top: calc(var(--open) * 100% - 0.7rem); margin-top: 0; }
-.scroll-body { display: block; position: relative; }
-.scroll-sheet {
-  margin: -0.7rem 0.2rem 0;
+  clip-path: var(--deckle);
   background-color: var(--paper);
-  background-image: var(--fibres), linear-gradient(180deg, rgba(60, 38, 16, 0.4), transparent 1.2rem, transparent calc(100% - 1.2rem), rgba(60, 38, 16, 0.4)), linear-gradient(90deg, rgba(110, 70, 25, 0.28), transparent 7%, transparent 93%, rgba(110, 70, 25, 0.28)), radial-gradient(ellipse at 12% 6%, rgba(150, 100, 40, 0.2), transparent 42%), var(--grain-dark);
-  background-size: 300px 300px, 100% 100%, 100% 100%, 100% 100%, 240px 240px;
-  border-inline: 2px solid #2a1d12;
+  background-image: var(--fibres), radial-gradient(ellipse at 14% 8%, rgba(150, 100, 40, 0.2), transparent 45%), radial-gradient(ellipse at 90% 96%, rgba(110, 70, 25, 0.22), transparent 50%), var(--grain-dark);
+  background-size: 300px 300px, 100% 100%, 100% 100%, 240px 240px;
+  box-shadow: inset 0 0 46px rgba(96, 58, 22, 0.5), inset 0 0 9px rgba(60, 35, 12, 0.55);
 }
-.scroll-inner { padding: 2.1rem 1.6rem 2rem; text-align: center; }
-.victory-scroll[data-result="lose"] .scroll-sheet { background-color: #cdbb94; }
-.victory-scroll[data-result="draw"] .scroll-sheet { background-color: #d6cdb4; }
-/* --open runs from 0 (rolled up) to 1 (open). The sheet is revealed from the top by it, and the bottom roll sits at the same edge, so the two cannot come apart:
-   both are worked out from the one number, with no measuring in script. */
-@property --open { syntax: "<number>"; inherits: true; initial-value: 1; }
-.victory-scroll { --open: 1; }
-.scroll-sheet { clip-path: inset(0 0 calc((1 - var(--open)) * 100%) 0); }
-/* (only the game's own Motion switch decides: the scroll waits a moment so the eye is on it, then opens) */
-.scroll-unroll { animation: scroll-open 1.7s cubic-bezier(0.3, 0.7, 0.35, 1) 0.4s both; }
-/* (the writing is already on the sheet: it comes into view line by line as the edge of the paper passes it, like a real scroll opening) */
-@keyframes scroll-open { from { --open: 0; } to { --open: 1; } }
+.result-page[data-result="lose"] .result-sheet { background-color: #cbb995; }
+.result-page[data-result="draw"] .result-sheet { background-color: #d4cbb2; }
+.result-inner { padding: 2.3rem 1.8rem 2rem; text-align: center; }
+.result-stamp { position: absolute; top: -1.5rem; right: -0.9rem; z-index: 2; transform: rotate(9deg); pointer-events: none; }
+.result-stamp svg { display: block; }
+/* (only the game's own Motion switch decides) the page settles onto the table, then the seal presses down into it */
+.result-settle { animation: result-settle 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.result-stamp-press { animation: result-press 0.34s cubic-bezier(0.3, 0.1, 0.4, 1) 0.65s both; }
+@keyframes result-settle { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
+@keyframes result-press { 0% { opacity: 0; scale: 1.5; } 55% { opacity: 1; scale: 0.94; } 100% { opacity: 1; scale: 1; } }
 .victory-medal { width: auto; height: auto; margin: 0 auto 0.1rem; border: 0; border-radius: 0; background: none; box-shadow: none; }
-.victory-emblem { display: block; margin: 0 auto; }
-.victory-title { font-size: clamp(2.8rem, 11vw, 4rem); letter-spacing: 0.005em; text-transform: none; background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--ink); filter: none; text-shadow: 2px 2px 0 rgba(120, 80, 30, 0.3); }
-.victory-scroll[data-result="lose"] .victory-title { color: #6a1a12; }
-.victory-scroll[data-result="draw"] .victory-title { color: #2f4a3b; }
+.victory-emblem { display: block; margin: 0 auto; color: #2a1d12; }
+.victory-title { font-size: clamp(2.8rem, 11vw, 4rem); letter-spacing: 0.005em; text-transform: none; background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--ink); filter: none; text-shadow: 1px 1px 0 rgba(120, 80, 30, 0.3); }
+.result-page[data-result="lose"] .victory-title { color: #2a221c; }
+.result-page[data-result="draw"] .victory-title { color: #2f4a3b; }
 .victory-rule { margin: -0.15rem auto 0.4rem; color: var(--accent); filter: none !important; }
 .victory-sub { margin: 0.2rem auto 0; max-width: 21rem; font-family: var(--font-fell-text), Georgia, serif; font-style: italic; font-weight: 400; font-size: 1.2rem; line-height: 1.3; color: #3a2d21; }
 .victory-reason { margin-top: 0.8rem; padding: 0.25rem 0.9rem; border-radius: 3px 8px 3px 7px; font-size: 1rem; color: #2a1d12; background: rgba(42, 29, 18, 0.08); border: 1.5px dashed rgba(42, 29, 18, 0.4); }
-.victory-actions { margin-top: 1.4rem; gap: 0.9rem; }
-/* buttons on parchment: the main one is a wax-red slip, the other a leather patch */
-.victory-scroll .btn-gold { color: var(--paper); text-shadow: 1px 1px 0 rgba(40, 8, 4, 0.8); background-color: #b3392b; background-image: var(--grain-pale); background-size: 240px 240px; border-color: #3a0f0a; box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6), inset 0 -3px 8px rgba(40, 8, 4, 0.35); }
-.victory-scroll .btn-gold:hover:not(:disabled) { background-color: #c4473a; }
-.victory-scroll .btn-gold:active:not(:disabled) { box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.6), inset 2px 3px 7px rgba(40, 8, 4, 0.6); }
-.victory-scroll .victory-leave { color: var(--color-white); text-shadow: none; background-color: var(--ink-3); background-image: var(--grain-pale); background-size: 240px 240px; border-color: #120c07; box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 3px var(--ink-3), inset 0 0 0 4px rgba(200, 178, 138, 0.26); }
-.victory-scroll .victory-leave:hover:not(:disabled) { background-color: #46352a; }
-.perf-lite .scroll-sheet { background-image: none; }
+.victory-actions { margin-top: 1.5rem; gap: 0.9rem; flex-wrap: wrap; justify-content: center; align-items: center; }
+/* on the paper: the main action is a wax-red slip pressed into it; the quiet one is only an inked outline */
+.result-page .btn-gold { color: var(--paper); text-shadow: 1px 1px 0 rgba(40, 8, 4, 0.8); background-color: #a8352a; background-image: var(--grain-pale); background-size: 240px 240px; border-color: #3a0f0a; box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.55), inset 0 -3px 8px rgba(40, 8, 4, 0.35); }
+.result-page .btn-gold:hover:not(:disabled) { background-color: #b9433a; }
+.result-page .btn-gold:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.55), inset 2px 3px 7px rgba(40, 8, 4, 0.6); }
+.result-page .result-quiet { color: #2a1d12; text-shadow: none; background: transparent; background-image: none; border: 2px solid rgba(42, 29, 18, 0.7); border-radius: 5px 9px 5px 8px / 8px 5px 9px 5px; box-shadow: none; }
+.result-page .result-quiet svg { color: #8a2e22; }
+.result-page .result-quiet:hover:not(:disabled) { background: rgba(42, 29, 18, 0.1); transform: none; box-shadow: none; }
+.result-page .result-quiet:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: none; }
 
 /* a list that scrolls inside its panel: a slim leather-coloured scrollbar */
 .deck-scroll { scrollbar-width: thin; scrollbar-color: #8c7455 transparent; }
@@ -536,4 +507,4 @@ html[data-theme="dark"] body { font-size: 1.08rem; line-height: 1.45; }
 .perf-lite .victory-medal, html.perf-lite .victory-medal { box-shadow: none; background: none; }
 
 /* the scroll is a child of the result dialog, which the general dialog rule gives a dark 2px border: the scroll draws its own edges */
-[role="dialog"] > .victory-scroll { border: 0; }
+[role="dialog"] > .result-page { border: 0; }
