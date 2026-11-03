@@ -16,6 +16,9 @@ export interface CardSearchResult {
 
 const cachedSearch = (search: CardSearch) => remember(`cards:${JSON.stringify(search)}`, () => searchCards(search), 60_000);
 
+/** A page of results, from the cache when it is fresh (the album fetches the neighbouring pages with this before a page turns). */
+export const loadCardPage = (search: CardSearch) => cachedSearch(search);
+
 /** Fetches a page of results ahead of time (the next page, or the one a pager button points at). */
 export function prefetchCardPage(search: CardSearch): Promise<void> {
   return cachedSearch(search).then(
