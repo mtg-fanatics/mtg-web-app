@@ -1,0 +1,266 @@
+/*
+ * INKFALL: the side panels, the phase bar and the hand tray.
+ *
+ * Every panel has a role, and the role decides how it is made (the colours and the type come from the tokens in inkfall.css):
+ *   bound page    the two players: dark hide, a stitched seam, and a spine in the owner's colour (moss down the left for you, wax red across the top for the other seat)
+ *   slip          the chat: a loose slip of paper with ink on it and a worn corner
+ *   ledger        the log: a ruled book with a red margin line
+ *   strip         the stops and the full-screen switch: no box at all, only two dashed rules, like a line in a ledger
+ *   tray          the hand: a felt strip pressed into the table, with the cards sitting in it
+ * Nothing here changes a card, a hit area or a size that the layout depends on.
+ */
+
+.pl-card, .chat-slip, .log-ledger, .ledger-strip, .panel-strip, section.hand-tray { color: var(--paper); }
+
+/* ───────── small pieces used everywhere ───────── */
+.panel-title {
+  font-family: var(--font-fell-text), "IM Fell English", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.12rem;
+  line-height: 1.2;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--paper-2);
+  padding-bottom: 0.15rem;
+  border-bottom: 1.5px solid rgba(200, 178, 138, 0.3);
+}
+.pl-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--font-fell-text), "IM Fell English", Georgia, serif;
+  font-weight: 400;
+  font-size: 1.15rem;
+  line-height: 1.15;
+  color: var(--paper);
+  text-shadow: 1px 1px 0 rgba(8, 5, 3, 0.8);
+}
+.pl-name .bf-seal { width: 1.1rem; height: 1.1rem; flex: none; }
+.pl-act {
+  display: inline-block;
+  padding: 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--ink);
+  background-color: var(--paper);
+  border-radius: 3px 6px 3px 5px;
+  box-shadow: 1px 2px 0 rgba(8, 5, 3, 0.6);
+  transform: rotate(-2deg);
+}
+.pl-heart { color: var(--wax-hi); flex: none; }
+.pl-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0 0.45rem;
+  font-weight: 600;
+  color: var(--paper-2);
+  background: rgba(8, 5, 3, 0.35);
+  border: 1.5px solid rgba(200, 178, 138, 0.4);
+  border-radius: 3px 6px 3px 5px;
+}
+.pl-poison { color: #c4d79e; border-color: rgba(196, 215, 158, 0.5); }
+.pl-poison[data-grave="yes"] { color: #e9f0a8; border-color: #e9f0a8; }
+.pl-counts span { display: inline-flex; align-items: center; gap: 0.2em; color: var(--paper-2); }
+.pl-counts b { font-weight: 700; color: var(--paper); }
+.pl-counts svg { width: 15px; height: 15px; }
+
+/* ───────── the life total: an inked numeral, and an ink well that drains ───────── */
+.life-num { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font-weight: 400; text-shadow: 1px 2px 0 rgba(8, 5, 3, 0.8); }
+.life-ok { color: var(--paper); }
+.life-mid { color: #e6b95e; }
+.life-low { color: #f08a6e; }
+.life-drop { position: absolute; top: -6px; right: -12px; opacity: 0; pointer-events: none; color: var(--wax-hi); }
+.life-drop[data-dir="gain"] { color: #8fc4a5; }
+.ink-well {
+  position: relative;
+  height: 11px;
+  margin-top: 0.45rem;
+  overflow: hidden;
+  border: 2px solid #120c07;
+  border-radius: 3px 6px 3px 5px / 5px 3px 6px 3px;
+  background-color: rgba(8, 5, 3, 0.55);
+  background-image: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), rgba(232, 220, 192, 0.28) calc(25% - 1px) 25%);
+  box-shadow: inset 1px 2px 3px rgba(0, 0, 0, 0.6);
+}
+.ink-well-big { height: 14px; }
+.ink-well-fill {
+  height: 100%;
+  background-color: #5f8f75;
+  background-image: var(--grain-pale);
+  background-size: 240px 240px;
+  border-right: 2px solid rgba(8, 5, 3, 0.45);
+  border-radius: 0 5px 3px 0 / 0 3px 5px 0;
+  transition: width 0.5s ease-out;
+}
+.ink-well-fill[data-level="mid"] { background-color: #c79a3f; }
+.ink-well-fill[data-level="low"] { background-color: #b3392b; }
+
+/* the heading over a player's page sits straight on the table cloth: a dark label behind it keeps it readable on any cloth */
+.pl-frame > .panel-title { align-self: flex-start; padding: 0.05rem 0.7rem; color: var(--paper); background: rgba(18, 12, 7, 0.78); border-bottom: 0; border-radius: 3px 7px 3px 6px; }
+
+/* ───────── bound pages: the two players ───────── */
+.pl-card {
+  --trim: var(--moss);
+  background-color: var(--ink-2);
+  background-image: var(--grain-pale), radial-gradient(ellipse at 12% 6%, rgba(255, 220, 160, 0.07), transparent 50%);
+  background-size: 240px 240px, 100% 100%;
+  border: 2px solid #120c07;
+  border-left: 7px solid var(--trim);
+  border-radius: 4px 8px 5px 9px / 8px 4px 9px 5px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 1px rgba(232, 220, 192, 0.08);
+  outline: 1.5px dashed rgba(200, 178, 138, 0.3);
+  outline-offset: -6px;
+}
+.pl-card[data-side="p1"] { --bf-seal: #4f7a62; --bf-seal-hi: #8fc4a5; --bf-paper: #efe3c6; }
+.pl-card[data-side="p2"] {
+  --trim: var(--wax-hi);
+  --bf-seal: #b3392b;
+  --bf-seal-hi: #e8896f;
+  --bf-paper: #efe3c6;
+  border-left: 2px solid #120c07;
+  border-top: 7px solid var(--trim);
+  border-radius: 8px 4px 9px 5px / 4px 8px 5px 9px;
+}
+.pl-acting { box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6), 0 0 0 2px var(--paper-3); }
+.pl-ledger { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1.5px dashed rgba(200, 178, 138, 0.35); padding-top: 0.35rem; text-align: center; }
+.pl-ledger span { display: inline-flex; align-items: center; justify-content: center; gap: 0.3em; font-size: 13px; color: var(--paper-2); }
+.pl-ledger span + span { border-left: 1px solid rgba(200, 178, 138, 0.25); }
+.pl-ledger b { color: var(--paper); font-weight: 700; }
+.pl-ledger svg { width: 16px; height: 16px; flex: none; }
+.pl-row { background: rgba(8, 5, 3, 0.3); border-bottom: 1.5px dashed rgba(200, 178, 138, 0.3); }
+
+/* ───────── the chat: a slip of paper ───────── */
+.chat-slip {
+  position: relative;
+  background-color: var(--paper);
+  background-image: var(--fibres), radial-gradient(ellipse at 12% 6%, rgba(150, 100, 40, 0.18), transparent 50%);
+  background-size: 300px 300px, 100% 100%;
+  border: 1.5px solid #2a1d12;
+  border-radius: 3px 7px 3px 6px;
+  box-shadow: 2px 3px 0 rgba(8, 5, 3, 0.55), inset 0 0 22px rgba(96, 58, 22, 0.28);
+  transform: rotate(-0.4deg);
+}
+.chat-slip::after { content: ""; position: absolute; right: 0; bottom: 0; width: 15px; height: 15px; background: linear-gradient(135deg, transparent 50%, rgba(60, 35, 12, 0.35) 50%); border-radius: 0 0 3px 0; pointer-events: none; }
+.chat-slip.chat-slip :where(p, span, div, h2) { color: #2a1d12; }
+.chat-slip.chat-slip .panel-title { color: #3a2d21; border-bottom-color: rgba(42, 29, 18, 0.35); }
+.chat-slip.chat-slip span.font-semibold { color: #7d2219; }
+.slip-field { color: #2a1d12; background: rgba(42, 29, 18, 0.07); border: 1.5px solid rgba(42, 29, 18, 0.6); border-radius: 3px 6px 3px 5px; }
+.slip-field::placeholder { color: #5e4e3b; opacity: 1; }
+.slip-field:focus { border-color: #7d2219; outline: 2px solid rgba(125, 34, 25, 0.5); outline-offset: 1px; }
+
+/* ───────── the log: a ruled ledger with a red margin ───────── */
+.log-ledger {
+  background-color: var(--ink-2);
+  background-image: var(--grain-pale);
+  background-size: 240px 240px;
+  border: 2px solid #120c07;
+  border-left: 2px solid rgba(179, 57, 43, 0.7);
+  border-radius: 4px 7px 4px 6px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.55);
+}
+.log-ledger .panel-title { border-bottom: 3px double rgba(200, 178, 138, 0.35); }
+
+/* ───────── strips: no box, two dashed rules ───────── */
+.panel-strip { background: rgba(18, 12, 7, 0.74); border-top: 1.5px dashed rgba(200, 178, 138, 0.4); border-bottom: 1.5px dashed rgba(200, 178, 138, 0.4); border-radius: 0; }
+.panel-strip .strip-row + .strip-row { border-top: 1px dotted rgba(200, 178, 138, 0.22); }
+.btn-row { font-weight: 600; font-size: 0.95rem; color: var(--paper); cursor: pointer; }
+.btn-row:hover { background: rgba(232, 220, 192, 0.08); }
+.ink-check {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  cursor: pointer;
+  border: 2px solid var(--paper-2);
+  border-radius: 3px 5px 3px 4px;
+  background-color: rgba(8, 5, 3, 0.4);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 130%;
+}
+.ink-check:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e8dcc0' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.400 12.900c2.200 1.700 3.700 3.500 4.900 5.700 2.700-5.600 6.100-9.500 10.300-12.500'/%3E%3C/svg%3E"); border-color: var(--paper); }
+.ink-check:focus-visible { outline: 2px solid var(--wax-hi); outline-offset: 2px; }
+
+/* ───────── the command bar: a ledger strip with the steps as column labels ───────── */
+.ledger-strip {
+  --trim: var(--moss);
+  background-color: var(--ink-2);
+  background-image: var(--grain-pale);
+  background-size: 240px 240px;
+  border: 2px solid #120c07;
+  border-radius: 4px 8px 4px 9px / 8px 4px 9px 5px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.55);
+}
+.ledger-strip[data-side="p2"] { --trim: var(--wax-hi); }
+.ledger-trim { height: 4px; background: repeating-linear-gradient(90deg, var(--trim) 0 14px, transparent 14px 18px); opacity: 0.9; }
+.turn-plate { padding: 0.05rem 0.6rem; text-align: center; color: var(--ink); background-color: var(--paper); border: 2px solid #120c07; border-radius: 3px 6px 3px 5px; box-shadow: 2px 2px 0 rgba(8, 5, 3, 0.55); transform: rotate(-1.5deg); }
+.turn-plate-label { font-family: var(--font-fell-text), Georgia, serif; font-style: italic; font-size: 0.8rem; line-height: 1.1; color: #3a2d21; }
+.turn-plate-num { font-family: var(--font-fell-text), Georgia, serif; font-size: 1.6rem; line-height: 1; color: var(--ink); }
+.phase-ledger { display: flex; flex-wrap: wrap; align-items: stretch; }
+.phase-ledger li {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.1rem 0.75rem 0.4rem;
+  font-family: var(--font-fell), "IM Fell English SC", Georgia, serif;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  color: var(--paper-3);
+  border-left: 1px solid rgba(200, 178, 138, 0.3);
+}
+.phase-ledger li:first-child { border-left: 0; }
+.phase-ledger li[data-state="done"] { color: #8fc4a5; }
+.phase-ledger li[data-state="now"] { color: var(--paper); }
+.phase-ledger li svg.ink-icon { flex: none; }
+.phase-ink { position: absolute; left: 0.55rem; right: 0.55rem; bottom: 0.1rem; width: auto; height: 8px; overflow: visible; color: var(--wax-hi); }
+.phase-ink path { fill: none; stroke: currentColor; stroke-width: 2.4px; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+/* the underline is written in once when the step starts (only while the game's Motion switch is on) */
+.phase-ink[data-draw="on"] path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: phase-draw 0.5s ease-out forwards; }
+@keyframes phase-draw { to { stroke-dashoffset: 0; } }
+.skip-confirm { color: var(--paper); background: rgba(8, 5, 3, 0.4); border: 2px dashed var(--wax-hi); border-radius: 4px 8px 4px 7px; }
+
+/* ───────── the banner: what to do now ───────── */
+.step-banner { border-width: 2px; border-radius: 5px 9px 5px 8px / 8px 5px 9px 5px; box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.5); }
+.step-icon { display: inline-flex; flex: none; }
+
+/* ───────── the hand tray: felt pressed into the table ───────── */
+section.hand-tray {
+  border: 2px solid #120c07;
+  border-radius: 6px 9px 5px 8px / 8px 5px 9px 6px;
+  background-color: #28311f;
+  background-image: var(--grain-pale), radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.05), transparent 65%);
+  background-size: 240px 240px, 100% 100%;
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.55), inset 0 -1px 0 rgba(232, 220, 192, 0.12), 0 1px 0 rgba(232, 220, 192, 0.1);
+}
+/* a soft lift: the card inside the slot rises a few pixels, the slot (and so the hover and the preview) stays where it is */
+.hand-slot > * { transition: translate 0.15s ease-out; }
+.hand-slot:hover > * { translate: 0 -5px; }
+
+.perf-lite .pl-card, .perf-lite .chat-slip, .perf-lite .log-ledger, .perf-lite .ledger-strip, .perf-lite section.hand-tray, .perf-lite .ink-well-fill { background-image: none; }
+
+/* ───────── swatches: aged dye on cloth, circled in ink when chosen ───────── */
+.swatch-art {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid #120c07;
+  border-radius: 4px 6px 4px 5px / 5px 4px 6px 4px;
+  filter: saturate(0.55) sepia(0.3) brightness(0.93);
+  box-shadow: 2px 2px 0 rgba(8, 5, 3, 0.55);
+}
+.swatch-art::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: var(--grain-dark), repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 4px); background-size: 240px 240px, auto; opacity: 0.55; }
+.swatch-art > * { border-radius: 0; box-shadow: none; }
+.swatch-ring { position: absolute; left: -5px; top: -5px; width: calc(100% + 10px); height: calc(100% + 10px); overflow: visible; pointer-events: none; opacity: 0; }
+.swatch-ring path { fill: none; stroke: var(--wax-hi); stroke-width: 2.4px; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.swatch[data-on="yes"] .swatch-ring { opacity: 1; }
+.swatch[data-on="yes"] .swatch-ring[data-draw="on"] path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: swatch-draw 0.45s ease-out forwards; }
+@keyframes swatch-draw { to { stroke-dashoffset: 0; } }
+.swatch-raw .swatch-art { filter: none; }
+.swatch-raw .swatch-art::after { display: none; }
+.perf-lite .swatch-art { filter: none; }
+.perf-lite .swatch-art::after { display: none; }

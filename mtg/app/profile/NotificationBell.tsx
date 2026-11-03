@@ -1,5 +1,7 @@
 "use client";
 
+import { clipName } from "@/lib/profile";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { playSound } from "@/lib/sound";
 import { acceptRequest, displayName, listLinks, removeLink } from "@/lib/friends";
@@ -149,7 +151,7 @@ export default function NotificationBell({ meId, meName }: { meId: string; meNam
         aria-expanded={open}
         aria-haspopup="dialog"
         title="Notifications"
-        className="relative grid h-[60px] w-[60px] place-items-center rounded-2xl border border-white/25 bg-slate-950/55 text-white shadow-xl shadow-black/40 ring-1 ring-inset ring-white/10 transition hover:-translate-y-0.5 hover:bg-slate-900/70"
+        className="paper-surface paper-card paper-bell relative grid h-[60px] w-[60px] place-items-center rounded-2xl border border-white/25 bg-slate-950/55 text-white shadow-xl shadow-black/40 ring-1 ring-inset ring-white/10 transition hover:-translate-y-0.5 hover:bg-slate-900/70"
       >
         <Handbell width={26} height={26} className={`ink-icon ${unseen.length > 0 ? "text-[#d9694f]" : ""}`} />
         {unseen.length > 0 && (
@@ -188,7 +190,7 @@ export default function NotificationBell({ meId, meName }: { meId: string; meNam
             }
           }}
           onPointerCancel={(e) => ((drag.current = null), (e.currentTarget.style.transform = ""), (e.currentTarget.style.opacity = ""))}
-          className="absolute left-0 top-full z-30 mt-2 w-max max-w-[18rem] cursor-pointer select-none max-md:fixed max-md:inset-x-3 max-md:top-14 max-md:mt-0 max-md:w-auto max-md:max-w-none rounded-xl border border-amber-300/60 bg-slate-950/90 px-3 py-2 text-sm font-semibold text-amber-100 shadow-xl shadow-black/40">
+          className="absolute left-0 top-full z-30 mt-2 w-max max-w-[18rem] cursor-pointer select-none max-md:fixed max-md:inset-x-3 max-md:top-14 max-md:mt-0 max-md:w-auto max-md:max-w-none rounded-xl border border-amber-300/60 bg-slate-950/90 px-3 py-2 text-sm font-semibold text-[#f4e3c0] shadow-xl shadow-black/40">
           🔔 {summary(newest)}
         </div>
       )}
@@ -257,7 +259,7 @@ export default function NotificationBell({ meId, meName }: { meId: string; meNam
                       ) : (
                         <button
                           disabled={busy === i.key || sent.has(i.person.id)}
-                          onClick={() => void run(i.key, async () => ((await inviteFriend(i.person.id, `${meName}'s room`)) ? setSent((s) => new Set(s).add(i.person.id)) : undefined))}
+                          onClick={() => void run(i.key, async () => ((await inviteFriend(i.person.id, `${clipName(meName)}'s room`)) ? setSent((s) => new Set(s).add(i.person.id)) : undefined))}
                           className="btn-gold !px-3 !py-1.5"
                         >
                           {sent.has(i.person.id) ? "Invitation sent ✓" : "Invite to a match"}

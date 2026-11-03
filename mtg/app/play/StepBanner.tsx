@@ -7,6 +7,7 @@ import { MAX_HAND_SIZE, MAX_LANDS_PER_TURN, playerToAct } from "@mtg/engine";
 import type { GameState, PlayerId } from "@mtg/engine";
 import { playerName } from "./log";
 import { ManaText } from "./ManaSymbols";
+import { Binned, Burst, Fan, Hourglass, Leaf, Quill, Shield, Spark, Swords } from "../Icons";
 import { BANNER } from "./theme";
 import type { BannerMode } from "./theme";
 import { shufflePending } from "./shuffleStep";
@@ -23,6 +24,8 @@ interface Props {
   onOpenAbilities: () => void;
 }
 
+const BANNER_ICON = { leaf: Leaf, swords: Swords, shield: Shield, burst: Burst, hourglass: Hourglass, quill: Quill, fan: Fan, binned: Binned } as const;
+
 /** What to do now, in the color of the step, with the last error and the land and ability counters. */
 export default function StepBanner({ state, actor, waiting, error, abilityCount, abilityLocked, onOpenAbilities }: Props) {
   const [help, setHelp] = useState(false); // phones: the hint is one line, and tapping it opens all of it
@@ -30,10 +33,11 @@ export default function StepBanner({ state, actor, waiting, error, abilityCount,
   if (state.winner) return null;
   const b = BANNER[bannerMode(state)];
   const hint = hintFor(state, actor, waiting);
+  const Icon = BANNER_ICON[b.icon];
   return (
-    <div className={`flex shrink-0 items-center gap-2 rounded-xl border px-2.5 py-1 shadow-sm lg:gap-2.5 lg:px-3.5 lg:py-2 ${b.box}`}>
-      <span className="text-xl lg:text-2xl" aria-hidden="true">
-        {b.icon}
+    <div className={`step-banner flex shrink-0 items-center gap-2 border px-2.5 py-1 lg:gap-2.5 lg:px-3.5 lg:py-2 ${b.box}`}>
+      <span className="step-icon" aria-hidden="true">
+        <Icon width={26} height={26} />
       </span>
       <button
         type="button"
@@ -49,7 +53,7 @@ export default function StepBanner({ state, actor, waiting, error, abilityCount,
         <div role="dialog" aria-modal="true" aria-label={b.label} className="game-modal fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-3" onClick={() => setHelp(false)}>
           <div className={`w-full max-w-sm rounded-2xl border p-4 shadow-2xl ${b.box}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2">
-              <span className="text-2xl" aria-hidden="true">{b.icon}</span>
+              <span className="step-icon" aria-hidden="true"><Icon width={26} height={26} /></span>
               <h2 className="font-display text-lg font-extrabold uppercase tracking-widest">{b.label}</h2>
               <button onClick={() => setHelp(false)} aria-label="Close" className="ml-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/30 text-2xl leading-none">×</button>
             </div>
@@ -70,7 +74,7 @@ export default function StepBanner({ state, actor, waiting, error, abilityCount,
               onClick={onOpenAbilities}
               className={`rounded-full px-3 py-1 text-xs font-bold ${abilityCount > 0 ? "bg-emerald-500 text-white shadow ring-2 ring-emerald-300" : "bg-zinc-100 text-zinc-500 ring-1 ring-zinc-300"}`}
             >
-              ⚡<span className="max-lg:sr-only"> Abilities</span>{abilityCount > 0 ? ` (${abilityCount})` : ""}
+              <Spark width={15} height={15} className="ink-icon inline-block align-[-2px]" /><span className="max-lg:sr-only"> Abilities</span>{abilityCount > 0 ? ` (${abilityCount})` : ""}
             </button>
           </Tip>
         )}

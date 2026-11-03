@@ -4,6 +4,7 @@ import type { PlayerId } from "@mtg/engine";
 import { MATS, resolve, SLEEVES, useMatFocusVersion } from "@/lib/playmat";
 import { SleeveBack } from "./AppearanceDialog";
 import MatPreview from "./MatPreview";
+import Swatch from "./Swatch";
 
 /**
  * Choose the card sleeve and the playmat for one player, with a preview of the table. `sleeve` and `mat` are the stored
@@ -30,7 +31,6 @@ export default function LookPicker({
   useMatFocusVersion(); // (moving the mat redraws the preview)
   const s = resolve("sleeve", sleeve, who);
   const m = resolve("mat", mat, who);
-  const ring = (on: boolean) => (on ? "border-[#d9694f] ring-2 ring-[#d9694f]" : "border-white/25 hover:border-white/70");
   const cardH = large ? 88 : 68;
   const cardW = large ? 62 : 48;
 
@@ -51,10 +51,12 @@ export default function LookPicker({
 
       <div>
         <span className={`field-label ${large ? "!text-sm" : ""}`}>Card sleeve</span>
-        <div className={`mt-1.5 flex flex-wrap overflow-y-auto pr-1 ${large ? "gap-2.5" : "max-h-[7.2rem] gap-1.5"}`}>
+        <div className={`mt-1 flex flex-wrap overflow-y-auto p-1.5 ${large ? "gap-2.5" : "max-h-[7.8rem] gap-2"}`}>
           {SLEEVES.map((x) => (
             <button key={x.id} type="button" disabled={disabled} onClick={() => onSleeve(`preset:${x.id}`)} title={x.name} aria-label={`Sleeve: ${x.name}`} aria-pressed={s.id === x.id} className="transition hover:-translate-y-0.5 disabled:opacity-50">
-              <SleeveBack css={x.css} edge={x.edge ?? "#fff"} className={`border-2 ${ring(s.id === x.id)} ${large ? "h-[62px] w-[45px]" : "h-[46px] w-[33px]"}`} />
+              <Swatch on={s.id === x.id} raw={x.css.includes("url(")}>
+                <SleeveBack css={x.css} edge={x.edge ?? "#fff"} className={large ? "h-[62px] w-[45px]" : "h-[46px] w-[33px]"} />
+              </Swatch>
             </button>
           ))}
         </div>
@@ -62,10 +64,12 @@ export default function LookPicker({
 
       <div>
         <span className={`field-label ${large ? "!text-sm" : ""}`}>Playmat</span>
-        <div className={`mt-1.5 flex flex-wrap overflow-y-auto pr-1 ${large ? "gap-2.5" : "max-h-[7.2rem] gap-1.5"}`}>
+        <div className={`mt-1 flex flex-wrap overflow-y-auto p-1.5 ${large ? "gap-2.5" : "max-h-[7.8rem] gap-2"}`}>
           {MATS.map((x) => (
             <button key={x.id} type="button" disabled={disabled} onClick={() => onMat(`preset:${x.id}`)} title={x.name} aria-label={`Playmat: ${x.name}`} aria-pressed={m.id === x.id} className="transition hover:-translate-y-0.5 disabled:opacity-50">
-              <span className={`block rounded-md border-2 ${ring(m.id === x.id)} ${large ? "h-[44px] w-[68px]" : "h-[34px] w-[52px]"}`} style={{ background: x.css }} />
+              <Swatch on={m.id === x.id} raw={x.css.includes("url(")}>
+                <span className={`block ${large ? "h-[44px] w-[68px]" : "h-[34px] w-[52px]"}`} style={{ background: x.css }} />
+              </Swatch>
             </button>
           ))}
         </div>

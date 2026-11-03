@@ -65,8 +65,9 @@ async function play(i: number) {
   });
   room.onMessage("start", (m: { view: GameState }) => ((view = m.view), stats.started++, act()));
   room.onMessage("update", (m: { view: GameState }) => ((view = m.view), act()));
-  room.onMessage("error", () => stats.errors++);
+  room.onMessage("error", (m: { message?: string }) => { stats.errors++; if (process.env.SHOW_ERRORS && stats.errors < 4) console.log("error from server:", m?.message); });
   room.onMessage("*" as never, () => {});
+  room.send("format", { bestOf: 1 });
   setTimeout(() => room.send("startVote"), 500);
   room.onMessage("closed", () => {});
 }

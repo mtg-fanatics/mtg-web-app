@@ -6,6 +6,9 @@ import { playerName } from "./log";
 import { PLAYER_STYLE } from "./theme";
 import { shufflePending } from "./shuffleStep";
 import Tip from "./Tip";
+import { Tick } from "../Icons";
+import { useAnimationsOn } from "@/lib/motion";
+import "./ledger.css";
 
 const PHASES = [
   ["mulligan", "Mulligan"],
@@ -114,17 +117,17 @@ interface Props {
 export default function CommandBar({ state, actor, mine, primary, skipping, confirmSkip, onConfirmSkip, onAct, noCombatYet, showEndTurn, onlyLandsLeft, onEndTurn, series }: Props) {
   const mulligansTaken = state.opening?.taken[actor] ?? 0;
   return (
-    <section className={`shrink-0 overflow-hidden rounded-xl border bg-white shadow-md ${PLAYER_STYLE[actor].border}`}>
-      <div className={`h-1 bg-gradient-to-r ${PLAYER_STYLE[actor].gradient}`} />
+    <section data-side={actor} className="ledger-strip shrink-0 overflow-hidden">
+      <div className="ledger-trim" aria-hidden="true" />
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-2 py-1 lg:gap-y-1.5 lg:px-3 lg:py-1.5">
         <div className="flex items-center gap-2">
-          <div className="rounded-lg bg-slate-900 px-2.5 py-0.5 text-center text-white shadow">
-            <div className="text-[8px] uppercase font-display tracking-widest text-zinc-400">Turn</div>
-            <div className="text-lg font-extrabold leading-none">{state.turn}</div>
+          <div className="turn-plate">
+            <div className="turn-plate-label">Turn</div>
+            <div className="turn-plate-num">{state.turn}</div>
           </div>
           <div className="leading-tight max-lg:hidden">
-            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${PLAYER_STYLE[actor].chip}`}>{playerName(actor)}</span>
-            <div className="mt-0.5 text-xs font-semibold text-zinc-800">{PHASE_TEXT[state.phase] ?? "to act"}</div>
+            <span className="pl-name text-[15px]">{playerName(actor)}</span>
+            <div className="mt-0.5 text-[13px] font-semibold text-zinc-800">{PHASE_TEXT[state.phase] ?? "to act"}</div>
           </div>
         </div>
         {series && (
@@ -150,7 +153,7 @@ export default function CommandBar({ state, actor, mine, primary, skipping, conf
             ))}
           {showEndTurn && !state.winner && (
             <Tip text={onlyLandsLeft ? "Nothing but lands left to play: skip the rest of this turn and pass it to your opponent." : "Skip the rest of this turn and pass it to your opponent."}>
-              <button onClick={onEndTurn} className="rounded-xl border-2 border-zinc-300 bg-white px-3 py-1 text-sm font-semibold text-zinc-700 max-lg:min-h-11 transition hover:border-zinc-400 hover:bg-zinc-50">
+              <button onClick={onEndTurn} className="btn-ghost !px-3 !py-1 !text-sm max-lg:min-h-11">
                 {onlyLandsLeft ? "Pass turn" : "End turn"}
               </button>
             </Tip>
@@ -160,7 +163,7 @@ export default function CommandBar({ state, actor, mine, primary, skipping, conf
               <button
                 onClick={() => onAct({ type: "mulligan" })}
                 disabled={mulligansTaken >= MAX_MULLIGANS}
-                className="rounded-xl border-2 border-indigo-300 bg-white px-3 py-1 text-sm font-semibold text-indigo-800 max-lg:min-h-11 transition hover:bg-indigo-50 disabled:opacity-40"
+                className="btn-ghost !px-3 !py-1 !text-sm max-lg:min-h-11"
               >
                 Mulligan
               </button>
@@ -176,17 +179,19 @@ export default function CommandBar({ state, actor, mine, primary, skipping, conf
 function PhaseSteps({ phase }: { phase: GameState["phase"] }) {
   const steps = PHASES.filter(([id]) => id !== "mulligan" || phase === "mulligan");
   const at = steps.findIndex(([id]) => id === phase);
+  const draw = useAnimationsOn();
+  // The steps are the column labels of a ledger: thin rules between them, the ones behind us ticked, and an ink stroke under the one we are in.
   return (
-    <ol className="flex flex-wrap items-center gap-1 text-xs">
+    <ol className="phase-ledger">
       {steps.map(([id, label], i) => (
-        <li
-          key={id}
-          className={`font-display flex items-center gap-1 rounded-full px-2 py-0.5 text-[12.5px] font-semibold tracking-wide transition ${
-            i === at ? "bg-amber-400 text-black shadow ring-2 ring-amber-300" : i < at ? "bg-emerald-100 text-emerald-700 max-lg:hidden" : "bg-zinc-100 text-zinc-400 max-lg:hidden"
-          }`}
-        >
-          {i < at && <span aria-hidden="true">✓</span>}
+        <li key={id} aria-current={i === at ? "step" : undefined} data-state={i === at ? "now" : i < at ? "done" : "next"} className={i === at ? "" : "max-lg:hidden"}>
+          {i < at && <Tick width={13} height={13} aria-hidden="true" />}
           {label}
+          {i === at && (
+            <svg key={phase} className="phase-ink" data-draw={draw ? "on" : "off"} viewBox="0 0 60 8" preserveAspectRatio="none" aria-hidden="true">
+              <path pathLength={1} d="M2 5.200C14 2.600 26 6.400 38 3.800s14 .6 20-.8" />
+            </svg>
+          )}
         </li>
       ))}
     </ol>
@@ -198,7 +203,7 @@ function PrimaryButton({ primary, tip, disabled, onClick }: { primary: Primary; 
     <button
       onClick={onClick}
       disabled={disabled}
-      className="rounded-xl bg-gradient-to-b from-amber-300 to-amber-500 px-4 py-2 text-sm font-extrabold max-lg:min-h-11 text-black shadow-md shadow-amber-500/40 transition hover:-translate-y-0.5 hover:shadow-lg active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:translate-y-0"
+      className="btn-gold !px-4 !py-2 !text-sm max-lg:min-h-11"
     >
       {primary.label}
     </button>
@@ -215,12 +220,12 @@ function SkipConfirm({ state, actor, onYes, onBack }: { state: GameState; actor:
     return n + (perm ? Math.max(0, powerOf(state, perm)) : 0);
   }, 0);
   return (
-    <span role="group" aria-label={blocking ? "No blocks?" : "Skip attack?"} className="flex flex-wrap items-center gap-2 rounded-xl border-2 border-amber-400 bg-amber-50 px-2 py-1 text-sm font-semibold text-amber-900">
+    <span role="group" aria-label={blocking ? "No blocks?" : "Skip attack?"} className="skip-confirm flex flex-wrap items-center gap-2 px-2 py-1 text-sm font-semibold">
       {blocking ? `No blocks? You'll take ${incoming} damage.` : "Skip attack? Your creatures won't attack this turn."}
-      <button onClick={onYes} className="rounded-lg bg-gradient-to-b from-amber-300 to-amber-500 px-3 py-1 font-extrabold text-black">
+      <button onClick={onYes} className="btn-gold !px-3 !py-1 !text-sm">
         {blocking ? "Yes, no blocks" : "Yes, skip"}
       </button>
-      <button onClick={onBack} className="rounded-lg border border-zinc-400 bg-white px-3 py-1 hover:bg-zinc-100">
+      <button onClick={onBack} className="btn-link !px-2 !py-1 !text-sm">
         Back
       </button>
     </span>

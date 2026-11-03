@@ -1,0 +1,195 @@
+/*
+ * INKFALL: the card album (see Album.tsx).
+ *
+ * Everything is measured in cqw, a hundredth of the book's own width, so the book looks the same at any size: it fills the room it is given
+ * (the largest book of its shape that fits, never scrolling) and the cards inside it are sized from the same unit through --card-h.
+ * Colours and paper come from the book tokens in book.css and the grain textures in inkfall.css.
+ */
+
+.alb-fit { flex: 1 1 0; min-height: 0; min-width: 0; display: grid; place-items: center; container-type: size; }
+.alb { --aspect: 1.5; position: relative; width: min(100cqw, calc(100cqh * var(--aspect))); aspect-ratio: var(--aspect); container-type: inline-size; }
+.alb[data-mode="single"] { --aspect: 0.8; }
+
+/* ───────── the cover and the block of pages ───────── */
+.alb-cover {
+  position: absolute;
+  inset: 0;
+  border-radius: 1.6cqw;
+  background-color: #3a2519;
+  background-image: var(--grain-pale), linear-gradient(180deg, #4a3220, #26170e);
+  background-size: 240px 240px, 100% 100%;
+  border: 2px solid #120a05;
+  box-shadow: 0 1.4cqw 2.6cqw rgba(0, 0, 0, 0.55), inset 0 0 0 0.2cqw rgba(201, 169, 110, 0.12);
+}
+.alb-cover::before { content: ""; position: absolute; inset: 0.9cqw; border: 0.22cqw dashed rgba(201, 169, 110, 0.5); border-radius: 1cqw; }
+.alb-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 0 0, rgba(140, 104, 68, 0.5), transparent 3.6cqw),
+    radial-gradient(circle at 100% 100%, rgba(140, 104, 68, 0.4), transparent 3.4cqw),
+    radial-gradient(circle at 100% 0, rgba(140, 104, 68, 0.22), transparent 2.6cqw);
+}
+.alb-pages { position: absolute; left: 3cqw; right: 3cqw; top: 2.4cqw; bottom: 3.2cqw; }
+
+/* the edges of the leaves: a few uneven sheets on the left, right and bottom, drawn as offset copies of the block of pages (so the corners join). The left stack
+   grows (and the right one shrinks) as you go further in. */
+.alb { --tl: calc(0.3cqw + var(--prog, 0) * 0.6cqw); --tr: calc(0.3cqw + (1 - var(--prog, 0)) * 0.6cqw); --tb: 0.7cqw; }
+.alb-stack-box {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5cqw;
+  pointer-events: none;
+  box-shadow:
+    calc(var(--tr) * 0.2) calc(var(--tb) * 0.2) 0 0 #d6c59f, calc(var(--tl) * -0.2) calc(var(--tb) * 0.2) 0 0 #d6c59f,
+    calc(var(--tr) * 0.4) calc(var(--tb) * 0.4) 0 0 #c7b38a, calc(var(--tl) * -0.4) calc(var(--tb) * 0.4) 0 0 #c7b38a,
+    calc(var(--tr) * 0.6) calc(var(--tb) * 0.6) 0 0 #d3c19a, calc(var(--tl) * -0.6) calc(var(--tb) * 0.6) 0 0 #d3c19a,
+    calc(var(--tr) * 0.8) calc(var(--tb) * 0.8) 0 0 #c4af86, calc(var(--tl) * -0.8) calc(var(--tb) * 0.8) 0 0 #c4af86,
+    var(--tr) var(--tb) 0 0 #cfbb92, calc(var(--tl) * -1) var(--tb) 0 0 #cfbb92,
+    var(--tr) var(--tb) 0 0.08cqw rgba(70, 45, 20, 0.5), calc(var(--tl) * -1) var(--tb) 0 0.08cqw rgba(70, 45, 20, 0.5);
+}
+
+/* ───────── the pages ─────────
+   Every page is the same box (the right half of the book) and a role moves it: R stays, L is shifted left, and the ones waiting are shifted or turned
+   to sit under or behind them. A turn animates the transform of the two that move; at its end the roles pass on and each page lands on a transform
+   that is exactly the one its new role gives it. */
+.alb-sheets { position: absolute; inset: 0; transition: opacity 0.16s ease-out; animation: alb-in 0.22s ease-out both; }
+.alb-sheets[data-fade="out"] { opacity: 0; }
+.alb-sheets[data-busy="yes"] { opacity: 0.6; }
+.alb[data-turning] .alb-sheets { perspective: 160cqw; }
+@keyframes alb-in { from { opacity: 0; } to { opacity: 1; } }
+
+.alb-page, .alb-blank {
+  background-color: var(--book-page);
+  background-image: var(--fibres), linear-gradient(90deg, var(--book-page-hi), var(--book-page) 58%, var(--book-page-lo) 92%, var(--book-gutter));
+  background-size: 300px 300px, 100% 100%;
+  box-shadow: inset 0 0 4.4cqw rgba(122, 75, 28, 0.34);
+}
+.alb-page[data-side="r"], .alb-blank[data-side="r"] { background-image: var(--fibres), linear-gradient(270deg, var(--book-page-hi), var(--book-page) 58%, var(--book-page-lo) 92%, var(--book-gutter)); border-radius: 0 0.5cqw 0.5cqw 0; }
+.alb-page[data-side="l"], .alb-blank[data-side="l"] { border-radius: 0.5cqw 0 0 0.5cqw; }
+.alb-blank { position: absolute; top: 0; bottom: 0; width: 50%; }
+.alb-blank[data-side="l"] { left: 0; }
+.alb-blank[data-side="r"] { left: 50%; }
+.alb[data-mode="single"] .alb-blank { left: 0; width: 100%; border-radius: 0 0.5cqw 0.5cqw 0; }
+.alb-page { position: absolute; top: 0; bottom: 0; left: 50%; width: 50%; overflow: hidden; transform-origin: left center; backface-visibility: hidden; -webkit-backface-visibility: hidden; contain: layout paint style; }
+.alb[data-mode="single"] .alb-page { left: 0; width: 100%; }
+.alb-page[data-role="L"], .alb-page[data-role="R"], .alb-page[data-role="P"] { z-index: 3; }
+.alb-page[data-role="UN"], .alb-page[data-role="UP"], .alb-page[data-role="N"] { z-index: 2; pointer-events: none; }
+.alb-page[data-role="NL"], .alb-page[data-role="PR"], .alb-page[data-role="V"] { z-index: 4; pointer-events: none; }
+.alb-page[data-role="far"] { visibility: hidden; z-index: 0; pointer-events: none; }
+.alb-page[data-role="L"], .alb-page[data-role="UP"] { transform: translateX(-100%); }
+.alb-page[data-role="NL"] { transform: translateX(50%) rotateY(180deg) translateX(-50%); }
+.alb-page[data-role="PR"] { transform: translateX(-100%) translateX(50%) rotateY(180deg) translateX(-50%); }
+.alb-page[data-role="V"] { transform: rotateY(-105deg); opacity: 0; }
+
+/* ───────── the cards on a page: a 3 x 3 grid, each in its own pocket ───────── */
+.alb-grid { position: absolute; inset: 2.6cqw 3cqw 5.2cqw; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); --card-h: 13.6cqw; }
+.alb[data-mode="single"] .alb-grid { inset: 4cqw 5cqw 9cqw; --card-h: 28cqw; }
+.alb-slot { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0.7cqw; min-width: 0; min-height: 0; }
+.alb[data-mode="single"] .alb-slot { padding: 1.4cqw; }
+/* the pocket: slightly sunk into the page, with a photo-corner mount at each corner */
+.alb-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0.2cqw;
+  border-radius: 0.5cqw;
+  background:
+    linear-gradient(135deg, var(--mount) 50%, transparent 50%) top left / 1cqw 1cqw no-repeat,
+    linear-gradient(225deg, var(--mount) 50%, transparent 50%) top right / 1cqw 1cqw no-repeat,
+    linear-gradient(45deg, var(--mount) 50%, transparent 50%) bottom left / 1cqw 1cqw no-repeat,
+    linear-gradient(315deg, var(--mount) 50%, transparent 50%) bottom right / 1cqw 1cqw no-repeat,
+    rgba(110, 76, 38, 0.1);
+  --mount: rgba(96, 64, 30, 0.6);
+  border: 0.1cqw solid rgba(90, 60, 28, 0.32);
+  box-shadow: inset 0.25cqw 0.35cqw 0.8cqw rgba(60, 32, 10, 0.34), 0.1cqw 0.15cqw 0 rgba(255, 248, 225, 0.4);
+}
+.alb[data-mode="single"] .alb-slot::before { background-size: 2cqw 2cqw, 2cqw 2cqw, 2cqw 2cqw, 2cqw 2cqw, auto; }
+.alb-slot > .card-tile { position: relative; z-index: 1; gap: 0.35cqw; min-width: 0; }
+.alb-slot .card-tile:hover { transform: translateY(-0.4cqw) scale(1.03); }
+/* waiting for a page's cards: a card-shaped shimmer in the pocket, tinted to sit on paper */
+.alb-wait { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0.35cqw; }
+.alb-wait .skeleton { background-color: rgba(96, 64, 30, 0.3); }
+.alb-wait-caption { width: 8cqw; height: max(11px, 1.4cqw); border-radius: 0.4cqw !important; }
+.alb[data-mode="single"] .alb-wait-caption { width: 18cqw; height: max(12px, 3cqw); }
+/* the label under a card, as if written in ink on the page */
+.alb-caption { font-family: var(--font-fell-text), Georgia, serif; font-style: italic; font-size: max(11px, 1.4cqw); line-height: 1.1; color: #382818; white-space: nowrap; }
+.alb[data-mode="single"] .alb-caption { font-size: max(12px, 3cqw); }
+.alb-caption[data-playable="no"] { color: #6a3322; }
+
+/* ───────── page numbers, and the curled corners that turn the page ───────── */
+.alb-folio { position: absolute; bottom: 1cqw; z-index: 4; padding: 0.1cqw 0.7cqw; font-family: var(--font-alegreya), sans-serif; font-weight: 600; font-style: italic; font-size: max(12px, 1.7cqw); color: #382818; background: none; border: 0; cursor: pointer; text-decoration: underline dotted rgba(56, 40, 24, 0.5); text-underline-offset: 0.3cqw; }
+.alb-folio:disabled { cursor: default; text-decoration: none; }
+.alb-page[data-side="l"] .alb-folio { left: 5.5cqw; }
+.alb-page[data-side="r"] .alb-folio { right: 5.5cqw; }
+.alb[data-mode="single"] .alb-folio { left: 50%; right: auto; transform: translateX(-50%); bottom: 2cqw; font-size: max(13px, 3.6cqw); }
+.alb-folio-edit input { width: 7cqw; min-width: 3.4rem; font: inherit; text-align: center; color: #2a1d12; background: rgba(255, 250, 235, 0.7); border: 0.15cqw solid #7d2219; border-radius: 0.4cqw; }
+.alb-folio-edit { text-decoration: none; }
+.alb-edge { position: absolute; top: 0; bottom: 0; width: 2.2cqw; z-index: 4; padding: 0; background: transparent; border: 0; cursor: pointer; }
+.alb-edge-l { left: 0; }
+.alb-edge-r { right: 0; }
+.alb-edge:hover:not(:disabled) { background: linear-gradient(90deg, rgba(255, 248, 225, 0.22), transparent); }
+.alb-edge-r:hover:not(:disabled) { background: linear-gradient(270deg, rgba(255, 248, 225, 0.22), transparent); }
+.alb-edge:disabled, .alb-corner:disabled { cursor: default; opacity: 0.35; }
+/* the corner buttons are only a place to click (nothing drawn); the curl you see is part of each page, so it goes with the page when it turns */
+.alb-corner { position: absolute; bottom: 0; z-index: 7; width: 5cqw; height: 5cqw; padding: 0; border: 0; background: none; cursor: pointer; }
+.alb-corner-r { right: 0; }
+.alb-corner-l { left: 0; }
+.alb-curl { position: absolute; bottom: 0; z-index: 3; display: none; width: 5cqw; height: 5cqw; pointer-events: none; transition: transform 0.15s ease-out; filter: drop-shadow(0.2cqw -0.2cqw 0.3cqw rgba(60, 35, 12, 0.35)); }
+.alb-curl-r { right: 0; background: linear-gradient(135deg, transparent 50%, #b3a075 50%, #e9dbb6 64%, #d2c096); border-radius: 0 0 0.5cqw 0; transform-origin: 100% 100%; }
+.alb-curl-l { left: 0; background: linear-gradient(225deg, transparent 50%, #b3a075 50%, #e9dbb6 64%, #d2c096); border-radius: 0 0 0 0.5cqw; transform-origin: 0 100%; }
+.alb-page[data-side="r"] .alb-curl-r, .alb-page[data-side="l"] .alb-curl-l, .alb[data-mode="single"] .alb-curl { display: block; }
+.alb:has(.alb-corner-r:disabled) .alb-curl-r, .alb:has(.alb-corner-l:disabled) .alb-curl-l { display: none; }
+.alb:has(.alb-corner-r:hover:not(:disabled)) .alb-page[data-role="R"] .alb-curl-r, .alb:has(.alb-corner-r:hover:not(:disabled)) .alb-page[data-role="P"] .alb-curl-r { transform: scale(1.25); }
+.alb:has(.alb-corner-l:hover:not(:disabled)) .alb-page[data-role="L"] .alb-curl-l, .alb:has(.alb-corner-l:hover:not(:disabled)) .alb-page[data-role="P"] .alb-curl-l { transform: scale(1.25); }
+.alb[data-mode="single"] .alb-corner, .alb[data-mode="single"] .alb-edge-l { /* a narrow screen: the same two ways to turn, a little bigger */ width: 9cqw; height: 9cqw; }
+.alb[data-mode="single"] .alb-edge-l { height: auto; width: 4cqw; }
+.alb:has(.alb-corner:focus-visible), .alb-corner:focus-visible, .alb-edge:focus-visible, .alb-folio:focus-visible { outline: 2px solid var(--wax-hi, #d9694f); outline-offset: 2px; }
+
+/* ───────── the leaves that turn ───────── */
+/* (the two pages that are about to move get their own layers a moment before, while the book waits for the next pages to be ready) */
+.alb[data-prep="1"] .alb-page[data-role="R"], .alb[data-prep="1"] .alb-page[data-role="NL"], .alb[data-prep="-1"] .alb-page[data-role="L"], .alb[data-prep="-1"] .alb-page[data-role="PR"], .alb[data-prep] .alb-page[data-role="P"], .alb[data-prep] .alb-page[data-role="V"] { will-change: transform; }
+.alb[data-turning] .alb-page[data-role="R"], .alb[data-turning] .alb-page[data-role="NL"], .alb[data-turning] .alb-page[data-role="L"], .alb[data-turning] .alb-page[data-role="PR"], .alb[data-turning] .alb-page[data-role="P"], .alb[data-turning] .alb-page[data-role="V"] { animation-duration: var(--dur); animation-timing-function: ease-in-out; animation-fill-mode: forwards; will-change: transform; }
+.alb[data-turning="1"] .alb-page[data-role="R"] { animation-name: alb-pg-r-next; }
+.alb[data-turning="1"] .alb-page[data-role="NL"] { animation-name: alb-pg-nl-next; }
+.alb[data-turning="-1"] .alb-page[data-role="L"] { animation-name: alb-pg-l-prev; }
+.alb[data-turning="-1"] .alb-page[data-role="PR"] { animation-name: alb-pg-pr-prev; }
+/* on a narrow screen there is one page: it swings off the spine and fades (going forward), or swings back onto the page (going back) */
+.alb[data-turning="1"] .alb-page[data-role="P"] { animation-name: alb-pg-p-next; }
+.alb[data-turning="-1"] .alb-page[data-role="V"] { animation-name: alb-pg-v-prev; }
+/* (each keyframe lists the same functions in the same order, so they are worked out one by one and never guessed from a matrix) */
+@keyframes alb-pg-r-next { 0% { transform: translateZ(0) rotateY(0) skewY(0); } 50% { transform: translateZ(1.4cqw) rotateY(-90deg) skewY(-2.4deg); } 100% { transform: translateZ(0) rotateY(-180deg) skewY(0); } }
+@keyframes alb-pg-nl-next { 0% { transform: translateZ(0) rotateY(0) skewY(0) translateX(50%) rotateY(180deg) translateX(-50%); } 50% { transform: translateZ(1.4cqw) rotateY(-90deg) skewY(-2.4deg) translateX(50%) rotateY(180deg) translateX(-50%); } 100% { transform: translateZ(0) rotateY(-180deg) skewY(0) translateX(50%) rotateY(180deg) translateX(-50%); } }
+@keyframes alb-pg-l-prev { 0% { transform: translateZ(0) rotateY(0) skewY(0) translateX(-100%); } 50% { transform: translateZ(1.4cqw) rotateY(90deg) skewY(2.4deg) translateX(-100%); } 100% { transform: translateZ(0) rotateY(180deg) skewY(0) translateX(-100%); } }
+@keyframes alb-pg-pr-prev { 0% { transform: translateZ(0) rotateY(0) skewY(0) translateX(-100%) translateX(50%) rotateY(180deg) translateX(-50%); } 50% { transform: translateZ(1.4cqw) rotateY(90deg) skewY(2.4deg) translateX(-100%) translateX(50%) rotateY(180deg) translateX(-50%); } 100% { transform: translateZ(0) rotateY(180deg) skewY(0) translateX(-100%) translateX(50%) rotateY(180deg) translateX(-50%); } }
+@keyframes alb-pg-p-next { 0% { transform: rotateY(0); opacity: 1; } 55% { opacity: 1; } 100% { transform: rotateY(-105deg); opacity: 0; } }
+@keyframes alb-pg-v-prev { 0% { transform: rotateY(-105deg); opacity: 0; } 45% { opacity: 1; } 100% { transform: rotateY(0); opacity: 1; } }
+
+/* a soft highlight sweeps across the paper as a leaf turns (no dark shading: it only made a murky band when the leaf passed the spine) */
+.alb-sheen { position: absolute; inset: 0; pointer-events: none; opacity: 0; transform: translateX(-120%); animation-duration: var(--dur); animation-fill-mode: forwards; animation-timing-function: linear; background: linear-gradient(100deg, transparent 36%, rgba(255, 250, 232, 0.5) 50%, transparent 64%); }
+.alb[data-turning="1"] .alb-page[data-role="R"] .alb-sheen, .alb[data-turning="-1"] .alb-page[data-role="L"] .alb-sheen { animation-name: alb-sheen-f; }
+.alb[data-turning="1"] .alb-page[data-role="NL"] .alb-sheen, .alb[data-turning="-1"] .alb-page[data-role="PR"] .alb-sheen { animation-name: alb-sheen-b; }
+@keyframes alb-sheen-f { 0% { transform: translateX(-120%); opacity: 0; } 20% { opacity: 0.9; } 50%, 100% { transform: translateX(120%); opacity: 0; } }
+@keyframes alb-sheen-b { 0%, 50% { transform: translateX(-120%); opacity: 0; } 70% { opacity: 0.9; } 100% { transform: translateX(120%); opacity: 0; } }
+
+/* while a leaf is turning, the cards ignore the mouse (nothing hovers or clicks by mistake) */
+.alb[data-turning] .alb-page { pointer-events: none; }
+
+/* a computer that needs the cheaper effects: no light and shade on the leaf */
+.perf-lite .alb-sheen { display: none; }
+
+/* ───────── the strip above the book: a leather band with a ribbon marker ───────── */
+.album-strip {
+  position: relative;
+  color: var(--paper);
+  background-color: var(--ink-2);
+  background-image: var(--grain-pale), linear-gradient(180deg, rgba(255, 220, 160, 0.06), rgba(0, 0, 0, 0.18));
+  background-size: 240px 240px, 100% 100%;
+  border: 2px solid #120c07;
+  border-radius: 4px 9px 5px 10px / 9px 5px 10px 4px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.55);
+  outline: 1.5px dashed rgba(200, 178, 138, 0.3);
+  outline-offset: -6px;
+}
+.album-strip::after { content: ""; position: absolute; right: 2.4rem; top: 100%; width: 0.9rem; height: 1.3rem; background: linear-gradient(90deg, #6a2820, #8a3328 50%, #632019); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%); pointer-events: none; }

@@ -41,7 +41,7 @@ export default function HandRow({ state, actor, mine, playable, exiled = [], han
     const def = state.cards[c.defId];
     const notes = exiled.includes(c) ? { castable: true, castLabel: "✓ From exile", hint: exileHint(state, actor, c.iid) } : handNotes(state, actor, c.iid, c.defId, playable.has(c.iid));
     return (
-      <div key={c.iid} className="shrink-0" onMouseEnter={(e) => onPreview(def, e.currentTarget)} onMouseLeave={onUnpreview}>
+      <div key={c.iid} className="hand-slot shrink-0" onMouseEnter={(e) => onPreview(def, e.currentTarget)} onMouseLeave={onUnpreview}>
         <CardView
           iid={c.iid}
           def={def}

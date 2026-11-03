@@ -1,6 +1,7 @@
 import Logo from "./Logo";
 import Link from "next/link";
-import LiveWallpaper from "./LiveWallpaper";
+import BookBackdrop from "./BookBackdrop";
+import "./paper.css";
 import Lobby from "./lobby/Lobby";
 import FriendsPanel from "./friends/FriendsPanel";
 import ProfileButton from "./profile/ProfileButton";
@@ -9,12 +10,12 @@ import { Fan, Scribble, Tome } from "./Icons";
 
 export default function Home() {
   return (
-    <main className="relative flex flex-1 flex-col items-center justify-center gap-7 overflow-x-clip p-5 text-white max-md:justify-start max-md:gap-5 max-md:pt-3 sm:p-8">
-      <LiveWallpaper />
+    <main className="book-page relative flex flex-1 flex-col items-center justify-center gap-7 overflow-x-clip p-5 text-white max-md:justify-start max-md:gap-5 max-md:pt-3 sm:p-8">
+      <BookBackdrop />
       <ProfileButton />
       <FriendsPanel />
       <Lobby />
-      <section className="relative flex flex-col items-center gap-5 text-center">
+      <section className="hero-page paper-surface paper-title relative flex flex-col items-center gap-5 text-center">
         {/* on a phone the seal and the title give way to the buttons (the name is in the top bar) */}
         <div className="flex flex-col items-center gap-3 max-md:hidden">
           <div className="hero-scrim" aria-hidden="true" />
@@ -30,7 +31,7 @@ export default function Home() {
             Write a deck. Take a seat. The ink is still wet.
           </p>
         </div>
-        <div className="hero-rise mt-2 flex flex-wrap justify-center gap-4" style={{ animationDelay: "0.24s" }}>
+        <div className="hero-rise mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-3" style={{ animationDelay: "0.24s" }}>
           <CreateRoomButton />
           <Link href="/decks" className="hero-btn">
             <Tome />

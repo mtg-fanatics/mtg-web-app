@@ -20,7 +20,7 @@ import {
   sendRequest,
 } from "@/lib/friends";
 import type { Link, Person } from "@/lib/friends";
-import { loadMe } from "@/lib/profile";
+import { loadMe, clipName } from "@/lib/profile";
 import { inviteFriend, useOnline, watchFriends } from "@/lib/online/session";
 import type { FriendStatus } from "@/lib/online/protocol";
 import WatchButton from "../lobby/WatchButton";
@@ -185,7 +185,7 @@ export default function FriendsPanel() {
   async function invite(friendId: string) {
     setInviting(friendId);
     try {
-      if (await inviteFriend(friendId, `${meName}'s room`)) {
+      if (await inviteFriend(friendId, `${clipName(meName)}'s room`)) {
         setInvited((list) => [...list, friendId]);
         setTimeout(() => setInvited((list) => list.filter((id) => id !== friendId)), 6000);
       }
@@ -210,9 +210,9 @@ export default function FriendsPanel() {
       {sheet && <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={() => setSheet(false)} aria-hidden="true" />}
       <section
         aria-label="Friends"
-        className={`panel-glass z-10 flex w-full max-w-[20rem] flex-col gap-2.5 self-start p-3.5 text-white ${
+        className={`paper-surface paper-ledger panel-glass z-10 flex w-full max-w-[20rem] flex-col gap-2.5 self-start p-3.5 text-white ${
           sheet ? "max-md:fixed max-md:inset-x-3 max-md:top-14 max-md:z-50 max-md:max-h-[80dvh] max-md:w-auto max-md:!max-w-none max-md:overflow-y-auto max-md:!bg-[#0b1020] max-md:!backdrop-blur-none" : "max-md:hidden"
-        } xl:fixed xl:left-4 xl:top-[7.6rem] xl:max-h-[calc(100dvh-9rem)]`}
+        } xl:fixed xl:left-12 xl:top-[10.6rem] xl:max-h-[calc(100dvh-17.5rem)]`}
       >
         <header className="flex items-center gap-2">
           <button

@@ -178,7 +178,8 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== "Space" || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
       const t = e.target as HTMLElement | null;
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(t.tagName))) return; // (space on a focused button or a text box keeps its own meaning)
+      // (space in a text box, or on a button reached with the keyboard, keeps its own meaning; a button that was only clicked with the mouse still holds focus, and must not swallow it)
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || (/^(BUTTON|A)$/.test(t.tagName) && t.matches(":focus-visible")))) return;
       if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return; // (a pop-up is open: it is asking something else)
       if (!spacePass.current) return;
       e.preventDefault();
@@ -884,7 +885,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
       style={{ "--bf-image": background.css, "--bf-dim": background.dim } as React.CSSProperties}
     >
       {/* Left: players, chat, log */}
-      <aside className="contents lg:flex lg:min-h-0 lg:flex-col lg:gap-2 lg:overflow-y-auto">
+      <aside className="contents lg:flex lg:min-h-0 lg:flex-col lg:gap-2 lg:overflow-y-auto lg:overflow-x-hidden">
         {/* On a phone these are a menu that covers the board; on a big screen they are the left column. */}
         <div className={`${menuOpen ? "fixed inset-x-0 bottom-0 top-[2.6rem] z-40 flex flex-col gap-2 overflow-y-auto bg-slate-950/95 p-3" : "hidden"} lg:contents`}>
         <div className="flex items-center justify-between lg:hidden">
@@ -897,14 +898,14 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
         {fullscreen.available && (
           <button
             onClick={fullscreen.toggle}
-            className="flex w-full items-center justify-between rounded-xl border border-white/40 bg-slate-950/55 px-3 py-2 text-left font-display text-xs font-bold uppercase tracking-wide text-white shadow-sm hover:bg-slate-900/70"
+            className="panel-strip btn-row flex w-full items-center justify-between px-3 py-2 text-left"
           >
             <span>⛶ {fullscreen.on ? "Leave full screen" : "Full screen"}</span>
           </button>
         )}
         {!watching && (
-          <div className="flex flex-col gap-1 rounded-xl border border-white/40 bg-slate-950/55 px-3 py-2 text-white" role="group" aria-label="Priority stops">
-            <span className="font-display text-xs font-bold uppercase tracking-wide">Stop for priority</span>
+          <div className="panel-strip flex flex-col gap-0.5 px-3 py-2" role="group" aria-label="Priority stops">
+            <span className="panel-title">Stop for priority</span>
             {(
               [
                 ["attack", "When I am attacked"],
@@ -912,9 +913,9 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
                 ["block", "After blocks"],
               ] as const
             ).map(([key, label]) => (
-              <label key={key} className="flex min-h-9 cursor-pointer items-center justify-between gap-2 text-sm">
+              <label key={key} className="strip-row flex min-h-9 cursor-pointer items-center justify-between gap-2 text-[15px]">
                 <span>{label}</span>
-                <input type="checkbox" checked={stops[key]} onChange={(e) => setStop(key, e.target.checked)} className="h-5 w-5 accent-amber-400" />
+                <input type="checkbox" checked={stops[key]} onChange={(e) => setStop(key, e.target.checked)} className="ink-check" />
               </label>
             ))}
           </div>
@@ -932,7 +933,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
           <KeepRandomDecks decks={{ [actor]: playedDecks[actor] }} saved={savedDecks} onSaved={keepDeck} label={() => "Save my random deck"} />
         </div>
         {!watching && !state.winner && (
-          <button onClick={() => (setMenuOpen(false), setResigning(actor))} className="rounded-xl border border-red-400/60 bg-red-950/40 px-3 py-2.5 text-sm font-bold text-red-200 lg:hidden">
+          <button onClick={() => (setMenuOpen(false), setResigning(actor))} className="btn-resign !py-2.5 lg:hidden">
             Resign
           </button>
         )}

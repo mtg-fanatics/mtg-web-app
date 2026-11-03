@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 // A player's profile: name, picture, and win / loss record. All of it belongs to the signed-in account.
@@ -28,7 +29,35 @@ export async function saveNickname(me: string, text: string): Promise<string | n
   if (error) {
     throw new Error(/column|schema cache/i.test(error.message) ? "Nicknames are not set up yet. Run supabase/05-friends.sql once in the Supabase SQL editor." : error.message);
   }
+  window.dispatchEvent(new Event(SHOWN_NAME_CHANGED)); // (the header and the room names follow)
   return nickname;
+}
+
+const SHOWN_NAME_CHANGED = "mtg-shown-name";
+
+/** A name cut short with an ellipsis, so a room named after a player stays within the server's 40 letters. */
+export const clipName = (name: string, max = 26) => (name.length > max ? `${name.slice(0, max - 1).trimEnd()}…` : name);
+
+/**
+ * The name to show for the signed-in player everywhere: their nickname, or the login name when they have none (never the account's email).
+ * Null until it is known, or when nobody is signed in.
+ */
+export function useShownName(): string | null {
+  const [name, setName] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      void loadMe().then((me) => {
+        if (alive) setName(me ? me.nickname || me.name : null);
+      });
+    load();
+    window.addEventListener(SHOWN_NAME_CHANGED, load);
+    return () => {
+      alive = false;
+      window.removeEventListener(SHOWN_NAME_CHANGED, load);
+    };
+  }, []);
+  return name;
 }
 
 /** Where a player's picture lives. `version` changes with every new picture, so browsers fetch the new one. */

@@ -31,6 +31,13 @@ export function InkFilters() {
         <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="2" seed="3" result="t" />
         <feDisplacementMap in="SourceGraphic" in2="t" scale="1.1" xChannelSelector="R" yChannelSelector="G" />
       </filter>
+      {/* the slight bleed of ink into paper at the edge of a letter: a faint blurred copy, then the rough edge (small headings only, never animated) */}
+      <filter id="ink-bleed" x="-3%" y="-10%" width="106%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" seed="5" result="t" />
+        <feDisplacementMap in="SourceGraphic" in2="t" scale="1.3" xChannelSelector="R" yChannelSelector="G" result="rough" />
+        <feGaussianBlur in="rough" stdDeviation="0.55" result="soft" />
+        <feMerge><feMergeNode in="soft" /><feMergeNode in="rough" /></feMerge>
+      </filter>
     </svg>
   );
 }
@@ -251,6 +258,94 @@ export function Query(props: IconProps) {
     <svg {...base} {...props}>
       <path d="M9 9.2c0-2 1.4-3.2 3.2-3.2s3 1.1 3 2.8c0 2.4-3.2 2.4-3.2 5" />
       <path d="M12 18.4v.1" strokeWidth="2.6" />
+    </svg>
+  );
+}
+
+
+/** A heart: life. */
+export function Heart(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 20.100c-4.800-3.500-7.900-6.400-7.900-10 0-2.400 1.800-4.100 4-4.100 1.700 0 3.100.9 3.900 2.400.8-1.500 2.200-2.400 3.900-2.400 2.200 0 4.100 1.700 4.100 4.100 0 3.600-3.200 6.500-8 10z" />
+      <path d="M7.400 9.600c.2-1 .9-1.600 1.800-1.700" opacity=".6" />
+    </svg>
+  );
+}
+
+/** An open hand: the cards held. */
+export function Hand(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M8.200 12.200V6.600a1.300 1.300 0 0 1 2.600 0v4.400M10.800 10.800V4.700a1.300 1.300 0 0 1 2.600 0v6M13.400 10.800V5.600a1.300 1.300 0 0 1 2.600 0V12M16 12V8.600a1.300 1.300 0 0 1 2.600 0v5.700c0 4-2.700 6.500-6.100 6.500-2.500 0-3.900-1.200-5.200-3.100l-2.600-4c-.6-1 .5-2 1.500-1.200l1.800 1.500" />
+    </svg>
+  );
+}
+
+/** A heater shield: damage that is stopped. */
+export function Shield(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3.200l7 2.400v5.500c0 4.400-3 7.800-7 9.700-4-1.900-7-5.300-7-9.700V5.600z" />
+      <path d="M12 6.800v10.200" opacity=".55" />
+    </svg>
+  );
+}
+
+/** A skull: poison. */
+export function Skull(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3.500c-4 0-7 2.600-7 6.400 0 2.300 1.100 3.800 2.600 4.700v3c0 .8.600 1.400 1.400 1.400h6c.8 0 1.400-.6 1.400-1.400v-3c1.500-.9 2.600-2.400 2.600-4.700 0-3.800-3-6.400-7-6.400z" />
+      <circle cx="9.300" cy="10.600" r="1.500" />
+      <circle cx="14.700" cy="10.600" r="1.500" />
+      <path d="M10.500 17.800v2M13.500 17.800v2" opacity=".6" />
+    </svg>
+  );
+}
+
+/** A four-point spark: an emblem, something lasting. */
+export function Spark(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3.400c.6 4.400 1.800 5.800 6.600 8.600-4.800 2.800-6 4.200-6.600 8.600-.6-4.400-1.800-5.800-6.600-8.600C10.200 9.200 11.400 7.800 12 3.400z" />
+    </svg>
+  );
+}
+
+/** Two swords crossed: attack. */
+export function Swords(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 4.600l10.600 10.600M19 4.600L8.400 15.200M3.900 14.300l5.400 5.400M3.600 20.400l2.500-2.500M20.100 14.300l-5.400 5.400M20.400 20.400l-2.500-2.500" />
+    </svg>
+  );
+}
+
+/** A jagged burst: damage. */
+export function Burst(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3l1.800 5.200 5.200-1.700-2.200 5 4.200 3.300-5.300.2L14.200 20 12 15.200 9.800 20l-.5-5-5.300-.2 4.200-3.300-2.200-5 5.200 1.700z" />
+    </svg>
+  );
+}
+
+/** A leaf: the main phase, a quiet turn to build in. */
+export function Leaf(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 19.200C5 11 10.200 5.600 19 4.800c0 9-5.100 14.400-13.200 14.400" />
+      <path d="M5.200 19l8-8.200" opacity=".7" />
+    </svg>
+  );
+}
+
+/** A tick, written in one stroke. */
+export function Tick(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4.400 12.900c2.200 1.700 3.700 3.500 4.900 5.700 2.700-5.600 6.100-9.500 10.300-12.500" />
     </svg>
   );
 }

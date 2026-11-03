@@ -10,11 +10,13 @@ import { connectSocial, disconnectSocial } from "@/lib/online/session";
 import { clearCached } from "@/lib/dashCache";
 import AudioMenu from "./AudioMenu";
 import { Hourglass, InkDrop } from "./Icons";
+import { useShownName } from "@/lib/profile";
 
 /** Slim top bar shown only while signed in. */
 export default function UserBar() {
   const router = useRouter();
   const [username, setUsername] = useState<string | null>(null);
+  const shown = useShownName() ?? username; // the nickname, or the login name until it arrives
   const [animations, setAnimations] = useState(animationsEnabled);
   const [speed, setSpeed] = useState(animationSpeed);
   useEffect(() => {
@@ -75,8 +77,9 @@ export default function UserBar() {
         </button>
       )}
       <AudioMenu />
-      <span className="hidden sm:inline">
-        Written in as <span className="font-semibold text-white">{username}</span>
+      <span className="hidden min-w-[4.5rem] max-w-[18rem] items-baseline gap-1 sm:flex">
+        <span className="shrink-0 max-lg:hidden">Written in as</span>
+        <span className="min-w-0 truncate font-semibold text-white" title={shown ?? undefined}>{shown}</span>
       </span>
       <button onClick={signOut} className="bar-btn">
         Close the book
