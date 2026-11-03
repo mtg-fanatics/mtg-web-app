@@ -28,28 +28,28 @@
   inset: 0;
   border-radius: inherit;
   background:
-    radial-gradient(circle at 0 0, rgba(140, 104, 68, 0.55) 0 2.6cqw, transparent 3cqw),
-    radial-gradient(circle at 100% 100%, rgba(140, 104, 68, 0.45) 0 2.4cqw, transparent 2.8cqw),
-    radial-gradient(circle at 100% 0, rgba(140, 104, 68, 0.25) 0 1.8cqw, transparent 2.2cqw);
+    radial-gradient(circle at 0 0, rgba(140, 104, 68, 0.5), transparent 3.6cqw),
+    radial-gradient(circle at 100% 100%, rgba(140, 104, 68, 0.4), transparent 3.4cqw),
+    radial-gradient(circle at 100% 0, rgba(140, 104, 68, 0.22), transparent 2.6cqw);
 }
 .alb-pages { position: absolute; left: 3cqw; right: 3cqw; top: 2.4cqw; bottom: 3.2cqw; }
 
-/* the edges of the leaves: a few uneven sheets on the left, right and bottom. The left stack grows (and the right one shrinks) as you go further in. */
-.alb-stack { position: absolute; pointer-events: none; }
-.alb-stack-l { right: 100%; top: 0.5cqw; bottom: 0.2cqw; width: 1.2cqw; --t: calc(0.3cqw + var(--prog, 0) * 0.6cqw); }
-.alb-stack-r { left: 100%; top: 0.5cqw; bottom: 0.2cqw; width: 1.2cqw; --t: calc(0.3cqw + (1 - var(--prog, 0)) * 0.6cqw); }
-.alb-stack-b { left: 0; right: 0; top: 100%; height: 1.6cqw; --t: 0.7cqw; }
-.alb-stack i { position: absolute; background-color: #d3c19a; background-image: repeating-linear-gradient(90deg, rgba(70, 45, 20, 0.3) 0 1px, transparent 1px 0.34cqw); border: 0.07cqw solid rgba(70, 45, 20, 0.5); --e: 0; }
-.alb-stack-b i { background-image: repeating-linear-gradient(0deg, rgba(70, 45, 20, 0.3) 0 1px, transparent 1px 0.34cqw); }
-.alb-stack i:nth-child(odd) { background: #c5b088; }
-.alb-stack i:nth-child(1) { --e: 0.05; }
-.alb-stack i:nth-child(2) { --e: -0.07; }
-.alb-stack i:nth-child(3) { --e: 0.09; }
-.alb-stack i:nth-child(4) { --e: -0.04; }
-.alb-stack i:nth-child(5) { --e: 0.06; }
-.alb-stack-l i { right: 0; top: calc(var(--k) * 0.1cqw); bottom: calc(var(--k) * 0.1cqw); width: calc(var(--t) * (var(--k) + 1) / 5 * (1 + var(--e))); border-radius: 0.25cqw 0 0 0.25cqw; }
-.alb-stack-r i { left: 0; top: calc(var(--k) * 0.1cqw); bottom: calc(var(--k) * 0.1cqw); width: calc(var(--t) * (var(--k) + 1) / 5 * (1 + var(--e))); border-radius: 0 0.25cqw 0.25cqw 0; }
-.alb-stack-b i { top: 0; left: calc(var(--k) * 0.1cqw + var(--e) * 0.5cqw); right: calc(var(--k) * 0.1cqw - var(--e) * 0.5cqw); height: calc(var(--t) * (var(--k) + 1) / 5); border-radius: 0 0 0.3cqw 0.3cqw; }
+/* the edges of the leaves: a few uneven sheets on the left, right and bottom, drawn as offset copies of the block of pages (so the corners join). The left stack
+   grows (and the right one shrinks) as you go further in. */
+.alb { --tl: calc(0.3cqw + var(--prog, 0) * 0.6cqw); --tr: calc(0.3cqw + (1 - var(--prog, 0)) * 0.6cqw); --tb: 0.7cqw; }
+.alb-stack-box {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5cqw;
+  pointer-events: none;
+  box-shadow:
+    calc(var(--tr) * 0.2) calc(var(--tb) * 0.2) 0 0 #d6c59f, calc(var(--tl) * -0.2) calc(var(--tb) * 0.2) 0 0 #d6c59f,
+    calc(var(--tr) * 0.4) calc(var(--tb) * 0.4) 0 0 #c7b38a, calc(var(--tl) * -0.4) calc(var(--tb) * 0.4) 0 0 #c7b38a,
+    calc(var(--tr) * 0.6) calc(var(--tb) * 0.6) 0 0 #d3c19a, calc(var(--tl) * -0.6) calc(var(--tb) * 0.6) 0 0 #d3c19a,
+    calc(var(--tr) * 0.8) calc(var(--tb) * 0.8) 0 0 #c4af86, calc(var(--tl) * -0.8) calc(var(--tb) * 0.8) 0 0 #c4af86,
+    var(--tr) var(--tb) 0 0 #cfbb92, calc(var(--tl) * -1) var(--tb) 0 0 #cfbb92,
+    var(--tr) var(--tb) 0 0.08cqw rgba(70, 45, 20, 0.5), calc(var(--tl) * -1) var(--tb) 0 0.08cqw rgba(70, 45, 20, 0.5);
+}
 
 /* ───────── the pages ─────────
    Every page is the same box (the right half of the book) and a role moves it: R stays, L is shifted left, and the ones waiting are shifted or turned

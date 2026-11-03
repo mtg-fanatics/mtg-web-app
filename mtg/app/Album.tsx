@@ -229,9 +229,7 @@ export default function Album({ pages, index, onIndex, prepare, renderPage, page
       <div className="alb" data-mode={spread ? "spread" : "single"} data-turning={turn ? turn.dir : undefined} data-prep={prep ?? undefined} style={style} role="group" aria-label={label} aria-roledescription="album">
         <div className="alb-cover" aria-hidden="true" />
         <div className="alb-pages">
-          <div className="alb-stack alb-stack-l" aria-hidden="true">{[4, 3, 2, 1, 0].map((k) => <i key={k} style={{ "--k": k } as CSSProperties} />)}</div>
-          <div className="alb-stack alb-stack-r" aria-hidden="true">{[4, 3, 2, 1, 0].map((k) => <i key={k} style={{ "--k": k } as CSSProperties} />)}</div>
-          <div className="alb-stack alb-stack-b" aria-hidden="true">{[4, 3, 2, 1, 0].map((k) => <i key={k} style={{ "--k": k } as CSSProperties} />)}</div>
+          <div className="alb-stack-box" aria-hidden="true" />
 
           <div
             key={resetKey}
