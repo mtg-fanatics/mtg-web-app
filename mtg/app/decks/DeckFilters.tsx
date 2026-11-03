@@ -65,7 +65,7 @@ export default function DeckFilterBar({
   const toggleColor = (c: string) => set({ colors: value.colors.includes(c) ? value.colors.filter((x) => x !== c) : [...value.colors, c] });
 
   return (
-    <div role="search" aria-label="Filter the decks" className="flex flex-wrap items-center gap-2.5">
+    <div role="search" aria-label="Filter the decks" className="deck-filters flex flex-wrap items-center gap-2.5">
       <label className="tool-field min-w-[13rem] flex-1 sm:max-w-xs">
         <Lens />
         <input value={value.query} onChange={(e) => set({ query: e.target.value })} maxLength={60} placeholder="Search by name" aria-label="Search decks by name" className="w-full" />
