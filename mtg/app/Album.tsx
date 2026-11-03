@@ -275,12 +275,10 @@ export default function Album({ pages, index, onIndex, prepare, renderPage, page
                       {(i + 1).toLocaleString()}
                     </button>
                   )}
-                  <div className="alb-shade" aria-hidden="true" />
                   <div className="alb-sheen" aria-hidden="true" />
                 </section>
               );
             })}
-            {turn && spread && <div className="alb-cast" data-dir={turn.dir} aria-hidden="true" />}
           </div>
 
           <button type="button" className="alb-edge alb-edge-l" aria-label="Previous page" disabled={atStart} onClick={() => go(heading.current - step)} />
