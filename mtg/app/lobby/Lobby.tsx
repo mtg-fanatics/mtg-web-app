@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { clipName, useShownName } from "@/lib/profile";
 import { connectLobby, createRoom, disconnectLobby, tryReconnect, useOnline } from "@/lib/online/session";
 import { Skeleton } from "../Skeleton";
 import LiveMatches from "./LiveMatches";
@@ -39,6 +40,7 @@ export default function Lobby() {
   const router = useRouter();
   const online = useOnline();
   const [username, setUsername] = useState<string | null>(null);
+  const shown = useShownName(); // the nickname (or the login name): what the room is called after
   const [creating, setCreating] = useState(false); // the "Create room" window is open
   const room = online.snapshot;
 
@@ -122,7 +124,7 @@ export default function Lobby() {
           error={online.error}
           onClose={() => setCreating(false)}
           onCreate={(password) => {
-            void createRoom(`${username}'s room`, password);
+            void createRoom(`${clipName(shown ?? username ?? "Player")}'s room`, password);
           }}
         />
       )}

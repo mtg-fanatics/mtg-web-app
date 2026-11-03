@@ -20,7 +20,7 @@ import {
   sendRequest,
 } from "@/lib/friends";
 import type { Link, Person } from "@/lib/friends";
-import { loadMe } from "@/lib/profile";
+import { loadMe, clipName } from "@/lib/profile";
 import { inviteFriend, useOnline, watchFriends } from "@/lib/online/session";
 import type { FriendStatus } from "@/lib/online/protocol";
 import WatchButton from "../lobby/WatchButton";
@@ -185,7 +185,7 @@ export default function FriendsPanel() {
   async function invite(friendId: string) {
     setInviting(friendId);
     try {
-      if (await inviteFriend(friendId, `${meName}'s room`)) {
+      if (await inviteFriend(friendId, `${clipName(meName)}'s room`)) {
         setInvited((list) => [...list, friendId]);
         setTimeout(() => setInvited((list) => list.filter((id) => id !== friendId)), 6000);
       }

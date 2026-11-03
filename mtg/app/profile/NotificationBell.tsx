@@ -1,5 +1,7 @@
 "use client";
 
+import { clipName } from "@/lib/profile";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { playSound } from "@/lib/sound";
 import { acceptRequest, displayName, listLinks, removeLink } from "@/lib/friends";
@@ -257,7 +259,7 @@ export default function NotificationBell({ meId, meName }: { meId: string; meNam
                       ) : (
                         <button
                           disabled={busy === i.key || sent.has(i.person.id)}
-                          onClick={() => void run(i.key, async () => ((await inviteFriend(i.person.id, `${meName}'s room`)) ? setSent((s) => new Set(s).add(i.person.id)) : undefined))}
+                          onClick={() => void run(i.key, async () => ((await inviteFriend(i.person.id, `${clipName(meName)}'s room`)) ? setSent((s) => new Set(s).add(i.person.id)) : undefined))}
                           className="btn-gold !px-3 !py-1.5"
                         >
                           {sent.has(i.person.id) ? "Invitation sent ✓" : "Invite to a match"}
