@@ -6,6 +6,7 @@ import { MATS, SLEEVES } from "@/lib/playmat";
 import type { useAppearance } from "@/lib/playmat";
 import { playerName } from "./log";
 import MatPreview from "./MatPreview";
+import Swatch from "./Swatch";
 
 type Appearance = ReturnType<typeof useAppearance>;
 
@@ -89,10 +90,12 @@ export default function AppearanceDialog({ look, cursor, onClose, first = "p1" }
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 p-1">
             {SLEEVES.map((s) => (
               <button key={s.id} onClick={() => look.choose("sleeve", who, `preset:${s.id}`)} title={s.name} className="group flex flex-col items-center gap-1">
-                <SleeveBack css={s.css} edge={s.edge ?? "#fff"} className={`h-[84px] w-[60px] border-2 transition group-hover:-translate-y-0.5 ${ring(sleeve.id === s.id)}`} />
+                <Swatch on={sleeve.id === s.id} raw={s.css.includes("url(")} className="transition group-hover:-translate-y-0.5">
+                  <SleeveBack css={s.css} edge={s.edge ?? "#fff"} className="h-[84px] w-[60px]" />
+                </Swatch>
                 <span className="text-[10px] text-slate-300">{s.name}</span>
               </button>
             ))}
@@ -119,10 +122,12 @@ export default function AppearanceDialog({ look, cursor, onClose, first = "p1" }
               </button>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+          <div className="grid grid-cols-3 gap-3 p-1 sm:grid-cols-5">
             {MATS.map((m) => (
               <button key={m.id} onClick={() => look.choose("mat", who, `preset:${m.id}`)} title={m.name} className="group flex flex-col items-center gap-1">
-                <span className={`h-14 w-full rounded-lg border-2 transition group-hover:-translate-y-0.5 ${ring(mat.id === m.id)}`} style={{ background: m.css }} />
+                <Swatch on={mat.id === m.id} raw={m.css.includes("url(")} className="w-full transition group-hover:-translate-y-0.5">
+                  <span className="block h-14 w-full" style={{ background: m.css }} />
+                </Swatch>
                 <span className="text-[10px] text-slate-300">{m.name}</span>
               </button>
             ))}

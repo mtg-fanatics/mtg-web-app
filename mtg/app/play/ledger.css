@@ -240,3 +240,24 @@ section.hand-tray {
 .hand-slot:hover > * { translate: 0 -5px; }
 
 .perf-lite .pl-card, .perf-lite .chat-slip, .perf-lite .log-ledger, .perf-lite .ledger-strip, .perf-lite section.hand-tray, .perf-lite .ink-well-fill { background-image: none; }
+
+/* ───────── swatches: aged dye on cloth, circled in ink when chosen ───────── */
+.swatch-art {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid #120c07;
+  border-radius: 4px 6px 4px 5px / 5px 4px 6px 4px;
+  filter: saturate(0.55) sepia(0.3) brightness(0.93);
+  box-shadow: 2px 2px 0 rgba(8, 5, 3, 0.55);
+}
+.swatch-art::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: var(--grain-dark), repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.07) 0 1px, transparent 1px 4px); background-size: 240px 240px, auto; opacity: 0.55; }
+.swatch-art > * { border-radius: 0; box-shadow: none; }
+.swatch-ring { position: absolute; left: -5px; top: -5px; width: calc(100% + 10px); height: calc(100% + 10px); overflow: visible; pointer-events: none; opacity: 0; }
+.swatch-ring path { fill: none; stroke: var(--wax-hi); stroke-width: 2.4px; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.swatch[data-on="yes"] .swatch-ring { opacity: 1; }
+.swatch[data-on="yes"] .swatch-ring[data-draw="on"] path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: swatch-draw 0.45s ease-out forwards; }
+@keyframes swatch-draw { to { stroke-dashoffset: 0; } }
+.swatch-raw .swatch-art { filter: none; }
+.swatch-raw .swatch-art::after { display: none; }
+.perf-lite .swatch-art { filter: none; }
+.perf-lite .swatch-art::after { display: none; }
