@@ -149,24 +149,17 @@ export default function BookBackdrop() {
           {/* the curved gutter shadow: dark in the crease, fading out across the page along a bowed edge */}
           <linearGradient id="bk-dip-l" gradientUnits="userSpaceOnUse" x1="820" y1="0" x2="672" y2="0">
             <stop offset="0" stopColor="#2a1608" stopOpacity="0.42" />
-            <stop offset="0.35" stopColor="#3a2010" stopOpacity="0.2" />
+            <stop offset="0.2" stopColor="#3a2010" stopOpacity="0.3" />
+            <stop offset="0.5" stopColor="#3a2010" stopOpacity="0.12" />
+            <stop offset="0.8" stopColor="#3a2010" stopOpacity="0.03" />
             <stop offset="1" stopColor="#3a2010" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="bk-dip-r" gradientUnits="userSpaceOnUse" x1="820" y1="0" x2="968" y2="0">
             <stop offset="0" stopColor="#2a1608" stopOpacity="0.42" />
-            <stop offset="0.35" stopColor="#3a2010" stopOpacity="0.2" />
+            <stop offset="0.2" stopColor="#3a2010" stopOpacity="0.3" />
+            <stop offset="0.5" stopColor="#3a2010" stopOpacity="0.12" />
+            <stop offset="0.8" stopColor="#3a2010" stopOpacity="0.03" />
             <stop offset="1" stopColor="#3a2010" stopOpacity="0" />
-          </linearGradient>
-          {/* and the page rising a little before it dips: a faint pale crest */}
-          <linearGradient id="bk-crest-l" gradientUnits="userSpaceOnUse" x1="600" y1="0" x2="690" y2="0">
-            <stop offset="0" stopColor="#fff6dc" stopOpacity="0" />
-            <stop offset="0.7" stopColor="#fff6dc" stopOpacity="0.22" />
-            <stop offset="1" stopColor="#fff6dc" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="bk-crest-r" gradientUnits="userSpaceOnUse" x1="1040" y1="0" x2="950" y2="0">
-            <stop offset="0" stopColor="#fff6dc" stopOpacity="0" />
-            <stop offset="0.7" stopColor="#fff6dc" stopOpacity="0.22" />
-            <stop offset="1" stopColor="#fff6dc" stopOpacity="0" />
           </linearGradient>
           <radialGradient id="bk-stain" cx="0.5" cy="0.5" r="0.72">
             <stop offset="0.55" stopColor="#7a4b1c" stopOpacity="0" />
@@ -217,15 +210,13 @@ export default function BookBackdrop() {
           <rect className="book-grain" x="40" y="40" width="790" height="870" filter="url(#bk-grain)" opacity="0.55" />
           <rect className="book-grain" x="40" y="40" width="790" height="870" filter="url(#bk-mottle)" opacity="0.5" />
           <path d={LEFT_PAGE} fill="url(#bk-stain)" />
-          <path d="M620 56C664 300 664 640 620 900H700C744 640 744 300 700 56Z" fill="url(#bk-crest-l)" />
-          <path d="M820 50H672C728 300 728 640 672 900H820Z" fill="url(#bk-dip-l)" />
+          <rect x="672" y="40" width="148" height="870" fill="url(#bk-dip-l)" />
         </g>
         <g clipPath="url(#bk-clip-r)">
           <rect className="book-grain" x="820" y="40" width="790" height="870" filter="url(#bk-grain)" opacity="0.55" />
           <rect className="book-grain" x="820" y="40" width="790" height="870" filter="url(#bk-mottle)" opacity="0.5" />
           <path d={RIGHT_PAGE} fill="url(#bk-stain)" />
-          <path d="M1020 56C976 300 976 640 1020 900H940C896 640 896 300 940 56Z" fill="url(#bk-crest-r)" />
-          <path d="M820 50H968C912 300 912 640 968 900H820Z" fill="url(#bk-dip-r)" />
+          <rect x="820" y="40" width="148" height="870" fill="url(#bk-dip-r)" />
         </g>
 
         {/* the faint ink: ruled lines, a margin, paragraphs of handwriting that says nothing (with a heading and a few crossings-out), blots and a small sketch */}
