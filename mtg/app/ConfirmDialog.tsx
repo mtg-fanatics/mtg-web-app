@@ -72,7 +72,7 @@ export default function ConfirmDialog({
           </p>
         )}
         <div className="confirm-actions">
-          <button ref={safe} type="button" disabled={busy} onClick={onCancel} className="btn-ghost !px-5 !py-2.5">
+          <button ref={safe} type="button" disabled={busy} onClick={onCancel} className="btn-link !px-4 !py-2.5">
             {cancelLabel}
           </button>
           <button type="button" disabled={busy} onClick={() => void confirm()} className={`${danger ? "btn-danger-solid" : "btn-gold"} !px-5 !py-2.5`}>

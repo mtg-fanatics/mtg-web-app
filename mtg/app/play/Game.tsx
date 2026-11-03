@@ -932,7 +932,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
           <KeepRandomDecks decks={{ [actor]: playedDecks[actor] }} saved={savedDecks} onSaved={keepDeck} label={() => "Save my random deck"} />
         </div>
         {!watching && !state.winner && (
-          <button onClick={() => (setMenuOpen(false), setResigning(actor))} className="btn-danger !py-2.5 lg:hidden">
+          <button onClick={() => (setMenuOpen(false), setResigning(actor))} className="btn-resign !py-2.5 lg:hidden">
             Resign
           </button>
         )}

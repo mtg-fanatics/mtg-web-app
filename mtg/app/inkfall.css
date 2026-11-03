@@ -98,6 +98,9 @@ html[data-theme="dark"] .battlefield-bg {
   background-attachment: local;
 }
 
+/* a focus ring in wax red, the same everywhere (keyboard only) */
+html[data-theme="dark"] :focus-visible { outline: 2px solid var(--wax-hi); outline-offset: 2px; }
+
 /* ───────── type ───────── */
 h1, h2, .font-title, .page-title, .hero-title, .confirm-title, .victory-title, .enter-title, .topbar .brand {
   font-family: var(--font-fell), "IM Fell English SC", Georgia, serif;
@@ -200,30 +203,65 @@ h3 { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font
   font-family: var(--font-alegreya), sans-serif;
   letter-spacing: 0.005em;
 }
-/* secondary buttons: a leather patch with a stitched edge */
+/* Three levels of button, so the main action is never in doubt:
+     primary    a slip of paper, stamped: raised on a hard shadow, and it sinks into the table when pressed (.btn-gold, .hero-btn-primary)
+     secondary  only an inked outline, no fill and no shadow (.btn-ghost, .hero-btn, the bar buttons)
+     tertiary   plain underlined text, for backing out (.btn-link)
+   The danger action is its own thing: wax red (.btn-resign to offer it, .btn-danger-solid to confirm it). */
 .hero-btn, .btn-ghost, .topbar .bar-btn, .pager-btn {
   color: var(--color-white);
   text-shadow: none;
-  background-color: var(--ink-3);
-  background-image: var(--grain-pale), linear-gradient(180deg, rgba(255, 230, 180, 0.07), rgba(0, 0, 0, 0.12));
-  background-size: 240px 240px, 100% 100%;
-  border: 2px solid #120c07;
+  background-color: rgba(8, 5, 3, 0.18);
+  background-image: none;
+  border: 2px solid rgba(200, 178, 138, 0.62);
   border-radius: 4px 7px 4px 8px / 7px 4px 8px 5px;
-  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 1px rgba(200, 178, 138, 0.2), inset 0 0 0 4px var(--ink-3), inset 0 0 0 5px rgba(200, 178, 138, 0.26);
-  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.12s ease;
+  box-shadow: none;
+  transition: transform 0.08s ease, background-color 0.12s ease, border-color 0.12s ease;
 }
 .hero-btn:hover, .btn-ghost:hover:not(:disabled), .topbar .bar-btn:hover, .pager-btn:hover:not(:disabled) {
-  transform: translate(-1px, -1px) rotate(-0.3deg);
-  background-color: #46352a;
-  border-color: #120c07;
-  box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 1px rgba(200, 178, 138, 0.3), inset 0 0 0 4px #46352a, inset 0 0 0 5px rgba(217, 105, 79, 0.55);
+  background-color: rgba(232, 220, 192, 0.1);
+  border-color: var(--paper);
 }
 .hero-btn:active, .btn-ghost:active:not(:disabled), .topbar .bar-btn:active, .pager-btn:active:not(:disabled) {
-  transform: translate(2px, 3px);
-  box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.6), inset 2px 3px 6px rgba(0, 0, 0, 0.45), inset 0 0 0 4px #2c2118, inset 0 0 0 5px rgba(200, 178, 138, 0.2);
-  background-color: #2c2118;
+  transform: translate(1px, 1px);
+  background-color: rgba(8, 5, 3, 0.35);
 }
+.btn-ghost:disabled, .hero-btn:disabled, .pager-btn:disabled { opacity: 0.45; }
 .hero-btn svg, .btn-ghost svg { color: var(--wax-hi); }
+/* tertiary: words, underlined like a correction in a margin */
+.btn-link {
+  font-family: var(--font-alegreya), sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--paper-2);
+  background: none;
+  border: 0;
+  padding: 0.45rem 0.6rem;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+  text-decoration-color: rgba(200, 178, 138, 0.6);
+  cursor: pointer;
+}
+.btn-link:hover:not(:disabled) { color: var(--paper); text-decoration-color: var(--wax-hi); }
+.btn-link:disabled { opacity: 0.45; cursor: default; }
+/* offering the danger action (Resign): a dark wax slip with a red edge, quieter than the confirm button that follows it */
+.btn-resign {
+  font-family: var(--font-alegreya), sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.45rem 1rem;
+  color: #f4b5a1;
+  background-color: #3a1713;
+  background-image: var(--grain-pale);
+  background-size: 240px 240px;
+  border: 2px solid #8a2e22;
+  border-radius: 4px 8px 4px 9px;
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 1px rgba(217, 105, 79, 0.25);
+  cursor: pointer;
+}
+.btn-resign:hover:not(:disabled) { background-color: #4a1d17; color: #ffd0c0; transform: translate(-1px, -1px); box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 1px rgba(217, 105, 79, 0.4); }
+.btn-resign:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 2px 0 rgba(8, 5, 3, 0.6); }
 /* primary buttons: a slip of paper, stamped in ink */
 .hero-btn-primary, .btn-gold, .pager-btn[aria-current="page"], .seg button[aria-pressed="true"], .icon-seg button[aria-pressed="true"] {
   color: var(--ink);
@@ -234,7 +272,7 @@ h3 { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font
   background-size: 300px 300px, 100% 100%, 240px 240px;
   border: 2px solid #2a1d12;
   border-radius: 3px 8px 3px 9px / 8px 3px 8px 4px;
-  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.65), inset 0 -4px 9px rgba(120, 80, 30, 0.32);
+  box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.65), inset 0 1px 0 rgba(255, 250, 235, 0.55), inset 0 -4px 9px rgba(120, 80, 30, 0.32);
 }
 .hero-btn-primary:hover, .btn-gold:hover:not(:disabled) {
   transform: translate(-1px, -1px) rotate(0.4deg);
@@ -243,8 +281,8 @@ h3 { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font
   box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.65), inset 0 -4px 9px rgba(120, 80, 30, 0.32);
 }
 .hero-btn-primary:active, .btn-gold:active:not(:disabled) {
-  transform: translate(2px, 3px);
-  box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.65), inset 2px 3px 7px rgba(90, 55, 20, 0.5);
+  transform: translate(2px, 2px);
+  box-shadow: 1px 2px 0 rgba(8, 5, 3, 0.65), inset 2px 3px 7px rgba(90, 55, 20, 0.5);
   background-color: #dccdaa;
 }
 .hero-btn-primary svg { color: var(--wax); }
@@ -407,8 +445,8 @@ button.from-amber-300:hover:not(:disabled), a.from-amber-300:hover, button.bg-am
   box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.65), inset 0 -4px 9px rgba(120, 80, 30, 0.3);
 }
 button.from-amber-300:active:not(:disabled), button.bg-amber-500:active:not(:disabled), button.bg-amber-400:active:not(:disabled) {
-  transform: translate(2px, 3px);
-  box-shadow: 1px 1px 0 rgba(8, 5, 3, 0.65), inset 2px 3px 7px rgba(90, 55, 20, 0.5);
+  transform: translate(2px, 2px);
+  box-shadow: 1px 2px 0 rgba(8, 5, 3, 0.65), inset 2px 3px 7px rgba(90, 55, 20, 0.5);
 }
 
 /* the old gold glow bars on top of the pop-up cards are gone */

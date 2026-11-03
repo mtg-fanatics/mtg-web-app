@@ -225,7 +225,7 @@ function SkipConfirm({ state, actor, onYes, onBack }: { state: GameState; actor:
       <button onClick={onYes} className="btn-gold !px-3 !py-1 !text-sm">
         {blocking ? "Yes, no blocks" : "Yes, skip"}
       </button>
-      <button onClick={onBack} className="btn-ghost !px-3 !py-1 !text-sm">
+      <button onClick={onBack} className="btn-link !px-2 !py-1 !text-sm">
         Back
       </button>
     </span>

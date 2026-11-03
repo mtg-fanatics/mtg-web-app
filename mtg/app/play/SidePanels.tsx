@@ -200,7 +200,7 @@ function PlayersPanelInner({
               <Heart width={26} height={26} className="ink-icon pl-heart" />
               <LifeTotal id={id} value={p.life} />
               {onResign && !state.winner && (
-                <button onClick={() => onResign(id)} title="Give up this game: the other player wins" className="btn-danger ml-auto shrink-0 !px-3 !py-1">
+                <button onClick={() => onResign(id)} title="Give up this game: the other player wins" className="btn-resign ml-auto shrink-0 !px-3 !py-1">
                   Resign
                 </button>
               )}
@@ -307,7 +307,7 @@ function PlayerDetail({ state, id, actor, unseen, note, onResign, onClose }: { s
           ))}
         </div>
         {onResign && !state.winner && (
-          <button onClick={() => (onClose(), onResign(id))} className="btn-danger mt-3 w-full !py-2.5">
+          <button onClick={() => (onClose(), onResign(id))} className="btn-resign mt-3 w-full !py-2.5">
             Resign
           </button>
         )}
