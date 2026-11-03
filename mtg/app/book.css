@@ -66,16 +66,22 @@ html[data-theme="dark"] {
 .perf-lite .book-live .book-glow { animation: none; }
 
 /* ───────── the screens that sit on the book ───────── */
-/* The dark panels are tipped onto the pages: a clear shadow, a degree of tilt, a different one on each so they do not look stamped out. */
-.book-page .book-tip-l, .book-page .book-tip-r { box-shadow: 6px 8px 0 rgba(8, 5, 3, 0.5); }
-.book-page .book-tip-l { rotate: -0.6deg; }
-.book-page .book-tip-l2 { rotate: 0.5deg; }
-.book-page .book-tip-r { rotate: 0.5deg; }
+/* The dark panels are set INTO the page, not laid on it: a bevel of darker paper round the edge, a thin brown cut line, a pale lip on the low side where
+   the paper catches the light, and a shadow that falls inward from the top and left, as if the page had been cut away and the leather pressed in.
+   No outer shadow and no tilt: they sit flush with the ruling of the page. */
+.book-page .book-tip-l2, .book-page .book-tip-r,
+.book-page .book-tip-l > button, .book-page .book-tip-l > div > button {
+  box-shadow:
+    0 0 0 3px #d0bc92,
+    0 0 0 4px rgba(88, 58, 26, 0.6),
+    2px 3px 0 4px rgba(255, 248, 225, 0.3),
+    inset 4px 5px 10px rgba(0, 0, 0, 0.55),
+    inset -1px -2px 0 rgba(232, 220, 192, 0.1);
+}
 /* The profile card and its bell were see-through, so the stitching and page edges of the book ran behind the words. They are solid now. */
-.book-page .book-tip-l > button, .book-page .book-tip-l > div > button { background-color: #241b13; background-image: var(--grain-pale); background-size: 240px 240px; border-color: #120c07; box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.5); }
+.book-page .book-tip-l > button, .book-page .book-tip-l > div > button { background-color: #241b13; background-image: var(--grain-pale); background-size: 240px 240px; border-color: #120c07; }
 
-/* The title block is a plaque fixed to the page: a dark card in a pale paper rim, a little out of true, with a second sheet of paper peeking out beneath
-   it and a wax seal and a pin holding it down. Its words stay straight. */
+/* The title block is set into the page the same way: a dark card in a bevel of pale paper, flush with the page, with a wax seal on one corner. */
 .book-page .hero-page::before {
   inset: -6px;
   z-index: -1;
@@ -84,21 +90,11 @@ html[data-theme="dark"] {
   background-size: 240px 240px;
   border: 5px solid #d8c6a0;
   border-radius: 4px 9px 5px 10px / 9px 5px 10px 4px;
-  box-shadow: 0 0 0 1px rgba(80, 52, 24, 0.7), inset 0 0 0 2px rgba(18, 12, 7, 0.6), 6px 9px 0 rgba(8, 5, 3, 0.45);
-  transform: rotate(-1deg);
+  box-shadow: 0 0 0 1px rgba(80, 52, 24, 0.7), 2px 3px 0 6px rgba(255, 248, 225, 0.3), inset 0 0 0 2px rgba(18, 12, 7, 0.6), inset 4px 5px 12px rgba(0, 0, 0, 0.55);
+  transform: none;
 }
-.book-page .hero-page::after {
-  display: block;
-  inset: -12px -10px -8px -14px;
-  z-index: -2;
-  background-color: #cdb98f;
-  background-image: var(--grain-dark);
-  background-size: 240px 240px;
-  border: 0;
-  border-radius: 5px 11px 6px 9px;
-  box-shadow: 3px 5px 0 rgba(8, 5, 3, 0.3);
-  transform: rotate(1.4deg);
-}
+.book-page .hero-page::after { display: none; }
+.plaque-pin { display: none; }
 .plaque-seal, .plaque-pin { position: absolute; z-index: 2; pointer-events: none; }
 .plaque-seal { bottom: -24px; right: -20px; width: 54px; height: 54px; transform: rotate(8deg); filter: drop-shadow(2px 3px 0 rgba(8, 5, 3, 0.45)); }
 .plaque-pin { top: -10px; left: 16px; width: 20px; height: 20px; filter: drop-shadow(2px 3px 0 rgba(8, 5, 3, 0.5)); }
