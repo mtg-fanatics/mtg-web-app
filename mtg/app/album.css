@@ -36,18 +36,19 @@
 
 /* the edges of the leaves: a few uneven sheets on the left, right and bottom. The left stack grows (and the right one shrinks) as you go further in. */
 .alb-stack { position: absolute; pointer-events: none; }
-.alb-stack-l { right: 100%; top: 0.4cqw; bottom: -0.2cqw; width: 2.4cqw; --t: calc(0.45cqw + var(--prog, 0) * 1.8cqw); }
-.alb-stack-r { left: 100%; top: 0.4cqw; bottom: -0.2cqw; width: 2.4cqw; --t: calc(0.45cqw + (1 - var(--prog, 0)) * 1.8cqw); }
-.alb-stack-b { left: 0; right: 0; top: 100%; height: 2.4cqw; --t: 0.9cqw; }
-.alb-stack i { position: absolute; background: #d3c19a; border: 0.08cqw solid rgba(70, 45, 20, 0.55); --e: 0; }
+.alb-stack-l { right: 100%; top: 0.5cqw; bottom: 0.2cqw; width: 1.6cqw; --t: calc(0.35cqw + var(--prog, 0) * 1.05cqw); }
+.alb-stack-r { left: 100%; top: 0.5cqw; bottom: 0.2cqw; width: 1.6cqw; --t: calc(0.35cqw + (1 - var(--prog, 0)) * 1.05cqw); }
+.alb-stack-b { left: 0; right: 0; top: 100%; height: 1.6cqw; --t: 0.7cqw; }
+.alb-stack i { position: absolute; background-color: #d3c19a; background-image: repeating-linear-gradient(90deg, rgba(70, 45, 20, 0.3) 0 1px, transparent 1px 0.34cqw); border: 0.07cqw solid rgba(70, 45, 20, 0.5); --e: 0; }
+.alb-stack-b i { background-image: repeating-linear-gradient(0deg, rgba(70, 45, 20, 0.3) 0 1px, transparent 1px 0.34cqw); }
 .alb-stack i:nth-child(odd) { background: #c5b088; }
 .alb-stack i:nth-child(1) { --e: 0.05; }
 .alb-stack i:nth-child(2) { --e: -0.07; }
 .alb-stack i:nth-child(3) { --e: 0.09; }
 .alb-stack i:nth-child(4) { --e: -0.04; }
 .alb-stack i:nth-child(5) { --e: 0.06; }
-.alb-stack-l i { right: 0; top: calc(var(--k) * 0.12cqw); bottom: calc(var(--k) * -0.1cqw); width: calc(var(--t) * (var(--k) + 1) / 5 * (1 + var(--e))); border-radius: 0.3cqw 0 0 0.3cqw; }
-.alb-stack-r i { left: 0; top: calc(var(--k) * 0.12cqw); bottom: calc(var(--k) * -0.1cqw); width: calc(var(--t) * (var(--k) + 1) / 5 * (1 + var(--e))); border-radius: 0 0.3cqw 0.3cqw 0; }
+.alb-stack-l i { right: 0; top: calc(var(--k) * 0.1cqw); bottom: calc(var(--k) * 0.1cqw); width: calc(var(--t) * (var(--k) + 1) / 5 * (1 + var(--e))); border-radius: 0.25cqw 0 0 0.25cqw; }
+.alb-stack-r i { left: 0; top: calc(var(--k) * 0.1cqw); bottom: calc(var(--k) * 0.1cqw); width: calc(var(--t) * (var(--k) + 1) / 5 * (1 + var(--e))); border-radius: 0 0.25cqw 0.25cqw 0; }
 .alb-stack-b i { top: 0; left: calc(var(--k) * 0.1cqw + var(--e) * 0.5cqw); right: calc(var(--k) * 0.1cqw - var(--e) * 0.5cqw); height: calc(var(--t) * (var(--k) + 1) / 5); border-radius: 0 0 0.3cqw 0.3cqw; }
 
 /* ───────── the pages ─────────
