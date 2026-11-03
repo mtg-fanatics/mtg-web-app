@@ -177,6 +177,16 @@ export default function BookBackdrop() {
             <stop offset="0.5" stopColor="#8a3328" />
             <stop offset="1" stopColor="#632019" />
           </linearGradient>
+          {/* where the title is written the ribbon goes pale (as if lying under the page), so the lettering stays easy to read over it */}
+          <linearGradient id="bk-ribbon-fade-g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="1000">
+            <stop offset="0" stopColor="#fff" />
+            <stop offset="0.14" stopColor="#fff" />
+            <stop offset="0.28" stopColor="#1c1c1c" />
+            <stop offset="0.72" stopColor="#1c1c1c" />
+            <stop offset="0.86" stopColor="#fff" />
+            <stop offset="1" stopColor="#fff" />
+          </linearGradient>
+          <mask id="bk-ribbon-fade" maskUnits="userSpaceOnUse" x="700" y="0" width="300" height="1000"><rect x="700" y="0" width="300" height="1000" fill="url(#bk-ribbon-fade-g)" /></mask>
           <clipPath id="bk-clip-l"><path d={LEFT_PAGE} /></clipPath>
           <clipPath id="bk-clip-r"><path d={RIGHT_PAGE} /></clipPath>
           <filter id="bk-blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14" /></filter>
@@ -269,7 +279,7 @@ export default function BookBackdrop() {
 
         {/* the gutter: a dark crease, and the ribbon bookmark trailing out of it a little off centre */}
         <path d="M820 78V872" stroke="#2a1a0c" strokeOpacity="0.6" strokeWidth="2.6" />
-        <g>
+        <g mask="url(#bk-ribbon-fade)">
           <path d={RIBBON} fill="none" stroke="rgba(0,0,0,0.36)" strokeWidth="20" transform="translate(4 5)" />
           <path d={RIBBON} fill="none" stroke="url(#bk-ribbon)" strokeWidth="20" />
           {/* the woven edges: a dark selvedge and a row of tiny pale stitches along each side, and a soft sheen down the middle */}
