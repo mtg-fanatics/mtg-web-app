@@ -77,8 +77,8 @@ export default function UserBar() {
         </button>
       )}
       <AudioMenu />
-      <span className="hidden min-w-0 max-w-[18rem] items-baseline gap-1 sm:flex">
-        <span className="shrink-0">Written in as</span>
+      <span className="hidden min-w-[4.5rem] max-w-[18rem] items-baseline gap-1 sm:flex">
+        <span className="shrink-0 max-lg:hidden">Written in as</span>
         <span className="min-w-0 truncate font-semibold text-white" title={shown ?? undefined}>{shown}</span>
       </span>
       <button onClick={signOut} className="bar-btn">

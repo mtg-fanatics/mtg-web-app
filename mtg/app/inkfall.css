@@ -184,6 +184,24 @@ h3 { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font
   transform: rotate(-1.4deg);
 }
 .hero-mtg { display: none; }
+/* A loose page lies under the title and the buttons (two sheets, a little out of true, only just paler than the desk), so the middle of the screen has a place
+   to rest instead of floating, and a short ink flourish sits either side of the tagline. Nothing here moves or takes a click. */
+.hero-page { padding: 1.6rem 2rem 2rem; }
+.hero-page::before, .hero-page::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: 6px 12px 7px 11px / 11px 7px 12px 6px; }
+.hero-page::before { background-color: rgba(232, 220, 192, 0.05); background-image: var(--grain-dark); background-size: 240px 240px; border: 1.5px dashed rgba(200, 178, 138, 0.22); transform: rotate(-0.8deg); }
+.hero-page::after { border: 1px solid rgba(200, 178, 138, 0.12); transform: rotate(0.6deg) translate(5px, 4px); }
+.hero-sub { display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+.hero-sub::before, .hero-sub::after {
+  content: "";
+  display: inline-block;
+  width: 3rem;
+  height: 0.7rem;
+  flex: none;
+  margin: 0 0.8rem;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 10' fill='none' stroke='%23bfa97c' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M2 6c9-4 17 3 26-1s12-1 18-2'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0.75;
+}
+.hero-sub::after { transform: scaleX(-1); }
 .hero-eyebrow {
   font-family: var(--font-fell-text), Georgia, serif;
   font-style: italic;
@@ -286,7 +304,7 @@ h3 { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font
   background-color: #dccdaa;
 }
 .hero-btn-primary svg { color: var(--wax); }
-.hero-btn-primary { font-size: 1.12rem; padding: 0.95rem 2rem; border-radius: 4px 9px 4px 10px / 9px 4px 9px 5px; }
+.hero-btn-primary { font-size: 1.3rem; padding: 1.05rem 2.4rem; border-radius: 4px 9px 4px 10px / 9px 4px 9px 5px; }
 .hero-btn { border-radius: 5px 8px 5px 9px / 8px 5px 8px 6px; font-size: 1.05rem; }
 .btn-gold:disabled { color: var(--tan); background-color: #2f251c; background-image: var(--grain-pale); border-color: #120c07; box-shadow: inset 1px 2px 5px rgba(0, 0, 0, 0.5); opacity: 1; }
 /* the red button (go back to your match): a wax seal */

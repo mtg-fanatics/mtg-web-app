@@ -14,7 +14,7 @@ export default function Home() {
       <ProfileButton />
       <FriendsPanel />
       <Lobby />
-      <section className="relative flex flex-col items-center gap-5 text-center">
+      <section className="hero-page relative flex flex-col items-center gap-5 text-center">
         {/* on a phone the seal and the title give way to the buttons (the name is in the top bar) */}
         <div className="flex flex-col items-center gap-3 max-md:hidden">
           <div className="hero-scrim" aria-hidden="true" />
@@ -30,7 +30,7 @@ export default function Home() {
             Write a deck. Take a seat. The ink is still wet.
           </p>
         </div>
-        <div className="hero-rise mt-2 flex flex-wrap justify-center gap-4" style={{ animationDelay: "0.24s" }}>
+        <div className="hero-rise mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-3" style={{ animationDelay: "0.24s" }}>
           <CreateRoomButton />
           <Link href="/decks" className="hero-btn">
             <Tome />
