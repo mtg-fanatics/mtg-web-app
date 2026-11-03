@@ -11,7 +11,10 @@ import { playerName } from "./log";
 import { lifeBusyUntil, registerLife } from "./lifeCount";
 import { useUnseenCards } from "./pileFx";
 import { useStacked } from "./useMedia";
-import { lifeColor, PLAYER_STYLE } from "./theme";
+import { PLAYER_STYLE } from "./theme";
+import { Heart, Hand, InkDrop, Shield, Skull, Spark } from "../Icons";
+import { Seal, ZoneIcon } from "./BattlefieldBits";
+import "./ledger.css";
 
 export interface ChatMessage {
   id: number;
@@ -19,8 +22,21 @@ export interface ChatMessage {
   text: string;
 }
 
-const panel = "flex min-h-0 flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-100/60 p-3";
-const title = "text-sm font-semibold uppercase tracking-wide text-zinc-500";
+// Each panel has a role: the players are bound pages, the chat is a slip of paper, the log a ruled ledger. See ledger.css.
+const frame = "pl-frame flex min-h-0 flex-col gap-2 p-3";
+const slip = "chat-slip flex min-h-0 flex-col gap-2 p-3";
+const ledger = "log-ledger flex min-h-0 flex-col gap-2 p-3";
+const title = "panel-title";
+
+/** The ink well under a life total: the ink is drawn down as the life goes, and a ledger tick marks every five. */
+function InkWell({ life, big }: { life: number; big?: boolean }) {
+  const level = life <= 5 ? "low" : life <= 10 ? "mid" : "ok";
+  return (
+    <div className={`ink-well ${big ? "ink-well-big" : ""}`} aria-hidden="true">
+      <div className="ink-well-fill" data-level={level} style={{ width: `${Math.max(0, Math.min(100, (life / 20) * 100))}%` }} />
+    </div>
+  );
+}
 
 /**
  * A life total that counts up or down ONE POINT AT A TIME: a creature that hits for 5 takes 20 to 19, 18, 17, 16, 15, each step a beat
@@ -34,9 +50,15 @@ function LifeTotal({ id, value }: { id: PlayerId; value: number }) {
   const target = useRef(value); // where the count is going
   const number = useRef<HTMLSpanElement>(null);
   const wrap = useRef<HTMLSpanElement>(null);
+  const drop = useRef<HTMLSpanElement>(null);
+  const dropAnim = useRef<Animation | null>(null);
+  const onRef = useRef(false);
   const pop = useRef<Animation | null>(null); // one pop animation, replayed on every point (a new one each time is a lot of small work)
   const timer = useRef(0);
   const on = useAnimationsOn();
+  useEffect(() => {
+    onRef.current = on;
+  }, [on]);
 
   // Counts towards `target`, a point per beat. A new change while it is counting just moves the target: one count, never two at once.
   const count = useCallback(() => {
@@ -48,9 +70,17 @@ function LifeTotal({ id, value }: { id: PlayerId; value: number }) {
     // Each step only changes the text of the number (no React render, nothing laid out again) and pops its wrapper (transform only: the
     // number itself already has its own pulsing animation when it is low). React is told once, at the end, for the colour and glow.
     const tick = () => {
-      current.current += target.current > current.current ? 1 : -1;
+      const up = target.current > current.current;
+      current.current += up ? 1 : -1;
       const text = number.current?.firstChild;
       if (text) text.nodeValue = String(current.current);
+      if (drop.current && onRef.current) {
+        // a small drop of ink falls from the number (wax red when life goes, moss when it comes back)
+        drop.current.dataset.dir = up ? "gain" : "loss";
+        dropAnim.current ??= drop.current.animate([{ opacity: 0.9, transform: "translateY(-12px) scale(0.7)" }, { opacity: 0, transform: "translateY(10px) scale(1)" }], { duration: 520, easing: "ease-in" });
+        dropAnim.current.currentTime = 0;
+        dropAnim.current.play();
+      }
       if (wrap.current) {
         pop.current ??= wrap.current.animate([{ transform: "scale(1.3)" }, { transform: "scale(1)" }], { duration: 180, easing: "ease-out" });
         pop.current.currentTime = 0;
@@ -74,8 +104,11 @@ function LifeTotal({ id, value }: { id: PlayerId; value: number }) {
   return (
     <span ref={wrap} className="relative inline-flex items-center justify-center">
       {danger > 0 && <span aria-hidden="true" className={`life-halo ${danger === 2 ? "life-halo-red" : "life-halo-amber"} ${on ? "life-halo-moving" : ""}`} />}
-      <span ref={number} data-life={id} className={`font-display relative inline-block text-3xl font-bold tabular-nums lg:text-4xl ${danger === 2 ? "text-red-600 life-pump" : danger === 1 ? "text-amber-600" : "text-emerald-700"} ${danger === 2 && on ? "life-pump-moving" : ""}`}>
+      <span ref={number} data-life={id} className={`life-num relative inline-block text-3xl tabular-nums lg:text-4xl ${danger === 2 ? "life-low life-pump" : danger === 1 ? "life-mid" : "life-ok"} ${danger === 2 && on ? "life-pump-moving" : ""}`}>
         {shown}
+      </span>
+      <span ref={drop} aria-hidden="true" className="life-drop">
+        <InkDrop width={14} height={14} />
       </span>
     </span>
   );
@@ -113,29 +146,28 @@ function PlayersPanelInner({
           const style = PLAYER_STYLE[id];
           const acting = id === actor;
           return (
-            <div key={id} role="button" tabIndex={0} aria-label={`${playerName(id)}: details`} onClick={() => setDetail(id)} onKeyDown={(e) => e.key === "Enter" && setDetail(id)} className={`cursor-pointer rounded-xl border border-l-4 bg-white px-2.5 py-1.5 shadow-sm ${style.border} ${style.borderL} ${acting ? `shadow-lg ${style.glow} ring-2 ring-amber-300` : ""}`}>
+            <div key={id} role="button" tabIndex={0} aria-label={`${playerName(id)}: details`} onClick={() => setDetail(id)} onKeyDown={(e) => e.key === "Enter" && setDetail(id)} data-side={id} className={`pl-card cursor-pointer px-2.5 py-1.5 ${acting ? "pl-acting" : ""}`}>
               <div className="flex items-center gap-1.5">
-                <span title={playerName(id)} className={`font-display min-w-0 max-w-[34%] truncate rounded-full px-2.5 py-0.5 text-[15px] font-bold ${style.chip}`}>
+                <span title={playerName(id)} className="pl-name min-w-0 max-w-[34%] truncate text-[15px]">
+                  <Seal player={id} />
                   {playerName(id)}
                 </span>
                 {/* (the amber ring already says whose turn it is: no room for the badge on a phone) */}
                 <span className="ml-auto flex shrink-0 items-center gap-1.5">
-                  <span className="flex gap-1 text-[13px] text-zinc-600">
-                    <span className="rounded bg-emerald-50 px-1" title="Cards in hand">✋<b>{p.hand.length}</b></span>
-                    <span className="rounded bg-amber-50 px-1" title="Cards in library">📚<b>{p.library.length + unseen[id]}</b></span>
-                    <span className="rounded bg-stone-100 px-1" title="Cards in graveyard">⚰️<b>{p.graveyard.length}</b></span>
+                  <span className="pl-counts flex gap-1.5 text-[13px]">
+                    <span title="Cards in hand"><Hand width={15} height={15} /><b>{p.hand.length}</b></span>
+                    <span title="Cards in library"><ZoneIcon kind="library" /><b>{p.library.length + unseen[id]}</b></span>
+                    <span title="Cards in graveyard"><ZoneIcon kind="graveyard" /><b>{p.graveyard.length}</b></span>
                   </span>
                   <DeathLife n={p.deathLife ?? 0} short />
-                  {(p.preventShield ?? 0) > 0 && <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[13px] font-bold text-sky-800" title="The next damage dealt to this player this turn is prevented">🛡️ {p.preventShield}</span>}
+                  {(p.preventShield ?? 0) > 0 && <span className="pl-tag text-[13px]" title="The next damage dealt to this player this turn is prevented"><Shield width={14} height={14} /> {p.preventShield}</span>}
                   <Emblems texts={(p.emblems ?? []).map((e) => e.text)} short />
                   {(p.poison ?? 0) > 0 && (
-                    <span data-poison={id} className={`rounded px-1.5 py-0.5 text-[13px] font-bold tabular-nums ${(p.poison ?? 0) >= 7 ? "bg-lime-200 text-lime-900" : "bg-lime-100 text-lime-800"}`}>
-                      ☠️ {p.poison}/10
+                    <span data-poison={id} data-grave={(p.poison ?? 0) >= 7 ? "yes" : "no"} className="pl-tag pl-poison text-[13px] tabular-nums">
+                      <Skull width={14} height={14} /> {p.poison}/10
                     </span>
                   )}
-                  <span className="text-xl" aria-hidden="true">
-                    ❤️
-                  </span>
+                  <Heart width={20} height={20} className="ink-icon pl-heart" />
                   <LifeTotal id={id} value={p.life} />
                 </span>
               </div>
@@ -148,25 +180,24 @@ function PlayersPanelInner({
     );
   }
   return (
-    <section className={panel}>
+    <section className={frame}>
       <h2 className={title}>{heading}</h2>
       {order.map((id) => {
         const p = state.players[id];
         const style = PLAYER_STYLE[id];
         const acting = id === actor;
         return (
-          <div key={id} className={`rounded-xl border border-l-4 bg-white p-3 shadow-sm ${style.border} ${style.borderL} ${acting ? `shadow-lg ${style.glow} ring-2 ring-amber-300` : ""}`}>
+          <div key={id} data-side={id} className={`pl-card p-3 ${acting ? "pl-acting" : ""}`}>
             {/* a long account name shortens (…) and the badge wraps below it instead of leaving the panel; Resign sits at the end of the life row */}
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-              <span title={playerName(id)} className={`font-display min-w-0 max-w-full truncate rounded-full px-2.5 py-0.5 text-base font-bold ${style.chip}`}>
+              <span title={playerName(id)} className="pl-name min-w-0 max-w-full truncate text-lg">
+                <Seal player={id} />
                 {playerName(id)}
               </span>
-              {acting && <span className="shrink-0 whitespace-nowrap rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-extrabold uppercase font-display tracking-wide text-black">to act</span>}
+              {acting && <span className="pl-act shrink-0 whitespace-nowrap">to act</span>}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="text-2xl" aria-hidden="true">
-                ❤️
-              </span>
+              <Heart width={26} height={26} className="ink-icon pl-heart" />
               <LifeTotal id={id} value={p.life} />
               {onResign && !state.winner && (
                 <button onClick={() => onResign(id)} title="Give up this game: the other player wins" className="btn-danger ml-auto shrink-0 !px-3 !py-1">
@@ -175,30 +206,28 @@ function PlayersPanelInner({
               )}
               <DeathLife n={p.deathLife ?? 0} />
               {(p.preventShield ?? 0) > 0 && (
-                <span title="The next damage dealt to this player this turn is prevented" className="rounded bg-sky-100 px-1.5 py-0.5 text-sm font-bold text-sky-800">
-                  🛡️ {p.preventShield}
+                <span title="The next damage dealt to this player this turn is prevented" className="pl-tag text-sm">
+                  <Shield width={15} height={15} /> {p.preventShield}
                 </span>
               )}
               <Emblems texts={(p.emblems ?? []).map((e) => e.text)} />
               {(p.poison ?? 0) > 0 && (
-                <span data-poison={id} title="Poison counters: a player with ten or more loses the game" className={`rounded px-1.5 py-0.5 text-sm font-bold tabular-nums ${(p.poison ?? 0) >= 7 ? "bg-lime-200 text-lime-900" : "bg-lime-100 text-lime-800"}`}>
-                  ☠️ {p.poison}/10
+                <span data-poison={id} data-grave={(p.poison ?? 0) >= 7 ? "yes" : "no"} title="Poison counters: a player with ten or more loses the game" className="pl-tag pl-poison text-sm tabular-nums">
+                  <Skull width={15} height={15} /> {p.poison}/10
                 </span>
               )}
             </div>
-            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200" aria-hidden="true">
-              <div className={`h-full rounded-full transition-all duration-500 ${lifeColor(p.life)}`} style={{ width: `${Math.max(0, Math.min(100, (p.life / 20) * 100))}%` }} />
-            </div>
+            <InkWell life={p.life} />
             <ManaMeter state={state} id={id} note={manaNotes[id]} />
-            <div className="mt-2 grid grid-cols-3 gap-1 text-center text-[11px] text-zinc-600">
-              <span data-hand={id} className="rounded bg-emerald-50 py-0.5" title="Cards in hand">
-                ✋ Hand <b>{p.hand.length}</b>
+            <div className="pl-ledger mt-2">
+              <span data-hand={id} title="Cards in hand">
+                <Hand width={16} height={16} /> Hand <b>{p.hand.length}</b>
               </span>
-              <span className="rounded bg-amber-50 py-0.5" title="Cards in library">
-                📚 Library <b>{p.library.length + unseen[id]}</b>
+              <span title="Cards in library">
+                <ZoneIcon kind="library" /> Library <b>{p.library.length + unseen[id]}</b>
               </span>
-              <span className="rounded bg-stone-100 py-0.5" title="Cards in graveyard">
-                ⚰️ Yard <b>{p.graveyard.length}</b>
+              <span title="Cards in graveyard">
+                <ZoneIcon kind="graveyard" /> Yard <b>{p.graveyard.length}</b>
               </span>
             </div>
           </div>
@@ -213,8 +242,8 @@ function PlayersPanelInner({
 function Emblems({ texts, short }: { texts: string[]; short?: boolean }) {
   if (texts.length === 0) return null;
   return (
-    <span title={texts.map((t) => `Emblem: ${t}`).join("\n")} className={`rounded bg-violet-100 px-1.5 py-0.5 font-semibold text-violet-800 ${short ? "text-[13px]" : "text-sm"}`}>
-      ✨ {short ? (texts.length > 1 ? `×${texts.length}` : "") : texts.map((t) => `Emblem: ${t}`).join(" · ")}
+    <span title={texts.map((t) => `Emblem: ${t}`).join("\n")} className={`pl-tag ${short ? "text-[13px]" : "text-sm"}`}>
+      <Spark width={14} height={14} /> {short ? (texts.length > 1 ? `×${texts.length}` : "") : texts.map((t) => `Emblem: ${t}`).join(" · ")}
     </span>
   );
 }
@@ -222,8 +251,8 @@ function Emblems({ texts, short }: { texts: string[]; short?: boolean }) {
 function DeathLife({ n, short }: { n: number; short?: boolean }) {
   if (n === 0) return null;
   return (
-    <span title={`This turn, whenever a creature dies, this player gains ${n} life (Ruinous Waterbending)`} className={`rounded bg-sky-100 px-1.5 py-0.5 font-semibold text-sky-800 ${short ? "text-[13px]" : "text-sm"}`}>
-      💧 {short ? `+${n}/death` : `Creature dies: +${n} life (this turn)`}
+    <span title={`This turn, whenever a creature dies, this player gains ${n} life (Ruinous Waterbending)`} className={`pl-tag ${short ? "text-[13px]" : "text-sm"}`}>
+      <InkDrop width={14} height={14} /> {short ? `+${n}/death` : `Creature dies: +${n} life (this turn)`}
     </span>
   );
 }
@@ -232,28 +261,28 @@ function DeathLife({ n, short }: { n: number; short?: boolean }) {
 function PlayerDetail({ state, id, actor, unseen, note, onResign, onClose }: { state: GameState; id: PlayerId; actor: PlayerId; unseen: number; note?: ManaNote; onResign?: (id: PlayerId) => void; onClose: () => void }) {
   const p = state.players[id];
   const style = PLAYER_STYLE[id];
-  const rows: [string, string, number][] = [
-    ["✋", "Hand", p.hand.length],
-    ["📚", "Library", p.library.length + unseen],
-    ["⚰️", "Graveyard", p.graveyard.length],
-    ["🌀", "Exile", p.exile.length],
+  const rows: [React.ReactNode, string, number][] = [
+    [<Hand key="h" width={18} height={18} />, "Hand", p.hand.length],
+    [<ZoneIcon key="l" kind="library" />, "Library", p.library.length + unseen],
+    [<ZoneIcon key="g" kind="graveyard" />, "Graveyard", p.graveyard.length],
+    [<ZoneIcon key="e" kind="exile" />, "Exile", p.exile.length],
   ];
   return (
     <div role="dialog" aria-modal="true" aria-label={`${playerName(id)}'s details`} className="game-modal fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-3" onClick={onClose}>
-      <div className={`w-full max-w-sm rounded-2xl border border-l-4 bg-white p-4 shadow-2xl ${style.border} ${style.borderL}`} onClick={(e) => e.stopPropagation()}>
+      <div data-side={id} className="pl-card w-full max-w-sm p-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
-          <span className={`font-display min-w-0 truncate rounded-full px-3 py-1 text-lg font-bold ${style.chip}`}>{playerName(id)}</span>
-          {id === actor && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[11px] font-extrabold uppercase font-display tracking-wide text-black">to act</span>}
+          <span className="pl-name min-w-0 truncate text-xl"><Seal player={id} />{playerName(id)}</span>
+          {id === actor && <span className="pl-act">to act</span>}
           <button onClick={onClose} aria-label="Close" className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-2xl leading-none">
             ×
           </button>
         </div>
         <div className="mt-3 flex items-center gap-2">
-          <span className="text-3xl" aria-hidden="true">❤️</span>
-          <span className="font-display text-5xl font-bold tabular-nums">{p.life}</span>
-          {(p.poison ?? 0) > 0 && <span className="rounded bg-lime-100 px-2 py-1 text-base font-bold text-lime-800">☠️ {p.poison}/10 poison</span>}
+          <Heart width={30} height={30} className="ink-icon pl-heart" />
+          <span className="life-num text-5xl tabular-nums">{p.life}</span>
+          {(p.poison ?? 0) > 0 && <span className="pl-tag pl-poison text-base"><Skull width={16} height={16} /> {p.poison}/10 poison</span>}
         </div>
-        {(p.preventShield ?? 0) > 0 && <div className="mt-2 rounded bg-sky-100 px-2 py-1 text-sm font-semibold text-sky-800">🛡️ The next {p.preventShield} damage dealt to this player this turn is prevented.</div>}
+        {(p.preventShield ?? 0) > 0 && <div className="pl-tag mt-2 text-sm"><Shield width={15} height={15} /> The next {p.preventShield} damage dealt to this player this turn is prevented.</div>}
         {p.skipCombat === state.turn + 1 || p.skipCombat === state.turn + 2 ? <div className="mt-2 rounded bg-amber-100 px-2 py-1 text-sm font-semibold text-amber-900">Skips all combat phases of their next turn.</div> : null}
         {(p.deathLife ?? 0) > 0 && (
           <div className="mt-2">
@@ -265,22 +294,20 @@ function PlayerDetail({ state, id, actor, unseen, note, onResign, onClose }: { s
             <Emblems texts={(p.emblems ?? []).map((e) => e.text)} />
           </div>
         )}
-        <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-zinc-200" aria-hidden="true">
-          <div className={`h-full rounded-full ${lifeColor(p.life)}`} style={{ width: `${Math.max(0, Math.min(100, (p.life / 20) * 100))}%` }} />
-        </div>
+        <InkWell life={p.life} big />
         <ManaMeter state={state} id={id} note={note} mark={false} />
         <div className="mt-3 grid grid-cols-2 gap-2 text-base">
           {rows.map(([icon, label, n]) => (
-            <div key={label} className="flex items-center justify-between rounded-lg bg-zinc-100 px-3 py-2">
-              <span>
-                <span aria-hidden="true">{icon}</span> {label}
+            <div key={label} className="pl-row flex items-center justify-between px-3 py-2">
+              <span className="inline-flex items-center gap-1.5">
+                {icon} {label}
               </span>
               <b className="tabular-nums">{n}</b>
             </div>
           ))}
         </div>
         {onResign && !state.winner && (
-          <button onClick={() => (onClose(), onResign(id))} className="mt-3 w-full rounded-lg border border-red-300 py-2.5 text-sm font-semibold text-red-700">
+          <button onClick={() => (onClose(), onResign(id))} className="btn-danger mt-3 w-full !py-2.5">
             Resign
           </button>
         )}
@@ -299,7 +326,7 @@ export function ChatPanel({ messages, as, onSend }: { messages: ChatMessage[]; a
   }, [messages.length]);
 
   return (
-    <section className={`${panel} h-48 lg:h-auto lg:min-h-[8.5rem] lg:flex-1`}>
+    <section className={`${slip} h-48 lg:h-auto lg:min-h-[8.5rem] lg:flex-1`}>
       <h2 className={title}>Chat</h2>
       <div className="min-h-0 flex-1 overflow-y-auto text-[15px] leading-relaxed">
         {messages.length === 0 && <p className="text-[15px] text-zinc-600">No messages yet.</p>}
@@ -326,9 +353,9 @@ export function ChatPanel({ messages, as, onSend }: { messages: ChatMessage[]; a
           onChange={(e) => setText(e.target.value)}
           maxLength={200}
           placeholder={`Message as ${playerName(as)}`}
-          className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-zinc-100 px-2.5 py-1.5 text-[15px] outline-none focus:border-amber-400"
+          className="slip-field min-w-0 flex-1 px-2.5 py-1.5 text-[15px] outline-none"
         />
-        <button type="submit" className="rounded-lg bg-zinc-300 px-3.5 text-[15px] font-medium hover:bg-zinc-400">
+        <button type="submit" className="btn-gold !px-3.5 !py-1 !text-sm">
           Send
         </button>
       </form>
@@ -421,7 +448,7 @@ export const LogPanel = memo(
     return { line, key: `${n}:${line}` };
   }).reverse();
   return (
-    <section className={`${panel} h-48 lg:h-auto lg:min-h-[8.5rem] lg:flex-1`}>
+    <section className={`${ledger} h-48 lg:h-auto lg:min-h-[8.5rem] lg:flex-1`}>
       <h2 className={title}>Log</h2>
       <div className="min-h-0 flex-1 overflow-y-auto pr-1 text-[15px] leading-relaxed text-zinc-800">
         {keyed.map((x) => (

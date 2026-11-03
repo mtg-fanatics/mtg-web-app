@@ -897,14 +897,14 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
         {fullscreen.available && (
           <button
             onClick={fullscreen.toggle}
-            className="flex w-full items-center justify-between rounded-xl border border-white/40 bg-slate-950/55 px-3 py-2 text-left font-display text-xs font-bold uppercase tracking-wide text-white shadow-sm hover:bg-slate-900/70"
+            className="panel-strip btn-row flex w-full items-center justify-between px-3 py-2 text-left"
           >
             <span>⛶ {fullscreen.on ? "Leave full screen" : "Full screen"}</span>
           </button>
         )}
         {!watching && (
-          <div className="flex flex-col gap-1 rounded-xl border border-white/40 bg-slate-950/55 px-3 py-2 text-white" role="group" aria-label="Priority stops">
-            <span className="font-display text-xs font-bold uppercase tracking-wide">Stop for priority</span>
+          <div className="panel-strip flex flex-col gap-0.5 px-3 py-2" role="group" aria-label="Priority stops">
+            <span className="panel-title">Stop for priority</span>
             {(
               [
                 ["attack", "When I am attacked"],
@@ -912,9 +912,9 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
                 ["block", "After blocks"],
               ] as const
             ).map(([key, label]) => (
-              <label key={key} className="flex min-h-9 cursor-pointer items-center justify-between gap-2 text-sm">
+              <label key={key} className="strip-row flex min-h-9 cursor-pointer items-center justify-between gap-2 text-[15px]">
                 <span>{label}</span>
-                <input type="checkbox" checked={stops[key]} onChange={(e) => setStop(key, e.target.checked)} className="h-5 w-5 accent-amber-400" />
+                <input type="checkbox" checked={stops[key]} onChange={(e) => setStop(key, e.target.checked)} className="ink-check" />
               </label>
             ))}
           </div>
@@ -932,7 +932,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
           <KeepRandomDecks decks={{ [actor]: playedDecks[actor] }} saved={savedDecks} onSaved={keepDeck} label={() => "Save my random deck"} />
         </div>
         {!watching && !state.winner && (
-          <button onClick={() => (setMenuOpen(false), setResigning(actor))} className="rounded-xl border border-red-400/60 bg-red-950/40 px-3 py-2.5 text-sm font-bold text-red-200 lg:hidden">
+          <button onClick={() => (setMenuOpen(false), setResigning(actor))} className="btn-danger !py-2.5 lg:hidden">
             Resign
           </button>
         )}

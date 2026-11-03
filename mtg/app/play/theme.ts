@@ -30,15 +30,15 @@ export const PLAYER_STYLE: Record<PlayerId, { chip: string; border: string; bord
 export type BannerMode = "main" | "attack" | "block" | "damage" | "stack" | "choice" | "mulligan" | "cleanup";
 
 /** The colored "what to do now" strip. */
-export const BANNER: Record<BannerMode, { box: string; icon: string; label: string }> = {
-  main: { box: "border-emerald-300 bg-emerald-50 text-emerald-900", icon: "🌿", label: "Your main phase" },
-  attack: { box: "border-red-300 bg-red-50 text-red-900", icon: "⚔️", label: "Attack" },
-  block: { box: "border-sky-300 bg-sky-50 text-sky-900", icon: "🛡️", label: "Block" },
-  damage: { box: "border-orange-300 bg-orange-50 text-orange-900", icon: "💥", label: "Damage" },
-  stack: { box: "border-violet-300 bg-violet-50 text-violet-900", icon: "⏳", label: "Respond" },
-  choice: { box: "border-rose-300 bg-rose-50 text-rose-900", icon: "👉", label: "Make a choice" },
-  mulligan: { box: "border-indigo-300 bg-indigo-50 text-indigo-900", icon: "🃏", label: "Opening hand" },
-  cleanup: { box: "border-slate-300 bg-slate-50 text-slate-900", icon: "🧹", label: "End of turn" },
+export const BANNER: Record<BannerMode, { box: string; icon: "leaf" | "swords" | "shield" | "burst" | "hourglass" | "quill" | "fan" | "binned"; label: string }> = {
+  main: { box: "border-emerald-300 bg-emerald-50 text-emerald-900", icon: "leaf", label: "Your main phase" },
+  attack: { box: "border-red-300 bg-red-50 text-red-900", icon: "swords", label: "Attack" },
+  block: { box: "border-sky-300 bg-sky-50 text-sky-900", icon: "shield", label: "Block" },
+  damage: { box: "border-orange-300 bg-orange-50 text-orange-900", icon: "burst", label: "Damage" },
+  stack: { box: "border-violet-300 bg-violet-50 text-violet-900", icon: "hourglass", label: "Respond" },
+  choice: { box: "border-rose-300 bg-rose-50 text-rose-900", icon: "quill", label: "Make a choice" },
+  mulligan: { box: "border-indigo-300 bg-indigo-50 text-indigo-900", icon: "fan", label: "Opening hand" },
+  cleanup: { box: "border-slate-300 bg-slate-50 text-slate-900", icon: "binned", label: "End of turn" },
 };
 
 /** Colors for the life bar: green while healthy, amber when low, red when close to losing. */

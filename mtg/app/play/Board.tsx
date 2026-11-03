@@ -48,7 +48,7 @@ export function Side({ label, children, player, tone, grow, mat, matFx, zones, o
   return (
     <section
       className={`relative flex flex-col gap-1.5 rounded-2xl border-2 px-1.5 py-1 shadow-lg lg:px-3 lg:py-2 ${grow ? "min-h-0 flex-1 overflow-y-auto" : "shrink-0"} ${
-        tray ? "border-[#8fc4a5]/50 bg-slate-950/65 text-white" : style ? `${style.border} ${style.borderL} ${style.soft}` : "border-zinc-200 border-l-zinc-400 bg-white/70"
+        tray ? "hand-tray text-white" : style ? `${style.border} ${style.borderL} ${style.soft}` : "border-zinc-200 border-l-zinc-400 bg-white/70"
       }`}
     >
       <h2 className={`flex items-center gap-2 font-display text-xs font-bold uppercase tracking-widest max-lg:sr-only ${tray ? "text-[#a9d4b9]" : "text-zinc-600"}`}>
