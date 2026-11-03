@@ -44,7 +44,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Inkfall",
   description: "A game of two hands and a table. Write a deck, take a seat, and duel.",
-  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }], shortcut: "/icon.svg", apple: "/logo.svg" },
+  icons: { icon: [{ url: "/inkfall-seal.svg", type: "image/svg+xml" }], shortcut: "/inkfall-seal.svg", apple: "/inkfall-seal.svg" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

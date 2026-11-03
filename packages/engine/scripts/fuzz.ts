@@ -22,6 +22,7 @@ import {
   playerToAct,
   createGame,
   staticEffectsOn,
+  handLimit,
   suggestDamageAssignment,
   toughnessOf,
   MAX_HAND_SIZE,
@@ -208,7 +209,7 @@ function choose(s: GameState, rng: Rng): { player: PlayerId; action: Action } {
       return go({ type: "keepHand", bottom: [] });
     case "cleanup": {
       const hand = s.players[player].hand;
-      const excess = hand.length - MAX_HAND_SIZE;
+      const excess = hand.length - handLimit(s, player);
       return go({ type: "discard", iids: hand.slice(0, excess).map((c) => c.iid) });
     }
     case "damage": {
@@ -254,7 +255,7 @@ function invariants(s: GameState, initial: Record<PlayerId, number>): string[] {
   const note = (iid: string, owner: PlayerId, where: string) => {
     if (seen.has(iid)) problems.push(`card ${iid} is in two places (second: ${where})`);
     seen.add(iid);
-    if (!iid.startsWith("tok")) count[owner]++; // tokens aren't cards of the deck
+    if (!iid.startsWith("tok") && !iid.startsWith("gen")) count[owner]++; // (tokens and conjured cards are not cards of the deck) // tokens aren't cards of the deck
   };
   for (const p of Object.values(s.players)) {
     p.library.forEach((c) => note(c.iid, c.owner, "library"));
@@ -263,7 +264,7 @@ function invariants(s: GameState, initial: Record<PlayerId, number>): string[] {
     p.exile.forEach((c) => note(c.iid, c.owner, "exile"));
     p.battlefield.forEach((x) => note(x.card.iid, x.card.owner, "battlefield"));
   }
-  for (const item of s.stack) if (item.kind === "spell") note(item.card.iid, item.card.owner, "stack");
+  for (const item of s.stack) if (item.kind === "spell" && !item.copy) note(item.card.iid, item.card.owner, "stack"); // (a copy of a spell is not a card)
   for (const id of ["p1", "p2"] as const) if (count[id] !== initial[id]) problems.push(`${id} has ${count[id]} cards, started with ${initial[id]}`);
 
   const onBoard = new Set(Object.values(s.players).flatMap((p) => p.battlefield.map((x) => x.card.iid)));
@@ -284,9 +285,9 @@ function invariants(s: GameState, initial: Record<PlayerId, number>): string[] {
   }
   if (s.pendingPick) {
     const p = s.pendingPick;
-    const where = new Set([...s.players[p.owner].hand, ...s.players[p.owner].library, ...s.players[p.owner].battlefield.map((x) => x.card)].map((c) => c.iid));
+    const where = new Set(Object.values(s.players).flatMap((pl) => [...pl.hand, ...pl.library, ...pl.graveyard, ...pl.exile, ...pl.battlefield.map((x) => x.card)]).map((c) => c.iid));
     // ward ("pay"), mode (an index), color and creature type picks are not cards
-    if (!["ward", "mode", "color", "creatureType", "mayPay", "tax", "toggle", "topBottom"].includes(p.kind)) for (const o of p.options) if (!where.has(o)) problems.push(`a pick offers ${o}, which is not in the hand, library or battlefield`);
+    if (!["ward", "mode", "color", "creatureType", "mayPay", "tax", "toggle", "topBottom"].includes(p.kind)) for (const o of p.options) if (!where.has(o)) problems.push(`a pick offers ${o}, which is in no zone`);
   }
   if (s.priority && s.stack.length === 0 && !s.priority.then && !s.pendingPick && !s.pendingChoice) problems.push("priority is open with an empty stack and nothing to do next");
   return problems;
@@ -401,6 +402,8 @@ for (let g = 0; g < games; g++) {
   let steps = 0;
   const trail: string[] = [];
   for (; steps < maxActions && !state.winner; steps++) {
+    // a card that doubles itself every turn (Troubling Tribbles) makes every move slower than the last: after this many permanents the game is called too long
+    if (state.players.p1.battlefield.length + state.players.p2.battlefield.length > 250) break;
     const { player, action } = choose(state, rng);
     let result;
     const before = state;

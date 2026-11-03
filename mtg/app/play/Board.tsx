@@ -33,7 +33,7 @@ export function Side({ label, children, player, tone, grow, mat, matFx, zones, o
           {label}
         </h2>
         {/* Notices (what the other player just cast) float over the mat, so they never squeeze the cards. */}
-        {overlay && <div className="pointer-events-none absolute inset-x-2 top-2 z-20 lg:inset-x-4 lg:top-9 flex flex-col gap-1.5 lg:right-48">{overlay}</div>}
+        {overlay && <div className="pointer-events-none absolute inset-x-2 top-2 z-20 lg:inset-x-4 lg:top-9 flex flex-col gap-1.5 lg:right-[13.5rem]">{overlay}</div>}
         <div className="relative z-[1] flex min-h-0 flex-1 gap-1.5 lg:gap-3">
           <FitToHeight className="flex-1">{children}</FitToHeight>
           {zones && (

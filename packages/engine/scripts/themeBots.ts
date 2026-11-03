@@ -6,7 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
-import { applyAction, botAction, createGame, getCastable, getDamageAssignments, getForcedBlocks, getPossibleAttackers, getPossibleBlockers, isSupportedCard, legalTargets, MAX_HAND_SIZE, playerToAct, suggestDamageAssignment, viewFor } from "../src/index.js";
+import { handLimit, applyAction, botAction, createGame, getCastable, getDamageAssignments, getForcedBlocks, getPossibleAttackers, getPossibleBlockers, isSupportedCard, legalTargets, MAX_HAND_SIZE, playerToAct, suggestDamageAssignment, viewFor } from "../src/index.js";
 import type { Action, CardDef, GameState, PlayerId, TargetChoice } from "../src/index.js";
 
 const [games = 6, firstSeed = 1] = process.argv.slice(2).map(Number);
@@ -82,7 +82,7 @@ function randomAction(s: GameState, me: PlayerId, rng: Rng): Action {
   const p = s.players[me];
   switch (s.phase) {
     case "mulligan": return { type: "keepHand", bottom: [] };
-    case "cleanup": return { type: "discard", iids: p.hand.slice(0, p.hand.length - MAX_HAND_SIZE).map((c) => c.iid) };
+    case "cleanup": return { type: "discard", iids: p.hand.slice(0, p.hand.length - handLimit(s, me)).map((c) => c.iid) };
     case "damage": return { type: "assignDamage", assignments: getDamageAssignments(s).flatMap((d) => Object.entries(suggestDamageAssignment(s, d.attacker)).map(([blocker, amount]) => ({ attacker: d.attacker, blocker, amount }))) };
     case "blockers": {
       const forced = getForcedBlocks(s);

@@ -146,7 +146,9 @@ export function staticEffectsOn(s: GameState, target: Permanent): StaticEffect[]
   const creature = isCreature(s, target);
   for (const owner of Object.values(s.players)) {
     for (const source of owner.battlefield) {
-      for (const st of parseCard(getCard(s, source.card.defId)).statics ?? []) {
+      const sources = parseCard(s.cards[source.card.defId] ?? getCard(s, source.card.defId)).statics;
+      if (sources === undefined || sources.length === 0) continue; // (most permanents have none: this is asked for every permanent on every power check)
+      for (const st of sources) {
         if (st.cond?.yourTurn && s.active !== owner.id) continue;
         if (st.level && (source.classLevel ?? 1) < st.level) continue;
         if (st.attackingOnly && !s.combat?.attackers.some((a) => a.attacker === target.card.iid)) continue;
@@ -299,6 +301,13 @@ const ownKeyword = (s: GameState, p: Permanent, keyword: Keyword) =>
 export const kw = (s: GameState, p: Permanent, keyword: Keyword) =>
   !(keyword === "defender" && p.tempNoDefender) && (
   hasKeyword(getCard(s, p.card.defId), keyword) || (p.tempKeywords ?? []).includes(keyword) || (p.kwCounters ?? []).includes(keyword) || staticEffectsOn(s, p).some((st) => st.keywords.includes(keyword)));
+
+/** Which of `keywords` the permanent has right now: the same answer as asking kw() for each, but its static effects are worked out once, not once per keyword. */
+export function keywordsNow(s: GameState, p: Permanent, keywords: readonly Keyword[]): Keyword[] {
+  const def = getCard(s, p.card.defId);
+  const statics = staticEffectsOn(s, p);
+  return keywords.filter((k) => !(k === "defender" && p.tempNoDefender) && (hasKeyword(def, k) || (p.tempKeywords ?? []).includes(k) || (p.kwCounters ?? []).includes(k) || statics.some((st) => st.keywords.includes(k))));
+}
 
 /** Keywords the permanent has right now that its card doesn't print and that don't wear off this turn: from counters and static effects (delirium, anthems, Equipment). */
 export function gainedKeywords(s: GameState, p: Permanent): Keyword[] {

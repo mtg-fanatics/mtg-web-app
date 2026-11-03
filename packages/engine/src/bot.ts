@@ -1,7 +1,7 @@
-import { applyAction, getDamageAssignments, getForcedBlocks, getPossibleAttackers, getPossibleBlockers, getRequiredBlocks, MAX_HAND_SIZE, suggestDamageAssignment } from "./actions.js";
+import { applyAction, getDamageAssignments, getForcedBlocks, getPossibleAttackers, getPossibleBlockers, getRequiredBlocks, suggestDamageAssignment } from "./actions.js";
 import type { Action, Block } from "./actions.js";
 import { getActivatable, getCastable, getLoyaltyAbilities, getPlottable } from "./stack.js";
-import { entersTappedNow, exilePlayable, legalTargets, playerToAct, powerOf, staticEffectsOn, toughnessOf } from "./core.js";
+import { entersTappedNow, exilePlayable, handLimit, legalTargets, playerToAct, powerOf, staticEffectsOn, toughnessOf } from "./core.js";
 import { landManaColors, manaSources } from "./mana.js";
 import { hasKeyword } from "./keywords.js";
 import type { Keyword } from "./keywords.js";
@@ -330,7 +330,7 @@ function plainAction(s: GameState): Action | null {
       return { type: "keepHand", bottom: [] };
     case "cleanup": {
       const hand = s.players[who].hand;
-      return { type: "discard", iids: hand.slice(0, Math.max(0, hand.length - MAX_HAND_SIZE)).map((c) => c.iid) };
+      return { type: "discard", iids: hand.slice(0, Math.max(0, hand.length - handLimit(s, who))).map((c) => c.iid) };
     }
     case "damage":
       return { type: "assignDamage", assignments: getDamageAssignments(s).flatMap((d) => Object.entries(suggestDamageAssignment(s, d.attacker)).map(([blocker, amount]) => ({ attacker: d.attacker, blocker, amount }))) };
@@ -388,7 +388,7 @@ function chooseMulligan(s: GameState, me: PlayerId): Action {
 
 function chooseDiscard(s: GameState, me: PlayerId): Action {
   const hand = s.players[me].hand;
-  const excess = Math.max(0, hand.length - MAX_HAND_SIZE);
+  const excess = Math.max(0, hand.length - handLimit(s, me)); // (some cards change the hand size)
   const worst = [...hand].sort((a, b) => keepValue(s, me, a.defId) - keepValue(s, me, b.defId)).slice(0, excess);
   return { type: "discard", iids: worst.map((c) => c.iid) };
 }

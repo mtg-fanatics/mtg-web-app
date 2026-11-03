@@ -19,7 +19,7 @@ import {
   subtypesOf,
   toughnessOf,
 } from "./permanents.js";
-import { ignoresHexproof } from "./targets.js";
+import { ignoresHexproof, legalTargets } from "./targets.js";
 import { isToken, putCounters } from "./zones.js";
 
 // Entering the battlefield and triggered abilities: which triggers fire, and putting them in the queue.
@@ -235,6 +235,8 @@ export function queueTriggers(state: GameState, card: CardInstance, controller: 
       // "Tap X target creatures": X copies of the target, and of the effects for each.
       const x = findPermanentOrNull(state, card.iid)?.perm.xPaid ?? 0;
       if (x === 0) continue;
+      // X different targets are needed: with fewer creatures than that the ability has no legal targets and is removed (rule 603.3d)
+      if (legalTargets(state, bindSpecs([trigger.targets[0]], card.iid)[0], controller).length < x) continue;
       targets = Array.from({ length: x }, (_, i) => ({ ...trigger.targets[0], label: `${trigger.targets[0].label} (${i + 1} of ${x})` }));
       effects = Array.from({ length: x }, (_, i) => shiftTargets(trigger.effects, i)).flat();
     }

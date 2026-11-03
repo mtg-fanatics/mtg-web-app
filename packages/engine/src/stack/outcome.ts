@@ -1,5 +1,5 @@
 import { getCard } from "../cards.js";
-import { isCreature, kw, powerOf, toughnessOf } from "../core.js";
+import { isCreature, keywordsNow, powerOf, toughnessOf } from "../core.js";
 import { SUPPORTED_KEYWORDS } from "../keywords.js";
 import type { GameState, Permanent, PlayerId } from "../types.js";
 
@@ -50,7 +50,7 @@ function see(state: GameState, perm: Permanent, player: PlayerId): Seen {
     toughness: creature ? toughnessOf(state, perm) : 0,
     plus: perm.counters ?? 0,
     minus: perm.minusCounters ?? 0,
-    keywords: creature ? SUPPORTED_KEYWORDS.filter((k) => kw(state, perm, k)) : [],
+    keywords: creature ? keywordsNow(state, perm, SUPPORTED_KEYWORDS) : [],
     shielded: perm.untargetableBy ?? [],
     tapped: perm.tapped,
     damage: perm.damage,

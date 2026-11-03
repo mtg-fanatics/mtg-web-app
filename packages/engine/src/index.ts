@@ -10,7 +10,7 @@ export * from "./oracle.js";
 export { abilityLockReason, getCastable, getActivatable, getCyclable, getCrewable, getLoyaltyAbilities, getPlottable, castCostOf, fizzleReason, liftedSpecs } from "./stack.js";
 export type { Castable, Activatable, Cyclable, Crewable, LoyaltyOption, Outcome } from "./stack.js";
 export { legalTargets } from "./core.js";
-export { colorsOfPerm, powerOf, toughnessOf, gainedKeywords, kw as hasKeywordNow, countFor, wardOf } from "./core.js";
+export { colorsOfPerm, handLimit, powerOf, toughnessOf, gainedKeywords, kw as hasKeywordNow, countFor, wardOf } from "./core.js";
 export { staticEffectsOn } from "./core.js";
 export { viewFor, spectatorView, HIDDEN_CARD_ID } from "./view.js";
 export { botAction, evaluate as evaluatePosition } from "./bot.js";

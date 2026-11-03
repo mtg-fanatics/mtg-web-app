@@ -55,7 +55,7 @@ test("attack stop: the attacked player gets priority after attackers are declare
 test("block stop: after blockers are declared the players are given priority", () => {
   let s = stops(stops(setup(), "p1", { block: true }), "p2", { block: true });
   s.phase = "attackers";
-  s = applyAction(s, "p1", { type: "declareAttackers", attackers: ["a1"] }).state as GameState;
+  s = (applyAction(s, "p1", { type: "declareAttackers", attackers: ["a1"] }) as { state: GameState }).state;
   const b = applyAction(s, "p2", { type: "declareBlockers", blocks: [{ blocker: "b1", attacker: "a1" }] });
   assert.ok(b.ok);
   assert.equal(b.state.priority?.then, "afterBlockers");

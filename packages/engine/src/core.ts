@@ -19,6 +19,7 @@ export {
   isArtifactDef,
   handLimit,
   isCreature,
+  keywordsNow,
   isEnchantmentDef,
   isPermanentCard,
   isPlaneswalker,
