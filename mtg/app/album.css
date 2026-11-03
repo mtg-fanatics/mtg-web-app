@@ -146,34 +146,34 @@
 .alb[data-turning="1"] .alb-page[data-role="P"] { animation-name: alb-pg-p-next; }
 .alb[data-turning="-1"] .alb-page[data-role="V"] { animation-name: alb-pg-v-prev; }
 /* (each keyframe lists the same functions in the same order, so they are worked out one by one and never guessed from a matrix) */
-@keyframes alb-pg-r-next { 0% { transform: translateZ(0) rotateY(0) skewY(0); } 50% { transform: translateZ(3cqw) rotateY(-90deg) skewY(-2.4deg); } 100% { transform: translateZ(0) rotateY(-180deg) skewY(0); } }
-@keyframes alb-pg-nl-next { 0% { transform: translateZ(0) rotateY(0) skewY(0) translateX(50%) rotateY(180deg) translateX(-50%); } 50% { transform: translateZ(3cqw) rotateY(-90deg) skewY(-2.4deg) translateX(50%) rotateY(180deg) translateX(-50%); } 100% { transform: translateZ(0) rotateY(-180deg) skewY(0) translateX(50%) rotateY(180deg) translateX(-50%); } }
-@keyframes alb-pg-l-prev { 0% { transform: translateZ(0) rotateY(0) skewY(0) translateX(-100%); } 50% { transform: translateZ(3cqw) rotateY(90deg) skewY(2.4deg) translateX(-100%); } 100% { transform: translateZ(0) rotateY(180deg) skewY(0) translateX(-100%); } }
-@keyframes alb-pg-pr-prev { 0% { transform: translateZ(0) rotateY(0) skewY(0) translateX(-100%) translateX(50%) rotateY(180deg) translateX(-50%); } 50% { transform: translateZ(3cqw) rotateY(90deg) skewY(2.4deg) translateX(-100%) translateX(50%) rotateY(180deg) translateX(-50%); } 100% { transform: translateZ(0) rotateY(180deg) skewY(0) translateX(-100%) translateX(50%) rotateY(180deg) translateX(-50%); } }
+@keyframes alb-pg-r-next { 0% { transform: translateZ(0) rotateY(0) skewY(0); } 50% { transform: translateZ(1.4cqw) rotateY(-90deg) skewY(-2.4deg); } 100% { transform: translateZ(0) rotateY(-180deg) skewY(0); } }
+@keyframes alb-pg-nl-next { 0% { transform: translateZ(0) rotateY(0) skewY(0) translateX(50%) rotateY(180deg) translateX(-50%); } 50% { transform: translateZ(1.4cqw) rotateY(-90deg) skewY(-2.4deg) translateX(50%) rotateY(180deg) translateX(-50%); } 100% { transform: translateZ(0) rotateY(-180deg) skewY(0) translateX(50%) rotateY(180deg) translateX(-50%); } }
+@keyframes alb-pg-l-prev { 0% { transform: translateZ(0) rotateY(0) skewY(0) translateX(-100%); } 50% { transform: translateZ(1.4cqw) rotateY(90deg) skewY(2.4deg) translateX(-100%); } 100% { transform: translateZ(0) rotateY(180deg) skewY(0) translateX(-100%); } }
+@keyframes alb-pg-pr-prev { 0% { transform: translateZ(0) rotateY(0) skewY(0) translateX(-100%) translateX(50%) rotateY(180deg) translateX(-50%); } 50% { transform: translateZ(1.4cqw) rotateY(90deg) skewY(2.4deg) translateX(-100%) translateX(50%) rotateY(180deg) translateX(-50%); } 100% { transform: translateZ(0) rotateY(180deg) skewY(0) translateX(-100%) translateX(50%) rotateY(180deg) translateX(-50%); } }
 @keyframes alb-pg-p-next { 0% { transform: rotateY(0); opacity: 1; } 55% { opacity: 1; } 100% { transform: rotateY(-105deg); opacity: 0; } }
 @keyframes alb-pg-v-prev { 0% { transform: rotateY(-105deg); opacity: 0; } 45% { opacity: 1; } 100% { transform: rotateY(0); opacity: 1; } }
 
 /* light and shade on a leaf: it darkens as it rises off the page, lightens as it comes down, and a soft highlight sweeps across the paper */
 .alb-shade, .alb-sheen { position: absolute; inset: 0; pointer-events: none; opacity: 0; animation-duration: var(--dur); animation-fill-mode: forwards; animation-timing-function: linear; }
-.alb-shade { background: linear-gradient(90deg, rgba(25, 12, 4, 0.62), rgba(25, 12, 4, 0.12)); }
-.alb-page[data-role="NL"] .alb-shade, .alb-page[data-role="L"] .alb-shade { background: linear-gradient(270deg, rgba(25, 12, 4, 0.62), rgba(25, 12, 4, 0.12)); }
+.alb-shade { background: linear-gradient(90deg, rgba(40, 22, 8, 0.34), rgba(40, 22, 8, 0.04)); }
+.alb-page[data-role="NL"] .alb-shade, .alb-page[data-role="L"] .alb-shade { background: linear-gradient(270deg, rgba(40, 22, 8, 0.34), rgba(40, 22, 8, 0.04)); }
 .alb-sheen { background: linear-gradient(100deg, transparent 36%, rgba(255, 250, 232, 0.55) 50%, transparent 64%); transform: translateX(-120%); }
 .alb[data-turning="1"] .alb-page[data-role="R"] .alb-shade, .alb[data-turning="-1"] .alb-page[data-role="L"] .alb-shade { animation-name: alb-shade-f; }
 .alb[data-turning="1"] .alb-page[data-role="NL"] .alb-shade, .alb[data-turning="-1"] .alb-page[data-role="PR"] .alb-shade { animation-name: alb-shade-b; }
 .alb[data-turning="1"] .alb-page[data-role="R"] .alb-sheen, .alb[data-turning="-1"] .alb-page[data-role="L"] .alb-sheen { animation-name: alb-sheen-f; }
 .alb[data-turning="1"] .alb-page[data-role="NL"] .alb-sheen, .alb[data-turning="-1"] .alb-page[data-role="PR"] .alb-sheen { animation-name: alb-sheen-b; }
-@keyframes alb-shade-f { 0% { opacity: 0; } 50%, 100% { opacity: 0.75; } }
-@keyframes alb-shade-b { 0%, 50% { opacity: 0.75; } 100% { opacity: 0; } }
+@keyframes alb-shade-f { 0% { opacity: 0; } 50%, 100% { opacity: 0.8; } }
+@keyframes alb-shade-b { 0%, 50% { opacity: 0.8; } 100% { opacity: 0; } }
 @keyframes alb-sheen-f { 0% { transform: translateX(-120%); opacity: 0; } 20% { opacity: 0.9; } 50%, 100% { transform: translateX(120%); opacity: 0; } }
 @keyframes alb-sheen-b { 0%, 50% { transform: translateX(-120%); opacity: 0; } 70% { opacity: 0.9; } 100% { transform: translateX(120%); opacity: 0; } }
 
 /* the shadow a leaf throws on the page beneath it as it lifts, and on the page it is coming down onto */
 .alb-cast { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
 .alb-cast::before, .alb-cast::after { content: ""; position: absolute; top: 0; bottom: 0; width: 50%; z-index: 5; pointer-events: none; opacity: 0; animation-duration: var(--dur); animation-fill-mode: forwards; animation-timing-function: linear; }
-.alb-cast[data-dir="1"]::before { left: 50%; background: linear-gradient(90deg, rgba(25, 12, 4, 0.6), transparent 72%); animation-name: alb-cast-early; }
-.alb-cast[data-dir="1"]::after { left: 0; background: linear-gradient(270deg, rgba(25, 12, 4, 0.55), transparent 72%); animation-name: alb-cast-late; }
-.alb-cast[data-dir="-1"]::before { left: 0; background: linear-gradient(270deg, rgba(25, 12, 4, 0.6), transparent 72%); animation-name: alb-cast-early; }
-.alb-cast[data-dir="-1"]::after { left: 50%; background: linear-gradient(90deg, rgba(25, 12, 4, 0.55), transparent 72%); animation-name: alb-cast-late; }
+.alb-cast[data-dir="1"]::before { left: 50%; background: linear-gradient(90deg, rgba(40, 22, 8, 0.38), transparent 72%); animation-name: alb-cast-early; }
+.alb-cast[data-dir="1"]::after { left: 0; background: linear-gradient(270deg, rgba(40, 22, 8, 0.34), transparent 72%); animation-name: alb-cast-late; }
+.alb-cast[data-dir="-1"]::before { left: 0; background: linear-gradient(270deg, rgba(40, 22, 8, 0.38), transparent 72%); animation-name: alb-cast-early; }
+.alb-cast[data-dir="-1"]::after { left: 50%; background: linear-gradient(90deg, rgba(40, 22, 8, 0.34), transparent 72%); animation-name: alb-cast-late; }
 @keyframes alb-cast-early { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes alb-cast-late { 0%, 55% { opacity: 0; } 88% { opacity: 1; } 100% { opacity: 0; } }
 
