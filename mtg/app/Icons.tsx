@@ -31,6 +31,13 @@ export function InkFilters() {
         <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="2" seed="3" result="t" />
         <feDisplacementMap in="SourceGraphic" in2="t" scale="1.1" xChannelSelector="R" yChannelSelector="G" />
       </filter>
+      {/* the slight bleed of ink into paper at the edge of a letter: a faint blurred copy, then the rough edge (small headings only, never animated) */}
+      <filter id="ink-bleed" x="-3%" y="-10%" width="106%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" seed="5" result="t" />
+        <feDisplacementMap in="SourceGraphic" in2="t" scale="1.3" xChannelSelector="R" yChannelSelector="G" result="rough" />
+        <feGaussianBlur in="rough" stdDeviation="0.55" result="soft" />
+        <feMerge><feMergeNode in="soft" /><feMergeNode in="rough" /></feMerge>
+      </filter>
     </svg>
   );
 }

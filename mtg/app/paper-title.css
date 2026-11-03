@@ -1,0 +1,13 @@
+/* paper-title: the front of the book. The lettering is written straight on the page. */
+.paper-title.hero-page { padding: 1.6rem 2rem 2rem; }
+.paper-title.hero-page::before, .paper-title.hero-page::after { display: none; }
+/* a very soft shadow where the two pages meet, falling across the title (it blends with the page, it is not a box) */
+.paper-title.hero-page::before { content: ""; display: block; position: absolute; top: -2rem; bottom: -2rem; left: 30%; right: 30%; z-index: -1; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(60, 36, 14, 0.14) 40%, rgba(60, 36, 14, 0.2) 50%, rgba(60, 36, 14, 0.14) 60%, transparent); }
+.paper-title .hero-eyebrow { color: var(--pi-soft); text-shadow: none; }
+.paper-title .hero-title { color: #1a0f06; text-shadow: 0 0 1.2px rgba(26, 15, 6, 0.8), 1.5px 1.5px 0 rgba(26, 15, 6, 0.28); }
+.paper-title .hero-sub { color: var(--pi-soft); text-shadow: none; }
+.paper-title .hero-sub::before, .paper-title .hero-sub::after { opacity: 0.8; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 10' fill='none' stroke='%2346331f' stroke-width='1.700' stroke-linecap='round'%3E%3Cpath d='M2 6c9-4 17 3 26-1s12-1 18-2'/%3E%3C/svg%3E"); }
+/* the red underline is a brush stroke: heavier, and a little ink spreading at its ends */
+.paper-title .scribble { color: var(--pi-red); stroke-width: 5.5px; }
+/* the wax seal is pressed into the page: it takes a soft shadow on one side only */
+.paper-title .hero-rise:first-of-type { filter: drop-shadow(1px 2px 1px rgba(60, 20, 10, 0.4)); }

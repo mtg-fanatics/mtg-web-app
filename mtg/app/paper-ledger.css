@@ -1,0 +1,60 @@
+/* paper-card and paper-ledger: entries written in a register (the profile card, the bell, the friends list) */
+
+/* the profile entry: the name in the display serif, the line under it written on a ruled line */
+.paper-card { position: relative; }
+.paper-card .block.truncate { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font-weight: 400; font-size: 1.12rem; }
+.paper-card .block.text-xs { font-size: 13px; font-style: italic; color: var(--pi-soft); border-bottom: 1px dotted var(--pi-rule); padding-bottom: 1px; }
+/* the portrait is mounted: a paper border, a thin line, and a bit of tape holding its corner */
+.paper-surface img.rounded-full, .paper-surface span.rounded-full.items-center.justify-center {
+  border-radius: 2px;
+  background: var(--pi-paper);
+  background-image: none;
+  color: var(--pi);
+  padding: 2px;
+  --tw-ring-shadow: 0 0 #0000;
+  box-shadow: 0 0 0 1px var(--pi-rule), 1px 2px 2px rgba(60, 35, 12, 0.3);
+  object-fit: cover;
+}
+.paper-card::before { content: ""; position: absolute; left: 10px; top: -3px; width: 26px; height: 10px; z-index: 2; background: var(--pi-tape); transform: rotate(-9deg); clip-path: polygon(0% 0%, 4% 12%, 0% 24%, 4% 38%, 0% 52%, 4% 66%, 0% 80%, 4% 100%, 96% 100%, 100% 82%, 96% 66%, 100% 50%, 96% 34%, 100% 18%, 96% 0%); pointer-events: none; }
+.paper-bell::before { display: none; }
+
+/* the friends list: a double rule above and below, and ruled lines between the entries */
+.paper-ledger { border-top: 3px double var(--pi); border-bottom: 3px double var(--pi); border-left: 0; border-right: 0; border-radius: 0; padding-left: 0.4rem; padding-right: 0.4rem; }
+.paper-ledger header h2 { font-size: 1.15rem; white-space: nowrap; }
+.paper-ledger header button:first-child { gap: 0.4rem; }
+.paper-ledger header .rounded-full.bg-rose-500 { background: none !important; color: var(--pi-red) !important; border: 1.5px solid var(--pi-red); font-size: 11px; line-height: 1; padding: 2px 6px; white-space: nowrap; }
+.paper-ledger .count-chip { background: none; border: 1.5px solid var(--pi); color: var(--pi); border-radius: 50% 46% 52% 48% / 52% 48% 50% 46%; box-shadow: none; }
+.paper-ledger .deck-row { background: none; border: 0; border-bottom: 1px solid var(--pi-rule); border-radius: 0; box-shadow: none; padding-left: 0.15rem !important; padding-right: 0.15rem !important; transform: none; }
+.paper-ledger .deck-row::before { display: none; }
+.paper-ledger .deck-row:hover { transform: none; background: var(--pi-wash); }
+.paper-ledger .truncate.font-bold { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font-weight: 400; font-size: 1.12rem; }
+.paper-ledger .text-xs { color: var(--pi-soft); }
+.paper-ledger h3 { color: var(--pi-soft); border-bottom: 1px solid var(--pi-rule); }
+.paper-ledger .empty-note { background: none; border: 0; box-shadow: none; color: var(--pi-soft); }
+.paper-ledger .empty-note button { color: var(--pi); text-decoration: underline wavy var(--pi-red); text-underline-offset: 4px; }
+/* a friend's mark: a filled ink dot for someone who is here, an empty ring for someone who is not */
+.paper-ledger .relative.shrink-0 > span.absolute { width: 11px; height: 11px; border: 1.5px solid var(--pi); box-shadow: none; --tw-ring-shadow: 0 0 #0000; background: var(--pi) !important; right: -3px; bottom: -3px; }
+.paper-ledger .relative.shrink-0 > span.absolute[style*="64748b"] { background: transparent !important; }
+.paper-ledger .relative.shrink-0 > span.absolute[style*="d9694f"] { background: var(--pi-red) !important; border-color: var(--pi-red); }
+.paper-ledger .relative.shrink-0 > span.absolute[style*="6b9a7f"] { background: var(--pi-green) !important; border-color: var(--pi-green); }
+/* the remove mark: a small inked minus, nothing round it */
+.paper-ledger .btn-ghost { background: none; border: 0; box-shadow: none; color: var(--pi-soft); }
+.paper-ledger .btn-ghost svg { color: var(--pi-soft); }
+.paper-ledger .btn-ghost:hover { background: var(--pi-wash); }
+
+/* the register is written on a leaf of the same paper as the page, faded out at its edges, so the page's own scribble does not run through the names */
+.paper-ledger::before {
+  content: "";
+  position: absolute;
+  inset: -0.6rem -0.5rem;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #e8dbb8;
+  background-image: var(--fibres), var(--grain-dark);
+  background-size: 300px 300px, 240px 240px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent), linear-gradient(180deg, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent), linear-gradient(180deg, transparent, #000 6%, #000 94%, transparent);
+  mask-composite: intersect;
+}
+.paper-ledger { isolation: isolate; }
