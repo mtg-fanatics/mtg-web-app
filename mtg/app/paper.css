@@ -90,7 +90,9 @@ html[data-theme="dark"] .paper-surface :focus-visible { outline: 2px solid var(-
   border-radius: 0;
   transition: background-color 0.12s ease, transform 0.08s ease;
 }
-.paper-surface.paper-card:hover:not(:disabled) { background-color: var(--pi-wash); transform: none; }
+/* the entry is written on a lighter leaf of the page (the corner of the book is the darkest part of the page, so bare paper there looked dim) */
+html[data-theme="dark"] .paper-surface.paper-card { background-color: #efe3c2; background-image: var(--fibres), var(--grain-dark); background-size: 300px 300px, 240px 240px; }
+.paper-surface.paper-card:hover:not(:disabled) { background-color: #e6d8b3; transform: none; }
 .paper-surface.paper-card:active:not(:disabled) { transform: translate(1px, 1px); }
 .paper-surface.paper-card svg { color: var(--pi); }
 
