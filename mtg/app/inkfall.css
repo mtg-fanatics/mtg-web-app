@@ -388,11 +388,13 @@ h3 { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font
 .deck-row[data-picked="true"] { border-color: var(--wax-hi); box-shadow: 4px 5px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 1px rgba(217, 105, 79, 0.5); }
 .deck-row::before { background: var(--wax); }
 .deck-name { font-family: var(--font-fell-text), Georgia, serif; font-size: 1.2rem; font-weight: 400; letter-spacing: 0; }
-.empty-note { border: 2px dashed rgba(200, 178, 138, 0.4); background: rgba(232, 220, 192, 0.04); border-radius: 7px 4px 8px 5px; font-family: var(--font-fell-text), Georgia, serif; font-style: italic; color: var(--paper-3); }
+.empty-note { border: 2px dashed rgba(200, 178, 138, 0.4); background: rgba(232, 220, 192, 0.04); border-radius: 7px 4px 8px 5px; font-family: var(--font-fell-text), Georgia, serif; font-style: italic; color: var(--paper-2); }
 .seg, .icon-seg { background: #120c07; border: 2px solid #0a0603; border-radius: 6px 4px 7px 5px; box-shadow: inset 1px 2px 5px rgba(0, 0, 0, 0.6); }
 .seg button, .icon-seg button { color: var(--paper-3); border-radius: 3px 5px 3px 4px; }
 .seg button:hover, .icon-seg button:hover { color: var(--color-white); }
-.field-label { font-family: var(--font-alegreya), sans-serif; font-size: 0.86rem; font-weight: 700; letter-spacing: 0.01em; text-transform: none; color: var(--paper-3); }
+/* captions and headings are set in the serif; the sans is only for the words you read and the buttons you press */
+.field-label { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font-size: 1rem; font-style: italic; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--paper-2); }
+h1.font-display, h2.font-display, h3.font-display, h4.font-display { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font-weight: 400; letter-spacing: 0.005em; }
 .seat-card { border-radius: 8px 5px 9px 6px; }
 .page-atmosphere, .page-atmosphere::before, .page-atmosphere::after { background: none !important; }
 

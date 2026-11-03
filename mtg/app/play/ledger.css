@@ -98,6 +98,9 @@
 .ink-well-fill[data-level="mid"] { background-color: #c79a3f; }
 .ink-well-fill[data-level="low"] { background-color: #b3392b; }
 
+/* the heading over a player's page sits straight on the table cloth: a dark label behind it keeps it readable on any cloth */
+.pl-frame > .panel-title { align-self: flex-start; padding: 0.05rem 0.7rem; color: var(--paper); background: rgba(18, 12, 7, 0.78); border-bottom: 0; border-radius: 3px 7px 3px 6px; }
+
 /* ───────── bound pages: the two players ───────── */
 .pl-card {
   --trim: var(--moss);
@@ -161,7 +164,7 @@
 .log-ledger .panel-title { border-bottom: 3px double rgba(200, 178, 138, 0.35); }
 
 /* ───────── strips: no box, two dashed rules ───────── */
-.panel-strip { background: rgba(8, 5, 3, 0.25); border-top: 1.5px dashed rgba(200, 178, 138, 0.4); border-bottom: 1.5px dashed rgba(200, 178, 138, 0.4); border-radius: 0; }
+.panel-strip { background: rgba(18, 12, 7, 0.74); border-top: 1.5px dashed rgba(200, 178, 138, 0.4); border-bottom: 1.5px dashed rgba(200, 178, 138, 0.4); border-radius: 0; }
 .panel-strip .strip-row + .strip-row { border-top: 1px dotted rgba(200, 178, 138, 0.22); }
 .btn-row { font-weight: 600; font-size: 0.95rem; color: var(--paper); cursor: pointer; }
 .btn-row:hover { background: rgba(232, 220, 192, 0.08); }
