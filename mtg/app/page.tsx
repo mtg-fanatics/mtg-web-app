@@ -1,6 +1,6 @@
 import Logo from "./Logo";
 import Link from "next/link";
-import LiveWallpaper from "./LiveWallpaper";
+import BookBackdrop from "./BookBackdrop";
 import Lobby from "./lobby/Lobby";
 import FriendsPanel from "./friends/FriendsPanel";
 import ProfileButton from "./profile/ProfileButton";
@@ -9,8 +9,8 @@ import { Fan, Scribble, Tome } from "./Icons";
 
 export default function Home() {
   return (
-    <main className="relative flex flex-1 flex-col items-center justify-center gap-7 overflow-x-clip p-5 text-white max-md:justify-start max-md:gap-5 max-md:pt-3 sm:p-8">
-      <LiveWallpaper />
+    <main className="book-page relative flex flex-1 flex-col items-center justify-center gap-7 overflow-x-clip p-5 text-white max-md:justify-start max-md:gap-5 max-md:pt-3 sm:p-8">
+      <BookBackdrop />
       <ProfileButton />
       <FriendsPanel />
       <Lobby />

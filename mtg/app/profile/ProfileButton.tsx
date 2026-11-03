@@ -119,7 +119,7 @@ export default function ProfileButton() {
   if (!me) return <ProfileSkeleton />;
   return (
     <>
-      <div className="z-20 flex items-center gap-2 self-start xl:fixed xl:left-4 xl:top-14 xl:self-auto">
+      <div className="book-tip-l z-20 flex items-center gap-2 self-start xl:fixed xl:left-4 xl:top-14 xl:self-auto">
       <button
         onClick={() => setOpen(true)}
         aria-label="Open your profile"

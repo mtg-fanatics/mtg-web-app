@@ -23,7 +23,7 @@ export default function LiveMatches({ online, inRoom }: { online: OnlineState; i
   const live = rooms.filter((r) => r.status === "playing").length;
 
   return (
-    <section aria-label="Live matches" className="panel-glass flex max-h-[min(26rem,52dvh)] flex-col gap-3 p-5 text-white">
+    <section aria-label="Live matches" className="book-tip-r panel-glass flex max-h-[min(26rem,52dvh)] flex-col gap-3 p-5 text-white">
       <header className="flex items-center gap-2.5">
         <span className={`h-3 w-3 rounded-[40%_60%_50%_50%] border-2 border-[#120c07] ${online.lobby === "on" ? "bg-[#6b9a7f]" : online.lobby === "connecting" ? "animate-pulse bg-[#d8c8a2]" : "bg-[#b3392b]"}`} aria-hidden="true" />
         <h2 className="text-2xl text-[#e8dcc0]">Tonight&apos;s tables</h2>
