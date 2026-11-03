@@ -32,12 +32,12 @@
     radial-gradient(circle at 100% 100%, rgba(140, 104, 68, 0.45) 0 2.4cqw, transparent 2.8cqw),
     radial-gradient(circle at 100% 0, rgba(140, 104, 68, 0.25) 0 1.8cqw, transparent 2.2cqw);
 }
-.alb-pages { position: absolute; left: 2.6cqw; right: 2.6cqw; top: 2.4cqw; bottom: 3.2cqw; }
+.alb-pages { position: absolute; left: 3cqw; right: 3cqw; top: 2.4cqw; bottom: 3.2cqw; }
 
 /* the edges of the leaves: a few uneven sheets on the left, right and bottom. The left stack grows (and the right one shrinks) as you go further in. */
 .alb-stack { position: absolute; pointer-events: none; }
-.alb-stack-l { right: 100%; top: 0.5cqw; bottom: 0.2cqw; width: 1.6cqw; --t: calc(0.35cqw + var(--prog, 0) * 1.05cqw); }
-.alb-stack-r { left: 100%; top: 0.5cqw; bottom: 0.2cqw; width: 1.6cqw; --t: calc(0.35cqw + (1 - var(--prog, 0)) * 1.05cqw); }
+.alb-stack-l { right: 100%; top: 0.5cqw; bottom: 0.2cqw; width: 1.2cqw; --t: calc(0.3cqw + var(--prog, 0) * 0.6cqw); }
+.alb-stack-r { left: 100%; top: 0.5cqw; bottom: 0.2cqw; width: 1.2cqw; --t: calc(0.3cqw + (1 - var(--prog, 0)) * 0.6cqw); }
 .alb-stack-b { left: 0; right: 0; top: 100%; height: 1.6cqw; --t: 0.7cqw; }
 .alb-stack i { position: absolute; background-color: #d3c19a; background-image: repeating-linear-gradient(90deg, rgba(70, 45, 20, 0.3) 0 1px, transparent 1px 0.34cqw); border: 0.07cqw solid rgba(70, 45, 20, 0.5); --e: 0; }
 .alb-stack-b i { background-image: repeating-linear-gradient(0deg, rgba(70, 45, 20, 0.3) 0 1px, transparent 1px 0.34cqw); }
