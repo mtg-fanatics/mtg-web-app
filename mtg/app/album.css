@@ -107,6 +107,11 @@
 .alb[data-mode="single"] .alb-slot::before { background-size: 2cqw 2cqw, 2cqw 2cqw, 2cqw 2cqw, 2cqw 2cqw, auto; }
 .alb-slot > .card-tile { position: relative; z-index: 1; gap: 0.35cqw; min-width: 0; }
 .alb-slot .card-tile:hover { transform: translateY(-0.4cqw) scale(1.03); }
+/* waiting for a page's cards: a card-shaped shimmer in the pocket, tinted to sit on paper */
+.alb-wait { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0.35cqw; }
+.alb-wait .skeleton { background-color: rgba(96, 64, 30, 0.3); }
+.alb-wait-caption { width: 8cqw; height: max(11px, 1.4cqw); border-radius: 0.4cqw !important; }
+.alb[data-mode="single"] .alb-wait-caption { width: 18cqw; height: max(12px, 3cqw); }
 /* the label under a card, as if written in ink on the page */
 .alb-caption { font-family: var(--font-fell-text), Georgia, serif; font-style: italic; font-size: max(11px, 1.4cqw); line-height: 1.1; color: #382818; white-space: nowrap; }
 .alb[data-mode="single"] .alb-caption { font-size: max(12px, 3cqw); }

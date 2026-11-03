@@ -10,6 +10,7 @@ import CardView from "../play/CardView";
 import { useHoverZoom } from "../play/HoverZoom";
 import { useMedia } from "../play/useMedia";
 import Album from "../Album";
+import { Skeleton } from "../Skeleton";
 import TypeButton from "./TypeButton";
 import { ALBUM_PAGE_CARDS, useAlbumPages } from "./useAlbumPages";
 import { Back, Lens } from "../Icons";
@@ -29,7 +30,7 @@ export default function CardBrowser() {
   const zoom = useHoverZoom(); // the big card shown while the mouse is over a card
   const [zoomedIdx, setZoomedIdx] = useState<number | null>(null); // position among the cards on show, while a card is open large
 
-  const pages = Math.max(1, Math.ceil(total / ALBUM_PAGE_CARDS));
+  const pages = ready ? Math.max(1, Math.ceil(total / ALBUM_PAGE_CARDS)) : 2; // (until the first answer, a spread of placeholders)
   const shown = [...(cardsOf(index) ?? []), ...(narrow ? [] : cardsOf(index + 1) ?? [])];
   const zoomed = zoomedIdx === null ? undefined : shown[zoomedIdx];
   const step = (by: number) => setZoomedIdx((i) => (i === null || shown.length === 0 ? null : (i + by + shown.length) % shown.length));
@@ -56,6 +57,13 @@ export default function CardBrowser() {
           const def = cards?.[k];
           return (
             <div key={k} className="alb-slot">
+              {!cards && (
+                // the page's cards have not arrived yet: placeholders the size of a card and its caption, so nothing jumps when they do
+                <div role="status" aria-label="Loading cards" className="alb-wait">
+                  <Skeleton className="h-[var(--card-h)] aspect-[146/204] !rounded-xl" />
+                  <Skeleton className="alb-wait-caption" />
+                </div>
+              )}
               {def && (
                 <div className="card-tile" {...ctl.current.zoom.on(def)} {...onIntent(() => preloadImage(cardDetailImageUrl(def, "large")))}>
                   <CardView def={def} size="md" onClick={() => (ctl.current.zoom.hide(), ctl.current.pick((i - ctl.current.index) * ALBUM_PAGE_CARDS + k))} />
