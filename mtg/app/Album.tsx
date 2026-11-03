@@ -274,6 +274,9 @@ export default function Album({ pages, index, onIndex, prepare, renderPage, page
                     </button>
                   )}
                   <div className="alb-sheen" aria-hidden="true" />
+                  {/* the curled corners belong to the page, so they turn with it; the buttons over them only catch the click */}
+                  <i className="alb-curl alb-curl-l" aria-hidden="true" />
+                  <i className="alb-curl alb-curl-r" aria-hidden="true" />
                 </section>
               );
             })}

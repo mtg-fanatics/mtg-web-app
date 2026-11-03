@@ -132,10 +132,17 @@
 .alb-edge:hover:not(:disabled) { background: linear-gradient(90deg, rgba(255, 248, 225, 0.22), transparent); }
 .alb-edge-r:hover:not(:disabled) { background: linear-gradient(270deg, rgba(255, 248, 225, 0.22), transparent); }
 .alb-edge:disabled, .alb-corner:disabled { cursor: default; opacity: 0.35; }
-.alb-corner { position: absolute; bottom: 0; z-index: 7; width: 5cqw; height: 5cqw; padding: 0; border: 0; cursor: pointer; transition: transform 0.15s ease-out; }
-.alb-corner-r { right: 0; background: linear-gradient(135deg, transparent 50%, #b3a075 50%, #e9dbb6 64%, #d2c096); border-radius: 0 0 0.5cqw 0; filter: drop-shadow(-0.2cqw -0.2cqw 0.3cqw rgba(60, 35, 12, 0.35)); transform-origin: 100% 100%; }
-.alb-corner-l { left: 0; background: linear-gradient(225deg, transparent 50%, #b3a075 50%, #e9dbb6 64%, #d2c096); border-radius: 0 0 0 0.5cqw; filter: drop-shadow(0.2cqw -0.2cqw 0.3cqw rgba(60, 35, 12, 0.35)); transform-origin: 0 100%; }
-.alb-corner:hover:not(:disabled) { transform: scale(1.25); }
+/* the corner buttons are only a place to click (nothing drawn); the curl you see is part of each page, so it goes with the page when it turns */
+.alb-corner { position: absolute; bottom: 0; z-index: 7; width: 5cqw; height: 5cqw; padding: 0; border: 0; background: none; cursor: pointer; }
+.alb-corner-r { right: 0; }
+.alb-corner-l { left: 0; }
+.alb-curl { position: absolute; bottom: 0; z-index: 3; display: none; width: 5cqw; height: 5cqw; pointer-events: none; transition: transform 0.15s ease-out; filter: drop-shadow(0.2cqw -0.2cqw 0.3cqw rgba(60, 35, 12, 0.35)); }
+.alb-curl-r { right: 0; background: linear-gradient(135deg, transparent 50%, #b3a075 50%, #e9dbb6 64%, #d2c096); border-radius: 0 0 0.5cqw 0; transform-origin: 100% 100%; }
+.alb-curl-l { left: 0; background: linear-gradient(225deg, transparent 50%, #b3a075 50%, #e9dbb6 64%, #d2c096); border-radius: 0 0 0 0.5cqw; transform-origin: 0 100%; }
+.alb-page[data-side="r"] .alb-curl-r, .alb-page[data-side="l"] .alb-curl-l, .alb[data-mode="single"] .alb-curl { display: block; }
+.alb:has(.alb-corner-r:disabled) .alb-curl-r, .alb:has(.alb-corner-l:disabled) .alb-curl-l { display: none; }
+.alb:has(.alb-corner-r:hover:not(:disabled)) .alb-page[data-role="R"] .alb-curl-r, .alb:has(.alb-corner-r:hover:not(:disabled)) .alb-page[data-role="P"] .alb-curl-r { transform: scale(1.25); }
+.alb:has(.alb-corner-l:hover:not(:disabled)) .alb-page[data-role="L"] .alb-curl-l, .alb:has(.alb-corner-l:hover:not(:disabled)) .alb-page[data-role="P"] .alb-curl-l { transform: scale(1.25); }
 .alb[data-mode="single"] .alb-corner, .alb[data-mode="single"] .alb-edge-l { /* a narrow screen: the same two ways to turn, a little bigger */ width: 9cqw; height: 9cqw; }
 .alb[data-mode="single"] .alb-edge-l { height: auto; width: 4cqw; }
 .alb:has(.alb-corner:focus-visible), .alb-corner:focus-visible, .alb-edge:focus-visible, .alb-folio:focus-visible { outline: 2px solid var(--wax-hi, #d9694f); outline-offset: 2px; }
