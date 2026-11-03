@@ -1,43 +1,82 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { CardType } from "@mtg/engine";
-import { CARDS_PAGE_SIZE, cardDetailImageUrl } from "@/lib/cards";
+import { cardDetailImageUrl } from "@/lib/cards";
 import { onIntent, preloadImage } from "@/lib/prefetch";
 import { Lightbox } from "../play/CardDetail";
 import CardView from "../play/CardView";
 import { useHoverZoom } from "../play/HoverZoom";
-import { CardSkeletons } from "../Skeleton";
-import { usePageKeys } from "@/lib/pageKeys";
+import { useMedia } from "../play/useMedia";
+import Album from "../Album";
 import TypeButton from "./TypeButton";
-import { useCardSearch } from "./useCardSearch";
+import { ALBUM_PAGE_CARDS, useAlbumPages } from "./useAlbumPages";
 import { Back, Lens } from "../Icons";
 
 type Filter = "all" | CardType;
 const TYPES: Filter[] = ["all", "creature", "land", "instant", "sorcery", "enchantment", "artifact", "planeswalker"];
 
+/** The library: every card in the game, kept in an album. The search, the filters and the paging of the data are the same as ever; the album shows them nine cards to a page. */
 export default function CardBrowser() {
   const [query, setQuery] = useState("");
   const [type, setType] = useState<Filter>("all");
   const [playableOnly, setPlayableOnly] = useState(false);
-  const [page, setPage] = useState(0);
-  const { result, loading } = useCardSearch({ query, type, playableOnly, page });
+  const [index, setIndex] = useState(0); // the album page at the left of the spread (the page itself on a narrow screen)
+  const filters = { query, type, playableOnly };
+  const { cardsOf, ensure, total, loading, error, ready } = useAlbumPages(filters, index);
+  const narrow = useMedia("(max-width: 1023px)");
   const zoom = useHoverZoom(); // the big card shown while the mouse is over a card
-  const [zoomedIdx, setZoomedIdx] = useState<number | null>(null); // position on this page, while a card is open large
+  const [zoomedIdx, setZoomedIdx] = useState<number | null>(null); // position among the cards on show, while a card is open large
 
-  const shown = result?.cards ?? [];
+  const pages = Math.max(1, Math.ceil(total / ALBUM_PAGE_CARDS));
+  const shown = [...(cardsOf(index) ?? []), ...(narrow ? [] : cardsOf(index + 1) ?? [])];
   const zoomed = zoomedIdx === null ? undefined : shown[zoomedIdx];
   const step = (by: number) => setZoomedIdx((i) => (i === null || shown.length === 0 ? null : (i + by + shown.length) % shown.length));
-  const total = result?.total ?? 0;
-  const pages = Math.max(1, Math.ceil(total / CARDS_PAGE_SIZE));
-  usePageKeys({ page, pages, setPage, enabled: zoomedIdx === null }); // the arrow keys turn the page
+  const resetKey = JSON.stringify(filters);
+  // the pages are drawn once and left alone while their cards do not change: what they call on a click or a hover is read from here, so it is always current
+  const ctl = useRef({ zoom, index, pick: (_n: number) => {} });
+  ctl.current = { zoom, index, pick: (n: number) => setZoomedIdx(n) };
+
+  // after each turn, the neighbouring pages are fetched in the background (and the ones after those), so the next turn has its pages ready
+  useEffect(() => {
+    if (!ready || total === 0) return;
+    const near = narrow ? [index + 1, index + 2, index - 1] : [index + 2, index + 3, index + 4, index + 5, index - 2, index - 1];
+    void ensure(near.filter((p) => p >= 0 && p < pages), 2500);
+  }, [index, ready, total, pages, narrow, ensure]);
+
   const icon = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true } as const;
+  void icon;
+
+  const renderPage = (i: number) => {
+    const cards = cardsOf(i);
+    return (
+      <div className="alb-grid">
+        {Array.from({ length: ALBUM_PAGE_CARDS }, (_, k) => {
+          const def = cards?.[k];
+          return (
+            <div key={k} className="alb-slot">
+              {def && (
+                <div className="card-tile" {...ctl.current.zoom.on(def)} {...onIntent(() => preloadImage(cardDetailImageUrl(def, "large")))}>
+                  <CardView def={def} size="md" onClick={() => (ctl.current.zoom.hide(), ctl.current.pick((i - ctl.current.index) * ALBUM_PAGE_CARDS + k))} />
+                  {def.playable === false ? (
+                    <span className="alb-caption" data-playable="no">Not playable yet</span>
+                  ) : (
+                    <span className="alb-caption" data-playable="yes">Playable</span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
-    <main className="cards-glass relative flex flex-1 flex-col gap-3 p-3 text-slate-100 lg:h-[calc(100dvh-2.7rem)] lg:flex-none lg:overflow-hidden">
+    <main className="cards-glass relative flex h-[calc(100dvh-2.7rem)] flex-none flex-col gap-3 overflow-hidden p-3 text-slate-100">
       <div className="page-atmosphere" aria-hidden="true" />
-      <div className="glass flex shrink-0 flex-col gap-3 p-3 sm:p-4">
+      <div className="album-strip flex shrink-0 flex-col gap-3 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           <Link href="/" className="btn-ghost" aria-label="Back to the home page">
             <Back width={15} height={15} />
@@ -50,7 +89,7 @@ export default function CardBrowser() {
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                setPage(0);
+                setIndex(0);
               }}
               placeholder="Search by name"
               aria-label="Search cards by name"
@@ -63,58 +102,49 @@ export default function CardBrowser() {
               checked={playableOnly}
               onChange={(e) => {
                 setPlayableOnly(e.target.checked);
-                setPage(0);
+                setIndex(0);
               }}
             />
             <i />
             Playable only
           </label>
-          <span className="count-chip ml-auto">{loading ? "Loading…" : `${total.toLocaleString()} cards`}</span>
+          <span className="count-chip ml-auto">{loading && total === 0 ? "Loading…" : `${total.toLocaleString()} cards`}</span>
         </div>
 
-      <div className="icon-seg self-start" role="group" aria-label="Card type">
-        {TYPES.map((t) => (
-          <TypeButton
-            key={t}
-            type={t}
-            active={type === t}
-            glass
-            onClick={() => {
-              setType(t);
-              setPage(0);
-              
-            }}
-          />
-        ))}
-      </div>
+        <div className="icon-seg self-start" role="group" aria-label="Card type">
+          {TYPES.map((t) => (
+            <TypeButton
+              key={t}
+              type={t}
+              active={type === t}
+              glass
+              onClick={() => {
+                setType(t);
+                setIndex(0);
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      {result?.error && <p className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#f0bfb0]">Could not load cards: {result.error}</p>}
-      {result && !result.error && !loading && total === 0 && (
+      {error && <p className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#f0bfb0]">Could not load cards: {error}</p>}
+      {ready && !error && !loading && total === 0 && (
         <p className="empty-note">Nothing by that name on these shelves. If the whole library is empty, the card import has not been run yet (see the project notes).</p>
       )}
 
-      {!result && <CardSkeletons count={CARDS_PAGE_SIZE} size="md" className="glass cards-fit p-3" />}
-      <div className={`glass cards-fit p-3 transition-opacity ${loading ? "opacity-50" : ""}`}>
-        {result?.cards.map((def, i) => (
-          <div key={def.id} className="card-tile glass-tile" {...zoom.on(def)} {...onIntent(() => preloadImage(cardDetailImageUrl(def, "large")))}>
-            <CardView def={def} size="md" onClick={() => (zoom.hide(), setZoomedIdx(i))} />
-            {def.playable === false ? <span className="chip chip-meta !text-[10px]">Not playable yet</span> : <span className="chip chip-ok !text-[10px]">Playable</span>}
-          </div>
-        ))}
-      </div>
-
-      <div className="glass mx-auto flex shrink-0 items-center justify-center gap-3 !rounded-full px-5 py-1.5 text-sm">
-        <button disabled={page === 0} onClick={() => setPage(page - 1)} className="pager-btn">
-          ← Prev
-        </button>
-        <span className="count-chip">
-          Page {page + 1} of {pages.toLocaleString()}
-        </span>
-        <button disabled={page + 1 >= pages} onClick={() => setPage(page + 1)} className="pager-btn">
-          Next →
-        </button>
-      </div>
+      <Album
+        pages={pages}
+        index={index}
+        onIndex={setIndex}
+        prepare={(p) => ensure(p)}
+        renderPage={renderPage}
+        pageToken={cardsOf}
+        onTurnStart={() => zoom.hide()}
+        busy={loading}
+        resetKey={resetKey}
+        keysEnabled={zoomedIdx === null}
+        label="The card library"
+      />
 
       {zoomedIdx === null && zoom.node}
 
@@ -124,7 +154,7 @@ export default function CardBrowser() {
           onClose={() => setZoomedIdx(null)}
           onPrev={() => step(-1)}
           onNext={() => step(1)}
-          caption={`Card ${zoomedIdx! + 1} of ${shown.length} on this page`}
+          caption={`Card ${zoomedIdx! + 1} of ${shown.length} on show`}
         />
       )}
     </main>
