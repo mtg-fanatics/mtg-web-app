@@ -22,9 +22,11 @@ html[data-theme="dark"] {
 .book-layer {
   position: fixed;
   top: 2.6rem;
-  right: 0;
   bottom: 0;
-  left: 0;
+  /* the book is stretched to the screen (so the panels at its sides stand on the pages), up to a very wide one, where it stays centred */
+  left: 50%;
+  width: min(100vw, calc((100dvh - 2.6rem) * 2.6));
+  transform: translateX(-50%);
   z-index: -10;
   overflow: hidden;
   pointer-events: none;
@@ -69,8 +71,34 @@ html[data-theme="dark"] {
 .book-page .book-tip-l { rotate: -0.6deg; }
 .book-page .book-tip-l2 { rotate: 0.5deg; }
 .book-page .book-tip-r { rotate: 0.5deg; }
+/* The profile card and its bell were see-through, so the stitching and page edges of the book ran behind the words. They are solid now. */
+.book-page .book-tip-l > button, .book-page .book-tip-l > div > button { background-color: #241b13; background-image: var(--grain-pale); background-size: 240px 240px; border-color: #120c07; box-shadow: 3px 4px 0 rgba(8, 5, 3, 0.5); }
 
-/* The title block straddles the gutter. Its loose sheet becomes a dark card pinned onto the page, so the cream title and the buttons keep their contrast
-   on the cream paper behind it. */
-.book-page .hero-page::before { inset: -4px; background-color: rgba(26, 19, 13, 0.95); background-image: var(--grain-pale); background-size: 240px 240px; border: 2px solid #120c07; box-shadow: 6px 8px 0 rgba(8, 5, 3, 0.5); }
-.book-page .hero-page::after { border-color: rgba(200, 178, 138, 0.25); }
+/* The title block is a plaque fixed to the page: a dark card in a pale paper rim, a little out of true, with a second sheet of paper peeking out beneath
+   it and a wax seal and a pin holding it down. Its words stay straight. */
+.book-page .hero-page::before {
+  inset: -6px;
+  z-index: -1;
+  background-color: rgba(26, 19, 13, 0.97);
+  background-image: var(--grain-pale);
+  background-size: 240px 240px;
+  border: 5px solid #d8c6a0;
+  border-radius: 4px 9px 5px 10px / 9px 5px 10px 4px;
+  box-shadow: 0 0 0 1px rgba(80, 52, 24, 0.7), inset 0 0 0 2px rgba(18, 12, 7, 0.6), 6px 9px 0 rgba(8, 5, 3, 0.45);
+  transform: rotate(-1deg);
+}
+.book-page .hero-page::after {
+  display: block;
+  inset: -12px -10px -8px -14px;
+  z-index: -2;
+  background-color: #cdb98f;
+  background-image: var(--grain-dark);
+  background-size: 240px 240px;
+  border: 0;
+  border-radius: 5px 11px 6px 9px;
+  box-shadow: 3px 5px 0 rgba(8, 5, 3, 0.3);
+  transform: rotate(1.4deg);
+}
+.plaque-seal, .plaque-pin { position: absolute; z-index: 2; pointer-events: none; }
+.plaque-seal { bottom: -24px; right: -20px; width: 54px; height: 54px; transform: rotate(8deg); filter: drop-shadow(2px 3px 0 rgba(8, 5, 3, 0.45)); }
+.plaque-pin { top: -10px; left: 16px; width: 20px; height: 20px; filter: drop-shadow(2px 3px 0 rgba(8, 5, 3, 0.5)); }

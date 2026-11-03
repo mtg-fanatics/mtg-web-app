@@ -15,6 +15,16 @@ export default function Home() {
       <FriendsPanel />
       <Lobby />
       <section className="hero-page relative flex flex-col items-center gap-5 text-center">
+        {/* what holds the plaque to the page: a wax seal on one corner, a brass pin on the other (they only show on the book) */}
+        <svg className="plaque-seal" viewBox="0 0 54 54" aria-hidden="true">
+          <path d="M27 3c6 0 9 3 14 4 5 1 8 5 8 10 1 4 4 7 3 12-1 5-3 8-4 12-1 5-5 9-10 10-4 1-8 5-14 4-6-1-9-4-14-6-5-2-7-6-8-11-1-4-4-8-2-13 1-5 4-8 5-12 1-5 5-8 10-9 4-1 7-1 12-1z" fill="#8a2e22" stroke="#3a0f0a" strokeWidth="2" />
+          <circle cx="27" cy="28" r="15" fill="none" stroke="#e8c9b8" strokeOpacity=".55" strokeWidth="1.5" strokeDasharray="3 2.6" />
+          <path d="M27 17c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z" fill="#e8c9b8" fillOpacity=".8" />
+        </svg>
+        <svg className="plaque-pin" viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="10" cy="10" r="8" fill="#a8864a" stroke="#4a3418" strokeWidth="1.5" />
+          <circle cx="7.5" cy="7.5" r="3" fill="#e6cf94" opacity=".8" />
+        </svg>
         {/* on a phone the seal and the title give way to the buttons (the name is in the top bar) */}
         <div className="flex flex-col items-center gap-3 max-md:hidden">
           <div className="hero-scrim" aria-hidden="true" />

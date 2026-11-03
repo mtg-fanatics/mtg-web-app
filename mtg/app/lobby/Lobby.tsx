@@ -11,7 +11,7 @@ import RoomPopup from "./RoomPopup";
 import VotePopup from "./VotePopup";
 import CreateRoomDialog from "./CreateRoomDialog";
 
-const ASIDE = "z-10 order-last flex w-full max-w-md flex-col gap-3 xl:order-none xl:fixed xl:right-4 xl:top-14 xl:w-[min(26rem,calc(100vw-2rem))] xl:max-w-none";
+const ASIDE = "z-10 order-last flex w-full max-w-md flex-col gap-3 xl:order-none xl:fixed xl:right-12 xl:top-[6.2rem] xl:w-[min(24rem,calc(100vw-2rem))] xl:max-w-none";
 
 /** The live matches panel and the Create room button, in their shapes, until it is known who is signed in. */
 function LobbySkeleton() {

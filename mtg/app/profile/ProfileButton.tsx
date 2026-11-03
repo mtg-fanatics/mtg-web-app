@@ -65,7 +65,7 @@ function Avatar({
 /** The profile button's shape, while it loads for the first time. */
 function ProfileSkeleton() {
   return (
-    <div role="status" aria-label="Loading your profile" className="z-20 flex items-center gap-2 self-start xl:fixed xl:left-4 xl:top-14 xl:self-auto">
+    <div role="status" aria-label="Loading your profile" className="z-20 flex items-center gap-2 self-start xl:fixed xl:left-12 xl:top-[6.2rem] xl:self-auto">
       <div className="flex w-[15.5rem] items-center gap-3 rounded-2xl border border-white/25 bg-slate-950/55 py-2 pl-2 pr-4 shadow-xl shadow-black/40 ring-1 ring-inset ring-white/10">
         <Skeleton className="h-11 w-11 shrink-0 !rounded-full" />
         <span className="flex flex-1 flex-col gap-2">
@@ -119,7 +119,7 @@ export default function ProfileButton() {
   if (!me) return <ProfileSkeleton />;
   return (
     <>
-      <div className="book-tip-l z-20 flex items-center gap-2 self-start xl:fixed xl:left-4 xl:top-14 xl:self-auto">
+      <div className="book-tip-l z-20 flex items-center gap-2 self-start xl:fixed xl:left-12 xl:top-[6.2rem] xl:self-auto">
       <button
         onClick={() => setOpen(true)}
         aria-label="Open your profile"

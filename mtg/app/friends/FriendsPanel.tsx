@@ -212,7 +212,7 @@ export default function FriendsPanel() {
         aria-label="Friends"
         className={`book-tip-l2 panel-glass z-10 flex w-full max-w-[20rem] flex-col gap-2.5 self-start p-3.5 text-white ${
           sheet ? "max-md:fixed max-md:inset-x-3 max-md:top-14 max-md:z-50 max-md:max-h-[80dvh] max-md:w-auto max-md:!max-w-none max-md:overflow-y-auto max-md:!bg-[#0b1020] max-md:!backdrop-blur-none" : "max-md:hidden"
-        } xl:fixed xl:left-4 xl:top-[7.6rem] xl:max-h-[calc(100dvh-9rem)]`}
+        } xl:fixed xl:left-12 xl:top-[10.6rem] xl:max-h-[calc(100dvh-17.5rem)]`}
       >
         <header className="flex items-center gap-2">
           <button
