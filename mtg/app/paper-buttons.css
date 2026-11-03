@@ -18,8 +18,10 @@
   background-image: var(--grain-pale), radial-gradient(ellipse at 28% 18%, rgba(255, 200, 170, 0.18), transparent 60%);
   background-size: 240px 240px, 100% 100%;
   border-radius: 6px 3px 7px 4px / 4px 7px 3px 6px;
-  box-shadow: inset 0 0 0 2px rgba(50, 10, 5, 0.3), inset 0 0 9px rgba(40, 8, 4, 0.45);
+  /* a raised stamp: a cream inner rim, a dark lower lip and a hard shadow under it, so it plainly reads as something to press */
+  box-shadow: inset 0 0 0 2px rgba(255, 224, 196, 0.5), inset 0 -4px 0 rgba(40, 8, 4, 0.5), 3px 5px 0 rgba(40, 20, 8, 0.6);
   filter: url(#ink-rough-sm);
+  transition: transform 0.08s ease, background-color 0.12s ease;
 }
 .paper-surface .hero-btn-primary svg, .paper-surface .btn-gold svg { color: #f7ead2; }
 .paper-surface .hero-btn-primary:hover:not(:disabled), .paper-surface .btn-gold:hover:not(:disabled) { transform: none; background: none; box-shadow: none; }
@@ -40,5 +42,12 @@
 }
 .paper-surface .hero-btn:not(.hero-btn-primary):hover { background-color: #d7c69b; transform: none; border-color: transparent; box-shadow: none; }
 .paper-surface .hero-btn:not(.hero-btn-primary):active { transform: translate(1px, 1px); }
-.paper-surface .hero-btn svg { color: var(--pi-red); }
+.paper-surface .hero-btn:not(.hero-btn-primary) svg { color: var(--pi-red); }
 .paper-surface .btn-danger { background: none; color: var(--pi-red); border: 1.5px solid var(--pi-red); box-shadow: none; }
+
+.paper-surface .hero-btn-primary, .paper-surface .btn-gold { cursor: pointer; font-weight: 800; letter-spacing: 0.01em; }
+.paper-surface .hero-btn-primary:hover:not(:disabled)::before, .paper-surface .btn-gold:hover:not(:disabled)::before { background-color: #a82a1c; transform: translate(-1px, -2px); box-shadow: inset 0 0 0 2px rgba(255, 232, 208, 0.65), inset 0 -4px 0 rgba(40, 8, 4, 0.5), 4px 7px 0 rgba(40, 20, 8, 0.55); }
+.paper-surface .hero-btn-primary:active:not(:disabled)::before, .paper-surface .btn-gold:active:not(:disabled)::before { transform: translate(1px, 2px); box-shadow: inset 0 0 0 2px rgba(255, 224, 196, 0.35), inset 0 3px 6px rgba(30, 6, 3, 0.55), 1px 1px 0 rgba(40, 20, 8, 0.6); }
+.paper-surface .hero-btn:not(.hero-btn-primary) { cursor: pointer; box-shadow: 2px 3px 0 rgba(40, 20, 8, 0.4); }
+.paper-surface .hero-btn:not(.hero-btn-primary):hover { box-shadow: 3px 5px 0 rgba(40, 20, 8, 0.4); transform: translate(-1px, -1px); }
+.paper-surface .hero-btn:not(.hero-btn-primary):active { box-shadow: 0 0 0 rgba(40, 20, 8, 0.4); transform: translate(2px, 3px); }
