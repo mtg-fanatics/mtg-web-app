@@ -15,7 +15,7 @@
  * mapped below. The whole surface is blended with `multiply`, so the grain and fibres of the paper show through the lettering.
  * Ink on the cream page is 7:1 or better (the page is #e6d7b3 to #f0e4c6); the softest ink is still above 5.5:1.
  *
- * Motion (only the Motion switch, via the book layer's .book-live): each surface settles in once; nothing else moves by itself.
+ * Nothing here moves by itself.
  */
 
 @import "./paper-title.css";
@@ -96,10 +96,6 @@ html[data-theme="dark"] .paper-surface.paper-card { background-color: #efe3c2; b
 .paper-surface.paper-card:active:not(:disabled) { transform: translate(1px, 1px); }
 .paper-surface.paper-card svg { color: var(--pi); }
 
-/* ───────── the surfaces settle onto the page once (opacity and a few pixels: nothing else) ───────── */
-.book-page:has(.book-live) .paper-surface { animation: paper-in 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) backwards; }
-@keyframes paper-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
 /* a computer that needs the cheaper effects: no blending (the ink is simply dark) */
 
 
@@ -120,16 +116,5 @@ html[data-theme="dark"] .paper-surface.paper-card { background-color: #efe3c2; b
 
 .paper-slip { --smudge: radial-gradient(ellipse at 50% 50%, rgba(60, 40, 20, 0.2), transparent 70%); }
 
-/* ───────── drawing in (only while the Motion switch is on; transform and opacity only) ───────── */
-.book-page:has(.book-live) .paper-title .scribble { transform-origin: left center; animation: paper-stroke 0.7s ease-out 0.35s backwards; }
-.book-page:has(.book-live) .paper-title .hero-title { animation: paper-write 0.6s ease-out 0.15s backwards; }
-.book-page:has(.book-live) .paper-surface :is(h2, .page-title) { animation: paper-write 0.45s ease-out 0.2s backwards; }
-.book-page:has(.book-live) .paper-ledger .deck-row { animation: paper-write 0.4s ease-out backwards; }
-.book-page:has(.book-live) .paper-ledger .deck-row:nth-child(2) { animation-delay: 0.06s; }
-.book-page:has(.book-live) .paper-ledger .deck-row:nth-child(3) { animation-delay: 0.12s; }
-.book-page:has(.book-live) .paper-ledger .deck-row:nth-child(4) { animation-delay: 0.18s; }
-.book-page:has(.book-live) .paper-slip { animation: paper-shift 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) backwards; }
-@keyframes paper-stroke { from { transform: scaleX(0); opacity: 0.2; } to { transform: scaleX(1); opacity: 1; } }
-@keyframes paper-write { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes paper-shift { from { opacity: 0; transform: translate(6px, -8px); } to { opacity: 1; transform: translate(0, 0); } }
+/* (nothing draws in on arrival: a dozen filtered, clipped and tilted layers all animating at once was the heaviest moment of the dashboard on a weak graphics chip) */
 .perf-lite .paper-surface h1, .perf-lite .paper-surface h2, .perf-lite .paper-surface .page-title, .perf-lite .paper-title .hero-eyebrow, .perf-lite .paper-title .hero-sub { filter: none; }

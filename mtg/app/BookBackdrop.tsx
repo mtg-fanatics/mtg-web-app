@@ -77,6 +77,10 @@ function heading(r: () => number, x: number, y: number, len: number): string[] {
   return [scribble(r, x, y, len, 5.2), `M${x} ${y + 10}q${len * 0.25} ${-3} ${len * 0.5} 0t${len * 0.5} -1`];
 }
 
+const GRAIN = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .22 0 0 0 0 .15 0 0 0 0 .08 0 0 0 .5 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
+// soft patches of age on the pages (x, y, rx, ry), the same set mirrored on the other page
+const BLOTCHES: [number, number, number, number][] = [[210, 250, 190, 120], [560, 420, 230, 150], [330, 720, 220, 130], [690, 800, 170, 110], [120, 560, 110, 160], [520, 130, 200, 90]];
+
 const r = rng(2417);
 const LEFT = {
   head: heading(r, 100, 372, 230),
@@ -179,21 +183,17 @@ export default function BookBackdrop() {
           <mask id="bk-title-fade" maskUnits="userSpaceOnUse" x="0" y="0" width="1640" height="1000"><rect width="1640" height="1000" fill="#fff" /><ellipse cx="820" cy="520" rx="300" ry="250" fill="url(#bk-title-fade-g)" /></mask>
           <clipPath id="bk-clip-l"><path d={LEFT_PAGE} /></clipPath>
           <clipPath id="bk-clip-r"><path d={RIGHT_PAGE} /></clipPath>
-          <filter id="bk-blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14" /></filter>
-          <filter id="bk-smudge" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5" /></filter>
-          {/* paper fibre and grain: noise turned into a faint brown speckle, laid over each page once */}
-          <filter id="bk-grain" x="0" y="0" width="100%" height="100%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="n" />
-            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.35  0 0 0 0 0.24  0 0 0 0 0.12  0 0 0 0.55 -0.12" />
-          </filter>
-          <filter id="bk-mottle" x="0" y="0" width="100%" height="100%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.006 0.012" numOctaves="3" seed="21" result="n" />
-            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.3  0 0 0 0 0.12  0 0 0 0.7 -0.22" />
-          </filter>
+          {/* the grain is one small tile (drawn once and repeated), not noise worked out over the whole page: a filter this big is the slowest thing on a weak graphics chip */}
+          <pattern id="bk-grain-p" width="240" height="240" patternUnits="userSpaceOnUse"><image href={GRAIN} width="240" height="240" /></pattern>
+          {/* a patch of age on the paper: a soft brown that fades to nothing at its edge (no blur filter) */}
+          <radialGradient id="bk-blotch" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stopColor="#8a5a22" stopOpacity="0.2" /><stop offset="1" stopColor="#8a5a22" stopOpacity="0" /></radialGradient>
+          <radialGradient id="bk-smudge-g" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stopColor="#2f2014" stopOpacity="0.16" /><stop offset="1" stopColor="#2f2014" stopOpacity="0" /></radialGradient>
         </defs>
 
         {/* the book's shadow on the table (there is no cover showing: the pages lie straight on the table) */}
-        <rect x="40" y="62" width="1566" height="842" rx="20" fill="#000" opacity="0.5" filter="url(#bk-blur)" />
+        {[0, 1, 2, 3].map((k) => (
+          <rect key={k} x={40 - k * 5} y={60 + k * 4} width={1566 + k * 10} height={842 + k * 8} rx={20 + k * 6} fill="#000" opacity="0.16" />
+        ))}
 
         {/* page edges: sheets sticking out past the top page on the left, right and bottom, none quite the same */}
         {STACK.map(({ k, a, b, shade }) => (
@@ -207,14 +207,14 @@ export default function BookBackdrop() {
         <path d={LEFT_PAGE} fill="url(#bk-left)" />
         <path d={RIGHT_PAGE} fill="url(#bk-right)" />
         <g clipPath="url(#bk-clip-l)">
-          <rect className="book-grain" x="40" y="40" width="790" height="870" filter="url(#bk-grain)" opacity="0.55" />
-          <rect className="book-grain" x="40" y="40" width="790" height="870" filter="url(#bk-mottle)" opacity="0.5" />
+          <rect className="book-grain" x="40" y="40" width="790" height="870" fill="url(#bk-grain-p)" opacity="0.6" />
+          {BLOTCHES.map((q, i) => <ellipse key={i} className="book-grain" cx={q[0]} cy={q[1]} rx={q[2]} ry={q[3]} fill="url(#bk-blotch)" />)}
           <path d={LEFT_PAGE} fill="url(#bk-stain)" />
           <rect x="672" y="40" width="148" height="870" fill="url(#bk-dip-l)" />
         </g>
         <g clipPath="url(#bk-clip-r)">
-          <rect className="book-grain" x="820" y="40" width="790" height="870" filter="url(#bk-grain)" opacity="0.55" />
-          <rect className="book-grain" x="820" y="40" width="790" height="870" filter="url(#bk-mottle)" opacity="0.5" />
+          <rect className="book-grain" x="820" y="40" width="790" height="870" fill="url(#bk-grain-p)" opacity="0.6" />
+          {BLOTCHES.map((q, i) => <ellipse key={i} className="book-grain" cx={1640 - q[0]} cy={q[1]} rx={q[2]} ry={q[3]} fill="url(#bk-blotch)" />)}
           <path d={RIGHT_PAGE} fill="url(#bk-stain)" />
           <rect x="820" y="40" width="148" height="870" fill="url(#bk-dip-r)" />
         </g>
@@ -237,7 +237,7 @@ export default function BookBackdrop() {
             <circle cx="420" cy="684" r="3" opacity="0.28" />
             <circle cx="252" cy="868" r="4.5" opacity="0.22" />
           </g>
-          <ellipse cx="300" cy="640" rx="72" ry="26" fill="var(--book-ink)" stroke="none" opacity="0.07" filter="url(#bk-smudge)" />
+          <ellipse cx="300" cy="640" rx="86" ry="34" fill="url(#bk-smudge-g)" stroke="none" />
         </g>
         <g clipPath="url(#bk-clip-r)" mask="url(#bk-title-fade)" fill="none" stroke="var(--book-ink)" strokeLinecap="round" strokeLinejoin="round">
           {RULES.map((y) => (
@@ -262,7 +262,7 @@ export default function BookBackdrop() {
             <circle cx="1488" cy="804" r="3.4" opacity="0.26" />
             <circle cx="1100" cy="866" r="4" opacity="0.22" />
           </g>
-          <ellipse cx="1380" cy="640" rx="74" ry="24" fill="var(--book-ink)" stroke="none" opacity="0.06" filter="url(#bk-smudge)" />
+          <ellipse cx="1380" cy="640" rx="88" ry="32" fill="url(#bk-smudge-g)" stroke="none" />
         </g>
 
         {/* the gutter: a dark crease, and the ribbon bookmark trailing out of it a little off centre */}

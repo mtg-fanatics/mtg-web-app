@@ -51,11 +51,9 @@ html[data-theme="dark"] {
   .book-single { display: block; }
 }
 
-/* Motion: the book settles onto the table once, and the lamp drifts very slowly. Transform and opacity only, and none of it when the Motion switch is off
+/* Motion: the lamp drifts very slowly (the book itself is simply there: fading in a page of this size at arrival was a heavy frame). Transform and opacity only, and none of it when the Motion switch is off
    (the component then does not add .book-live) (the computer's own reduce-motion setting is not used: it hid animations before with no way to tell why). */
-.book-live .book-settle { animation: book-settle 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
 .book-live .book-glow { animation: book-lamp 22s ease-in-out infinite alternate; }
-@keyframes book-settle { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes book-lamp { from { opacity: 0.8; transform: translate3d(-14px, -8px, 0); } to { opacity: 1; transform: translate3d(14px, 8px, 0); } }
 
 /* A computer that needs the cheaper effects (perfTier.ts): no paper grain, a still lamp. */
