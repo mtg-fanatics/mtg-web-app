@@ -192,18 +192,8 @@ export default function BookBackdrop() {
           </filter>
         </defs>
 
-        {/* the book's shadow on the table */}
-        <rect x="18" y="24" width="1628" height="930" rx="30" fill="#000" opacity="0.55" filter="url(#bk-blur)" />
-
-        {/* the leather cover, with the stitching and a tooled line just inside its edge */}
-        <rect x="6" y="6" width="1628" height="930" rx="22" fill="url(#bk-cover)" stroke="#120a05" strokeWidth="3" />
-        <rect x="6" y="6" width="1628" height="930" rx="22" fill="none" stroke="var(--book-leather-hi)" strokeOpacity="0.22" strokeWidth="2" transform="translate(1 1)" />
-        <rect x="16" y="16" width="1608" height="910" rx="16" fill="none" stroke="var(--book-thread)" strokeOpacity="0.5" strokeWidth="2.2" strokeDasharray="10 8" strokeLinecap="round" />
-        <rect x="22" y="22" width="1596" height="898" rx="12" fill="none" stroke="#120a05" strokeOpacity="0.5" strokeWidth="1.4" />
-        {/* worn corners: the leather rubbed pale where the book has been carried */}
-        <path d="M6 30C6 17 17 6 30 6H78L6 78Z" fill="var(--book-leather-hi)" opacity="0.38" />
-        <path d="M1634 906V912C1634 925 1623 936 1610 936H1556Z" fill="var(--book-leather-hi)" opacity="0.34" />
-        <path d="M1634 30C1634 17 1623 6 1610 6H1580L1634 60Z" fill="var(--book-leather-hi)" opacity="0.2" />
+        {/* the book's shadow on the table (there is no cover showing: the pages lie straight on the table) */}
+        <rect x="40" y="62" width="1566" height="842" rx="20" fill="#000" opacity="0.5" filter="url(#bk-blur)" />
 
         {/* page edges: sheets sticking out past the top page on the left, right and bottom, none quite the same */}
         {STACK.map(({ k, a, b, shade }) => (
