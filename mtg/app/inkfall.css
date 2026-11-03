@@ -88,6 +88,8 @@ html[data-theme="dark"] body {
   background-image: var(--grain-pale), radial-gradient(ellipse at 50% 18%, rgba(255, 226, 170, 0.06), transparent 62%), radial-gradient(ellipse at 50% 120%, rgba(0, 0, 0, 0.35), transparent 60%);
   background-size: 240px 240px, 100% 100%, 100% 100%;
 }
+/* Browsers give buttons and fields their own word-spacing (normal), so the body's wider gaps never reached "Open a table", "Keep hand" and the like: Alegreya's narrow space then ran the words together. Hand it down. */
+html[data-theme="dark"] button, html[data-theme="dark"] input, html[data-theme="dark"] select, html[data-theme="dark"] textarea, html[data-theme="dark"] optgroup { word-spacing: inherit; }
 html[data-theme="dark"] .battlefield-bg {
   /* the play table: a worn paper cloth (your own art goes in --bf-image) */
   background-color: #b9a67e;
