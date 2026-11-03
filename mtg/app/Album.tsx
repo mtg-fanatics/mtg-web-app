@@ -16,7 +16,7 @@ import "./album.css";
  *   - Every page of the neighbouring spreads is already in the document, sitting in its place under or behind the visible ones (see `roleOf`). A turn
  *     therefore only moves pages that exist: it builds nothing, and when it ends the pages only change place, with the same transform they landed on, so
  *     there is no work (and no jump) at the end of it. The pages two spreads away are added after each turn, when things are quiet.
- *   - A turn is CSS 3D (transform and opacity only). With the game's Motion switch off, or the system asking for reduced motion, there is no turn:
+ *   - A turn is CSS 3D (transform and opacity only). With the game's Motion switch off there is no turn:
  *     the pages cross-fade. A jump to a far page, or a new search, cross-fades too.
  *   - Turns are queued at most once: more requests while one is going just move the one waiting, and if it is more than one spread away the book
  *     skips straight to it instead of leafing through.
@@ -66,9 +66,9 @@ const Body = memo(
 
 export default function Album({ pages, index, onIndex, prepare, renderPage, pageToken, onTurnStart, busy = false, resetKey = "", keysEnabled = true, label = "Card album" }: AlbumProps) {
   const narrow = useMedia("(max-width: 1023px)");
-  const reduce = useMedia("(prefers-reduced-motion: reduce)");
   const on = useAnimationsOn();
-  const animated = on && !reduce;
+  // (only the game's Motion switch decides, not the computer's own "reduce motion" setting: that one silently hid animations before, with no way to tell why)
+  const animated = on;
   const spread = !narrow;
   const step = spread ? 2 : 1;
   const total = Math.max(1, pages);
