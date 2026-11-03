@@ -80,14 +80,14 @@ function heading(r: () => number, x: number, y: number, len: number): string[] {
 const r = rng(2417);
 const LEFT = {
   head: heading(r, 100, 372, 230),
-  a: paragraph(r, 88, 410, 330, 8, { gap: 30, slant: -0.6, indent: 22, strike: [3] }),
-  b: paragraph(r, 88, 690, 310, 4, { gap: 31, slant: 0.5, strike: [1] }),
+  a: paragraph(r, 88, 410, 640, 8, { gap: 30, slant: -0.6, indent: 22, strike: [3] }),
+  b: paragraph(r, 88, 690, 620, 4, { gap: 31, slant: 0.5, strike: [1] }),
   c: paragraph(r, 96, 826, 640, 2, { gap: 30, slant: -0.3, indent: 24 }),
 };
 const RIGHT = {
   head: heading(r, 1252, 392, 190),
-  a: paragraph(r, 1232, 432, 330, 7, { gap: 30, slant: 0.7, indent: 20, strike: [2, 5] }),
-  b: paragraph(r, 1232, 676, 322, 5, { gap: 30, slant: -0.5 }),
+  a: paragraph(r, 920, 440, 620, 7, { gap: 30, slant: 0.7, indent: 20, strike: [2, 5] }),
+  b: paragraph(r, 920, 690, 600, 5, { gap: 30, slant: -0.5 }),
   c: paragraph(r, 880, 828, 660, 2, { gap: 31, slant: 0.4, indent: 26 }),
 };
 const RULES = Array.from({ length: 21 }, (_, i) => 150 + i * 36);
@@ -108,7 +108,7 @@ const STACK = [6, 5, 4, 3, 2, 1].map((k) => {
 // The pages dip toward the gutter at x = 820: the top edge sags a little, the bottom edge lifts.
 const LEFT_PAGE = "M46 60C280 50 600 56 820 78V872C600 892 280 894 46 888Z";
 const RIGHT_PAGE = "M820 78C1040 56 1360 50 1594 60V888C1360 894 1040 892 820 872Z";
-const RIBBON = "M848 76C868 250 826 470 858 690S890 850 863 960";
+const RIBBON = "M832 52C858 250 810 470 842 690S880 850 858 960";
 
 function Ink({ p }: { p: Paragraph }) {
   return (
@@ -148,13 +148,13 @@ export default function BookBackdrop() {
           </linearGradient>
           {/* the curved gutter shadow: dark in the crease, fading out across the page along a bowed edge */}
           <linearGradient id="bk-dip-l" gradientUnits="userSpaceOnUse" x1="820" y1="0" x2="672" y2="0">
-            <stop offset="0" stopColor="#2a1608" stopOpacity="0.7" />
-            <stop offset="0.35" stopColor="#3a2010" stopOpacity="0.34" />
+            <stop offset="0" stopColor="#2a1608" stopOpacity="0.42" />
+            <stop offset="0.35" stopColor="#3a2010" stopOpacity="0.2" />
             <stop offset="1" stopColor="#3a2010" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="bk-dip-r" gradientUnits="userSpaceOnUse" x1="820" y1="0" x2="968" y2="0">
-            <stop offset="0" stopColor="#2a1608" stopOpacity="0.7" />
-            <stop offset="0.35" stopColor="#3a2010" stopOpacity="0.34" />
+            <stop offset="0" stopColor="#2a1608" stopOpacity="0.42" />
+            <stop offset="0.35" stopColor="#3a2010" stopOpacity="0.2" />
             <stop offset="1" stopColor="#3a2010" stopOpacity="0" />
           </linearGradient>
           {/* and the page rising a little before it dips: a faint pale crest */}
@@ -177,16 +177,13 @@ export default function BookBackdrop() {
             <stop offset="0.5" stopColor="#8a3328" />
             <stop offset="1" stopColor="#632019" />
           </linearGradient>
-          {/* where the title is written the ribbon goes pale (as if lying under the page), so the lettering stays easy to read over it */}
-          <linearGradient id="bk-ribbon-fade-g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="1000">
-            <stop offset="0" stopColor="#fff" />
-            <stop offset="0.14" stopColor="#fff" />
-            <stop offset="0.28" stopColor="#1c1c1c" />
-            <stop offset="0.72" stopColor="#1c1c1c" />
-            <stop offset="0.86" stopColor="#fff" />
+          {/* the writing fades out, softly and only here, round the title: an ellipse of mask, never a box */}
+          <radialGradient id="bk-title-fade-g" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stopColor="#000" />
+            <stop offset="0.55" stopColor="#000" />
             <stop offset="1" stopColor="#fff" />
-          </linearGradient>
-          <mask id="bk-ribbon-fade" maskUnits="userSpaceOnUse" x="700" y="0" width="300" height="1000"><rect x="700" y="0" width="300" height="1000" fill="url(#bk-ribbon-fade-g)" /></mask>
+          </radialGradient>
+          <mask id="bk-title-fade" maskUnits="userSpaceOnUse" x="0" y="0" width="1640" height="1000"><rect width="1640" height="1000" fill="#fff" /><ellipse cx="820" cy="520" rx="300" ry="250" fill="url(#bk-title-fade-g)" /></mask>
           <clipPath id="bk-clip-l"><path d={LEFT_PAGE} /></clipPath>
           <clipPath id="bk-clip-r"><path d={RIGHT_PAGE} /></clipPath>
           <filter id="bk-blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14" /></filter>
@@ -232,7 +229,7 @@ export default function BookBackdrop() {
         </g>
 
         {/* the faint ink: ruled lines, a margin, paragraphs of handwriting that says nothing (with a heading and a few crossings-out), blots and a small sketch */}
-        <g clipPath="url(#bk-clip-l)" fill="none" stroke="var(--book-ink)" strokeLinecap="round" strokeLinejoin="round">
+        <g clipPath="url(#bk-clip-l)" mask="url(#bk-title-fade)" fill="none" stroke="var(--book-ink)" strokeLinecap="round" strokeLinejoin="round">
           {RULES.map((y) => (
             <path key={y} d={`M110 ${y}H800`} strokeOpacity="0.09" strokeWidth="1" />
           ))}
@@ -251,7 +248,7 @@ export default function BookBackdrop() {
           </g>
           <ellipse cx="300" cy="640" rx="72" ry="26" fill="var(--book-ink)" stroke="none" opacity="0.07" filter="url(#bk-smudge)" />
         </g>
-        <g clipPath="url(#bk-clip-r)" fill="none" stroke="var(--book-ink)" strokeLinecap="round" strokeLinejoin="round">
+        <g clipPath="url(#bk-clip-r)" mask="url(#bk-title-fade)" fill="none" stroke="var(--book-ink)" strokeLinecap="round" strokeLinejoin="round">
           {RULES.map((y) => (
             <path key={y} d={`M840 ${y}H1530`} strokeOpacity="0.09" strokeWidth="1" />
           ))}
@@ -279,7 +276,7 @@ export default function BookBackdrop() {
 
         {/* the gutter: a dark crease, and the ribbon bookmark trailing out of it a little off centre */}
         <path d="M820 78V872" stroke="#2a1a0c" strokeOpacity="0.6" strokeWidth="2.6" />
-        <g mask="url(#bk-ribbon-fade)">
+        <g>
           <path d={RIBBON} fill="none" stroke="rgba(0,0,0,0.36)" strokeWidth="20" transform="translate(4 5)" />
           <path d={RIBBON} fill="none" stroke="url(#bk-ribbon)" strokeWidth="20" />
           {/* the woven edges: a dark selvedge and a row of tiny pale stitches along each side, and a soft sheen down the middle */}
@@ -289,7 +286,7 @@ export default function BookBackdrop() {
           <path d={RIBBON} fill="none" stroke="#d29a86" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="2.4 2.4" transform="translate(6.5 0)" />
           <path d={RIBBON} fill="none" stroke="#d9a894" strokeOpacity="0.16" strokeWidth="3" />
           {/* the tail below the book: a swallow-tail cut, and the threads coming loose */}
-          <path d="M853 957L874 957L877 988L865 977L852 990Z" fill="#6f281f" stroke="#3d100b" strokeOpacity="0.5" strokeWidth="1" />
+          <path d="M848 957L870 957L873 988L861 977L847 990Z" fill="#6f281f" stroke="#3d100b" strokeOpacity="0.5" strokeWidth="1" />
           <g fill="none" stroke="#7d2c22" strokeWidth="1.2" strokeLinecap="round" opacity="0.85">
             {THREADS.map((d, i) => (
               <path key={i} d={d} />

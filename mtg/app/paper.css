@@ -63,7 +63,7 @@ html[data-theme="dark"] .paper-surface {
   color: var(--pi);
   text-shadow: none;
 }
-.paper-surface.paper-title { mix-blend-mode: multiply; }
+
 
 /* the few pale colours written straight into the markup, as inks */
 .paper-surface .text-\[\#e8dcc0\], .paper-surface .text-\[\#d8c8a2\], .paper-surface .text-\[\#e8d9b5\], .paper-surface .text-\[\#a9d4b9\] { color: var(--pi); }
@@ -99,14 +99,14 @@ html[data-theme="dark"] .paper-surface :focus-visible { outline: 2px solid var(-
 @keyframes paper-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
 /* a computer that needs the cheaper effects: no blending (the ink is simply dark) */
-.perf-lite .paper-surface.paper-title { mix-blend-mode: normal; }
+
 
 
 /* ───────── the bleed of ink into the paper, ink blots and a smudge ───────── */
 .paper-surface h1, .paper-surface h2, .paper-surface .page-title, .paper-surface .block.truncate.text-\[15px\], .paper-title .hero-eyebrow, .paper-title .hero-sub { filter: url(#ink-bleed); }
 .paper-surface .hero-title { filter: url(#ink-rough); }
 /* a couple of blots and a thumb of smudge beside the panels (never under the writing) */
-.paper-ledger::after, .paper-card:not(.paper-bell)::after, .paper-title::after {
+.paper-ledger::after, .paper-card:not(.paper-bell)::after {
   content: "";
   position: absolute;
   pointer-events: none;
@@ -115,7 +115,7 @@ html[data-theme="dark"] .paper-surface :focus-visible { outline: 2px solid var(-
 }
 .paper-ledger::after { width: 26px; height: 26px; right: -22px; bottom: -14px; rotate: 18deg; }
 .paper-card:not(.paper-bell)::after { width: 18px; height: 18px; right: -9px; bottom: -9px; rotate: -30deg; opacity: 0.8; }
-.paper-title::after { width: 34px; height: 34px; right: 3%; top: 18%; rotate: 40deg; display: block; }
+
 .paper-slip { --smudge: radial-gradient(ellipse at 50% 50%, rgba(60, 40, 20, 0.2), transparent 70%); }
 
 /* ───────── drawing in (only while the Motion switch is on; transform and opacity only) ───────── */
