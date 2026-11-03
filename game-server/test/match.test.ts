@@ -111,6 +111,9 @@ describe("a live match", function () {
     bob.send("startVote");
     await new Promise((r) => setTimeout(r, 150));
     assert.equal(snap.bob.stage, "waiting", "a guest can't start the vote");
+    alice.send("format", { bestOf: 1 });
+    bob.send("format", { bestOf: 1 });
+    await new Promise((r) => setTimeout(r, 80));
     alice.send("startVote");
     await until("decks stage (there is no vote: every deck is 60 cards)", () => snap.alice.stage === "decks");
     assert.equal(snap.alice.size, 60);
@@ -194,6 +197,8 @@ describe("a live match", function () {
     assert.equal(snap!.players[1].name, "Bot");
     await assert.rejects(colyseus.connectTo(room, { token: "dev:frank" }), "a third person can't join");
 
+    alice.send("format", { bestOf: 1 });
+    await new Promise((r) => setTimeout(r, 80));
     alice.send("startVote");
     await until("decks stage (the bot voted with the host)", () => snap?.stage === "decks");
     alice.send("deck", { name: "Reds", ids: deckOf(60, "mountain", "agent-of-atlas"), botDeck: { name: "Bot deck", ids: deckOf(60, "forest", "advance-scout") } });
@@ -228,6 +233,9 @@ describe("a live match", function () {
     }
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
     await wait(200);
+    alice.send("format", { bestOf: 1 });
+    bob.send("format", { bestOf: 1 });
+    await new Promise((r) => setTimeout(r, 80));
     alice.send("startVote");
     await wait(100);
     await wait(100);
@@ -375,6 +383,9 @@ describe("a live match", function () {
     const uri = await colyseus.connectTo(room, { token: "dev:uri" });
     const errors: string[] = [];
     for (const c of [tia, uri]) (c.onMessage("room", () => {}), c.onMessage("error", (m: { message: string }) => errors.push(m.message)));
+    tia.send("format", { bestOf: 1 });
+    uri.send("format", { bestOf: 1 });
+    await new Promise((r) => setTimeout(r, 80));
     tia.send("startVote");
     await wait(100);
     await wait(150);
@@ -429,6 +440,9 @@ describe("a live match", function () {
       throw new Error(`timed out waiting for: ${what}`);
     };
     await until("both in the room", () => snap.ivy?.players.length === 2);
+    ivy.send("format", { bestOf: 1 });
+    jack.send("format", { bestOf: 1 });
+    await new Promise((r) => setTimeout(r, 80));
     ivy.send("startVote");
     await until("decks", () => snap.ivy.stage === "decks");
     ivy.send("deck", { name: "A", ids: deckOf(60, "mountain", "agent-of-atlas") });
@@ -498,6 +512,8 @@ describe("a live match", function () {
     await until("in the room", () => snap?.players.length === 1);
     kim.send("addBot");
     await until("bot added", () => snap?.players.length === 2);
+    kim.send("format", { bestOf: 1 });
+    await new Promise((r) => setTimeout(r, 60));
     kim.send("startVote");
     await until("decks", () => snap?.stage === "decks");
     kim.send("deck", { name: "Reds", ids: deckOf(60, "mountain", "agent-of-atlas"), botDeck: { name: "Bot deck", ids: deckOf(60, "forest", "advance-scout") } });
@@ -552,6 +568,9 @@ describe("a live match", function () {
       throw new Error(`timed out waiting for: ${what}`);
     };
     await until("both in the room", () => snap.lee?.players.length === 2);
+    lee.send("format", { bestOf: 1 });
+    max.send("format", { bestOf: 1 });
+    await new Promise((r) => setTimeout(r, 80));
     lee.send("startVote");
     await until("decks", () => snap.lee.stage === "decks");
     lee.send("deck", { name: "A", ids: deckOf(60, "swamp", "slimy-dualleech") });
@@ -607,6 +626,8 @@ describe("a live match", function () {
     client.send("addBot");
     await until("the bot is in", () => snap?.players.length === 2);
     if (look) client.send("look", look); // the table, chosen before the game
+    client.send("format", { bestOf: 1 });
+    await new Promise((r) => setTimeout(r, 60));
     client.send("startVote");
     await until("decks", () => snap?.stage === "decks");
     client.send("deck", { name: "Reds", ids: deckOf(60, "mountain", "agent-of-atlas"), botDeck: { name: "Greens", ids: deckOf(60, "forest", "advance-scout") } });

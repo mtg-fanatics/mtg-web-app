@@ -84,6 +84,7 @@ async function pair(i: number) {
     room.onMessage("*" as never, () => {});
     room.onLeave(() => {});
   }
+  host.send("format", { bestOf: 1 }); guest.send("format", { bestOf: 1 });
   setTimeout(() => host.send("startVote"), 400);
 }
 
