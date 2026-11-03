@@ -148,7 +148,9 @@ export default function ShuffleStage({
                 <SleeveBack css={sleeve(owner).css} edge={sleeve(owner).edge} className="h-full w-full shadow-[2px_-2px_0_rgba(0,0,0,0.55),4px_-4px_0_rgba(255,255,255,0.18),6px_-6px_0_rgba(0,0,0,0.45)]" />
               </div>
               <span
-                className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-bold shadow-lg transition-opacity ${shrink ? "opacity-0" : "opacity-100"} ${canClick ? "border-amber-300 bg-amber-400 text-black" : "border-white/25 bg-slate-950/90 text-slate-100"}`}
+                // (the words say "click to shuffle": clicking them does it, like clicking the deck)
+                onClick={canClick ? () => onShuffle(shuffler) : undefined}
+                className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs font-bold shadow-lg transition-opacity ${shrink ? "opacity-0" : "opacity-100"} ${canClick ? "pointer-events-auto cursor-pointer" : ""} ${canClick ? "border-amber-300 bg-amber-400 text-black" : "border-white/25 bg-slate-950/90 text-slate-100"}`}
               >
                 {label}
               </span>

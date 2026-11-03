@@ -178,7 +178,8 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== "Space" || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
       const t = e.target as HTMLElement | null;
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(t.tagName))) return; // (space on a focused button or a text box keeps its own meaning)
+      // (space in a text box, or on a button reached with the keyboard, keeps its own meaning; a button that was only clicked with the mouse still holds focus, and must not swallow it)
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || (/^(BUTTON|A)$/.test(t.tagName) && t.matches(":focus-visible")))) return;
       if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return; // (a pop-up is open: it is asking something else)
       if (!spacePass.current) return;
       e.preventDefault();
@@ -884,7 +885,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
       style={{ "--bf-image": background.css, "--bf-dim": background.dim } as React.CSSProperties}
     >
       {/* Left: players, chat, log */}
-      <aside className="contents lg:flex lg:min-h-0 lg:flex-col lg:gap-2 lg:overflow-y-auto">
+      <aside className="contents lg:flex lg:min-h-0 lg:flex-col lg:gap-2 lg:overflow-y-auto lg:overflow-x-hidden">
         {/* On a phone these are a menu that covers the board; on a big screen they are the left column. */}
         <div className={`${menuOpen ? "fixed inset-x-0 bottom-0 top-[2.6rem] z-40 flex flex-col gap-2 overflow-y-auto bg-slate-950/95 p-3" : "hidden"} lg:contents`}>
         <div className="flex items-center justify-between lg:hidden">

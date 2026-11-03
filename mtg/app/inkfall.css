@@ -189,7 +189,7 @@ h3 { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font
 .hero-page { padding: 1.6rem 2rem 2rem; }
 .hero-page::before, .hero-page::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: 6px 12px 7px 11px / 11px 7px 12px 6px; }
 .hero-page::before { background-color: rgba(232, 220, 192, 0.05); background-image: var(--grain-dark); background-size: 240px 240px; border: 1.5px dashed rgba(200, 178, 138, 0.22); transform: rotate(-0.8deg); }
-.hero-page::after { border: 1px solid rgba(200, 178, 138, 0.12); transform: rotate(0.6deg) translate(5px, 4px); }
+.hero-page::after { display: none; }
 .hero-sub { display: flex; align-items: center; justify-content: center; white-space: nowrap; }
 .hero-sub::before, .hero-sub::after {
   content: "";
@@ -373,7 +373,9 @@ h3 { font-family: var(--font-fell-text), "IM Fell English", Georgia, serif; font
   box-shadow: inset 2px 3px 6px rgba(90, 55, 20, 0.3), 0 0 0 2px rgba(179, 57, 43, 0.35);
 }
 .tool-field input, .tool-field select { color: var(--ink); }
-.tool-field input::placeholder, .auth-input::placeholder { color: #8a7656; font-style: italic; }
+/* these fields already show focus themselves (the whole field lights up): no second ring on the input inside */
+html[data-theme="dark"] .tool-field input:focus-visible, html[data-theme="dark"] .tool-field select:focus-visible, html[data-theme="dark"] .auth-input:focus-visible { outline: none; }
+.tool-field input::placeholder, .auth-input::placeholder { color: #5e4e3b; font-style: italic; }
 .tool-field svg { color: var(--wax); }
 
 /* ───────── switches, chips, ticks ───────── */
