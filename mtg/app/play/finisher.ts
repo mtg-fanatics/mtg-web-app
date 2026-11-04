@@ -68,9 +68,10 @@ export function warmFinisher(): void {
   // after the match starts, and not in the middle of the finisher: that start-up work was what dropped frames.
   const idle = (fn: () => void, ms: number) => window.setTimeout(() => ("requestIdleCallback" in window ? (window as unknown as { requestIdleCallback: (f: () => void) => void }).requestIdleCallback(fn) : fn()), ms);
   for (const [i, src] of [SCYTHE, FIST_L, SLASH].entries()) idle(() => void loadImage(src), 400 + i * 300);
-  idle(() => void slashBands(), 1800);
-  idle(() => warmShaders(), 2400);
-  idle(() => primeFinisherAudio(), 3000);
+  // (the opening of a match is the busiest moment of the game: the cards are dealt and shuffled. None of this is started until it has passed, and the heavy parts are in pieces)
+  idle(() => void slashBands(), 7000);
+  idle(() => warmShaders(), 8200);
+  idle(() => primeFinisherAudio(), 10500);
 }
 
 // ───────────────────────────── the rig ─────────────────────────────
@@ -486,8 +487,8 @@ async function makeSlashBands(): Promise<{ light: HTMLCanvasElement; dark: HTMLC
     let x1 = 0;
     let y0 = H2;
     let y1 = 0;
-    for (let y = 0; y < H2; y += 2) {
-      for (let x = 0; x < W2; x += 2) {
+    for (let y = 0; y < H2; y += 3) {
+      for (let x = 0; x < W2; x += 3) {
         if (data[(y * W2 + x) * 4 + 3] > 24) {
           if (x < x0) x0 = x;
           if (x > x1) x1 = x;
@@ -496,8 +497,11 @@ async function makeSlashBands(): Promise<{ light: HTMLCanvasElement; dark: HTMLC
         }
       }
     }
-    const cw = Math.max(16, x1 - x0 + 2);
-    const ch = Math.max(16, y1 - y0 + 2);
+    // (every third pixel was looked at, so the box is widened by what could have been missed)
+    x0 = Math.max(0, x0 - 2);
+    y0 = Math.max(0, y0 - 2);
+    const cw = Math.max(16, Math.min(W2 - x0, x1 - x0 + 5));
+    const ch = Math.max(16, Math.min(H2 - y0, y1 - y0 + 5));
     const light = document.createElement("canvas");
     light.width = cw;
     light.height = ch;
@@ -961,7 +965,19 @@ function warmShaders(): void {
   try {
     const gl = document.createElement("canvas").getContext("webgl");
     if (!gl) return;
-    for (const [v, f] of [[VERT, FRAG], [ARC_VERT, ARC_FRAG], [FLAME_VERT, FLAME_FRAG]]) {
+    // (where the browser can compile in the background, it is only started and not waited for: asking for the result at once held the page still for the whole compile)
+    const parallel = gl.getExtension("KHR_parallel_shader_compile");
+    const jobs = [[VERT, FRAG], [ARC_VERT, ARC_FRAG], [FLAME_VERT, FLAME_FRAG]];
+    const programs: WebGLProgram[] = [];
+    const finish = (tries = 0) => {
+      const done = !parallel || programs.every((p) => gl.getProgramParameter(p, parallel.COMPLETION_STATUS_KHR));
+      if (done || tries > 40) gl.getExtension("WEBGL_lose_context")?.loseContext();
+      else window.setTimeout(() => finish(tries + 1), 250);
+    };
+    // one program at a time, a moment apart, so that no frame has to carry all three
+    const step = (i: number) => {
+      if (i >= jobs.length) return finish();
+      const [v, f] = jobs[i];
       const prog = gl.createProgram()!;
       for (const [type, src] of [[gl.VERTEX_SHADER, v], [gl.FRAGMENT_SHADER, f]] as const) {
         const sh = gl.createShader(type)!;
@@ -970,9 +986,11 @@ function warmShaders(): void {
         gl.attachShader(prog, sh);
       }
       gl.linkProgram(prog);
-      gl.getProgramParameter(prog, gl.LINK_STATUS); // (asking makes the driver finish)
-    }
-    gl.getExtension("WEBGL_lose_context")?.loseContext();
+      if (!parallel) gl.getProgramParameter(prog, gl.LINK_STATUS); // (asking makes the driver finish)
+      programs.push(prog);
+      window.setTimeout(() => step(i + 1), 400);
+    };
+    step(0);
   } catch {
     /* (nothing to warm) */
   }

@@ -34,15 +34,14 @@ html[data-theme="dark"] {
 }
 .book-spread, .book-single { position: absolute; inset: 0; width: 100%; height: 100%; }
 .book-single { display: none; }
+/* lamplight and the darkened corners are ONE still layer (a warm pool toward the middle, then the edges falling away). Nothing here moves: an endlessly animated full-screen layer
+   cost a weak graphics chip a slice of every frame, and made every hover and scroll on the page more expensive. */
 .book-glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 44%, rgba(255, 205, 140, 0.2), rgba(255, 205, 140, 0) 58%);
-}
-.book-vignette {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 50%, rgba(8, 5, 3, 0) 52%, rgba(8, 5, 3, 0.66) 100%);
+  background:
+    radial-gradient(ellipse at 50% 44%, rgba(255, 205, 140, 0.2), rgba(255, 205, 140, 0) 58%),
+    radial-gradient(ellipse at 50% 50%, rgba(8, 5, 3, 0) 52%, rgba(8, 5, 3, 0.66) 100%);
 }
 
 /* A narrow screen has no room for a spread: one page fills it, with the gutter shadow along its left edge. */
@@ -51,14 +50,9 @@ html[data-theme="dark"] {
   .book-single { display: block; }
 }
 
-/* Motion: the lamp drifts very slowly (the book itself is simply there: fading in a page of this size at arrival was a heavy frame). Transform and opacity only, and none of it when the Motion switch is off
-   (the component then does not add .book-live) (the computer's own reduce-motion setting is not used: it hid animations before with no way to tell why). */
-.book-live .book-glow { animation: book-lamp 22s ease-in-out infinite alternate; }
-@keyframes book-lamp { from { opacity: 0.8; transform: translate3d(-14px, -8px, 0); } to { opacity: 1; transform: translate3d(14px, 8px, 0); } }
 
 /* A computer that needs the cheaper effects (perfTier.ts): no paper grain, a still lamp. */
 .perf-lite .book-grain { display: none; }
-.perf-lite .book-live .book-glow { animation: none; }
 
 /* ───────── the screens that sit on the book ───────── */
 /* The panels are drawn on the page itself: see paper.css. */

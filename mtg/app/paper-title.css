@@ -8,4 +8,3 @@
 /* the red underline is a brush stroke: heavier, and a little ink spreading at its ends */
 .paper-title .scribble { color: var(--pi-red); stroke-width: 5.5px; }
 /* the wax seal is pressed into the page: it takes a soft shadow on one side only */
-.paper-title .hero-rise:first-of-type { filter: drop-shadow(1px 2px 1px rgba(60, 20, 10, 0.4)) saturate(1.35) brightness(1.12); }

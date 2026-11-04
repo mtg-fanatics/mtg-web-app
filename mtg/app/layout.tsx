@@ -7,6 +7,7 @@ import UserBar from "./UserBar";
 import RegisterSW from "./RegisterSW";
 import AutoFullscreen from "./AutoFullscreen";
 import Music from "./Music";
+import FontWarm from "./FontWarm";
 import { InkFilters } from "./Icons";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
@@ -67,6 +68,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <AutoFullscreen />
         <Music />
         <UserBar />
+        <FontWarm />
         {children}
       </body>
     </html>

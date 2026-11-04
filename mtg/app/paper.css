@@ -101,7 +101,6 @@ html[data-theme="dark"] .paper-surface.paper-card { background-color: #efe3c2; b
 
 
 /* ───────── the bleed of ink into the paper, ink blots and a smudge ───────── */
-.paper-surface h1, .paper-surface h2, .paper-surface .page-title, .paper-surface .block.truncate.text-\[15px\], .paper-title .hero-eyebrow, .paper-title .hero-sub { filter: url(#ink-bleed); }
 .paper-surface .hero-title { filter: url(#ink-rough); }
 /* a couple of blots and a thumb of smudge beside the panels (never under the writing) */
 .paper-ledger::after, .paper-card:not(.paper-bell)::after {
@@ -117,4 +116,4 @@ html[data-theme="dark"] .paper-surface.paper-card { background-color: #efe3c2; b
 .paper-slip { --smudge: radial-gradient(ellipse at 50% 50%, rgba(60, 40, 20, 0.2), transparent 70%); }
 
 /* (nothing draws in on arrival: a dozen filtered, clipped and tilted layers all animating at once was the heaviest moment of the dashboard on a weak graphics chip) */
-.perf-lite .paper-surface h1, .perf-lite .paper-surface h2, .perf-lite .paper-surface .page-title, .perf-lite .paper-title .hero-eyebrow, .perf-lite .paper-title .hero-sub { filter: none; }
+

@@ -6,6 +6,10 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 1.7;
 /** The contents only grow when they can get this much bigger. */
 const GROW = 0.04;
+/** While the sizes keep changing, the board is refitted at most this often (ms). */
+const MIN_GAP = 140;
+/** One fit looks at the height of the board at most this many times (each look is a whole layout) before it goes on in the next frame. */
+const LOOKS = 4;
 
 /**
  * Uses all of the space it has, without scrolling: the contents are sized to the largest size that still fits.
@@ -64,35 +68,45 @@ export default function FitToHeight({
           return;
         }
       }
-      // Otherwise the size changes. The contents are about as tall as the zoom is big, so the answer is guessed from the height just
-      // measured and then corrected a step at a time: usually two or three layouts, where a search of the whole range takes seven.
+      // Otherwise the size changes. The contents are about as tall as the zoom is big, so the answer is guessed from the height just measured and corrected
+      // from what each look shows. A search keeps the biggest size known to fit and the smallest known not to; when rows wrap differently the guesses miss,
+      // and every miss is a layout of the whole board, so one call makes at most LOOKS of them, keeps the biggest size known to fit, and carries on in a moment
+      // (the board is never left too big, and no single frame pays for a long search).
       const minStep = Math.round(minZoom * 50);
       const maxStep = Math.round(maxZoom * 50);
-      let step = Math.min(maxStep, Math.max(minStep, Math.floor(((current * room) / now) * 50 + 1e-6)));
-      let height = heightAt(step / 50);
-      let looks = 0;
-      while (height > room && step > minStep && looks++ < 6) height = heightAt(--step / 50);
-      while (height <= room && step < maxStep && looks++ < 6) {
-        if (height * ((step + 1) / step) > room) break; // (a step more cannot fit: no need to look)
-        const up = heightAt((step + 1) / 50);
-        if (up > room) break;
-        step++;
-        height = up;
-      }
-      if (looks >= 6) {
-        // far from the guess (rows wrapping differently): the biggest zoom that still fits, found by halving the range
-        let low = minStep;
-        let high = maxStep;
-        if (heightAt(high / 50) <= room) low = high;
-        else {
-          while (high - low > 1) {
-            const mid = Math.floor((low + high) / 2);
-            if (heightAt(mid / 50) <= room) low = mid;
-            else high = mid;
+      let fits = 0; // the biggest step known to fit (0: none yet)
+      let fitsHeight = 0;
+      let tooBig = maxStep + 1; // the smallest step known not to fit
+      const note = (st: number, h: number) => {
+        if (h <= room) {
+          if (st > fits) {
+            fits = st;
+            fitsHeight = h;
           }
-        }
-        step = low;
+        } else if (st < tooBig) tooBig = st;
+      };
+      note(Math.round(current * 50), now);
+      let at = Math.round(current * 50);
+      let seen = now;
+      let looks = 0;
+      while (tooBig - fits > 1 && looks < LOOKS) {
+        const lowest = Math.max(fits + 1, minStep);
+        let guess = Math.floor((at * room) / seen + 1e-6);
+        // (a guess outside what is still open falls back to the middle of it)
+        if (guess < lowest || guess >= tooBig) guess = Math.floor((Math.max(fits, minStep - 1) + tooBig) / 2);
+        guess = Math.min(Math.max(guess, lowest), tooBig - 1);
+        if (guess < minStep) break;
+        const h = heightAt(guess / 50);
+        looks++;
+        note(guess, h);
+        at = guess;
+        seen = h;
+        if (fits === 0 && guess <= minStep) break; // nothing smaller is allowed
       }
+      const unfinished = tooBig - fits > 1 && fits >= minStep;
+      const step = fits >= minStep ? fits : minStep;
+      const height = fits >= minStep ? fitsHeight : heightAt(minStep / 50);
+      if (unfinished) window.setTimeout(() => later(), 0);
       // Only a real change is written back, so the size observers below do not wake themselves up again.
       const next = now <= room && Math.abs(step / 50 - current) < GROW ? current : step / 50;
       // the height at the size chosen: it is already known when that is the last size looked at
@@ -104,13 +118,24 @@ export default function FitToHeight({
         current = next;
         settledHeight = heightAt(current);
       }
-      settledRoom = room;
+      settledRoom = unfinished ? -1 : room; // (an unfinished search must not be taken for a settled board)
+    };
+    // The observers wake this up on every frame in which the room or the contents change size (a panel that slides open, a label that appears): each fit
+    // costs two to five layouts of the whole board, so while the sizes keep changing it runs at most once every MIN_GAP ms, and once more when they settle.
+    let last = 0;
+    let timer = 0;
+    const run = () => {
+      last = performance.now();
+      fit();
     };
     const later = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(fit);
+      window.clearTimeout(timer);
+      const wait = last + MIN_GAP - performance.now();
+      if (wait <= 0) frame = requestAnimationFrame(run);
+      else timer = window.setTimeout(() => (frame = requestAnimationFrame(run)), wait);
     };
-    counted.current = content.getElementsByTagName("*").length;
+    counted.current = content.querySelectorAll("[data-card-iid]").length;
     fit();
     refit.current = fit;
     const watch = new ResizeObserver(later);
@@ -119,14 +144,17 @@ export default function FitToHeight({
     return () => {
       refit.current = null;
       cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
       watch.disconnect();
     };
   }, [minZoom, maxZoom]);
 
   // A card that comes or goes is fitted before the screen is drawn, so the animations that follow it find everything where it will stay (the
-  // observers above only notice a frame later, and the layout they ask for is then done twice). Counting the elements costs no layout.
+  // observers above only notice a frame later, and the layout they ask for is then done twice). Counting the cards costs no layout. (Only cards are
+  // counted: the labels, hints and chips that come and go in combat do not change how many rows fit, and if they do change the size the observers above
+  // still notice it. Counting every element refitted the whole board, several layouts each time, whenever a label appeared.)
   useLayoutEffect(() => {
-    const count = inner.current?.getElementsByTagName("*").length ?? 0;
+    const count = inner.current?.querySelectorAll("[data-card-iid]").length ?? 0;
     if (count === counted.current) return;
     counted.current = count;
     refit.current?.();

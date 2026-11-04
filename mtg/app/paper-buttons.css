@@ -20,7 +20,6 @@
   border-radius: 6px 3px 7px 4px / 4px 7px 3px 6px;
   /* a raised stamp: a cream inner rim, a dark lower lip and a hard shadow under it, so it plainly reads as something to press */
   box-shadow: inset 0 0 0 2px rgba(255, 224, 196, 0.5), inset 0 -4px 0 rgba(40, 8, 4, 0.5), 3px 5px 0 rgba(40, 20, 8, 0.6);
-  filter: url(#ink-rough-sm);
   transition: transform 0.08s ease, background-color 0.12s ease;
 }
 .paper-surface .hero-btn-primary svg, .paper-surface .btn-gold svg { color: #f7ead2; }
