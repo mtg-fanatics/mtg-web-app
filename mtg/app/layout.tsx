@@ -85,6 +85,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {/* a phone gets the cheaper way of drawing from the very first paint (the filters on the big lettering were the slowest thing on the sign-in page) */}
+        <script dangerouslySetInnerHTML={{ __html: "if(matchMedia('(hover: none) and (pointer: coarse)').matches)document.documentElement.classList.add('perf-lite')" }} />
         {/* Open the connections to the card picture hosts early, so the first picture does not wait for them. */}
         <link rel="preconnect" href="https://cards.scryfall.io" crossOrigin="" />
         {process.env.NEXT_PUBLIC_SUPABASE_URL && <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="" />}

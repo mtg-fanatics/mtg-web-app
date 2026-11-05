@@ -227,3 +227,6 @@ html[data-hidden] *, html[data-hidden] *::before, html[data-hidden] *::after { a
 @media (hover: none) and (pointer: coarse) {
   .perf-lite .paper-surface, .perf-lite .paper-slip, .perf-lite .paper-card { background-image: none !important; }
 }
+
+/* the big lettering is filtered (rough ink edges): on a phone it is plain, which is where the first paint of every page was slowest */
+.perf-lite .paper-surface .hero-title, .perf-lite .hero-title { filter: none !important; }
