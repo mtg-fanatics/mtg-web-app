@@ -88,6 +88,9 @@ export type Effect =
   | { type: "returnFromYard" } // "when this dies, return it to its owner's hand"
   | { type: "counterUnlessPay"; what: Ref; cost: string } // counter target spell unless its controller pays
   | { type: "noRegen" } // "it can't be regenerated": the destroy/damage of the same spell can't be saved by a shield
+  | { type: "reanimateAll"; maxMV: number } // "return all creature cards with mana value 2 or less from your graveyard to the battlefield"
+  | { type: "damageIfLife"; who: Ref; life: number; amount: number } // "if target player has exactly 10 life, ~ deals 10 damage to that player"
+  | { type: "discardUnlessAttacked" } // "then discard a card unless you attacked this turn"
   | { type: "discardHands"; who: Ref; thenDraw?: number } // "each opponent discards their hand" (then draws that many cards)
   | { type: "giftControl"; what: Ref } // "an opponent gains control of ~"
   | { type: "namedCounters"; name: string; amount: Amount; what: Ref; remove?: boolean } // counters of another kind (bait, incubation...): put on, or taken off ("remove a bait counter")
@@ -420,6 +423,8 @@ export type CountSpec =
   | { kind: "opponents" } // the number of opponents you have
   | { kind: "selfPower" } // the power of the permanent the ability belongs to
   | { kind: "selfCounters" } // counters on it
+  | { kind: "lifeGainedThisTurn" } // the life you gained this turn
+  | { kind: "distinctMV" } // "each different mana value among nonland permanents you control"
   | { kind: "selfNamed"; name: string } // counters of that kind on it ("the number of soul counters on this artifact")
   | { kind: "excessDamage" } // the excess of the damage the same spell or ability just dealt
   | { kind: "greatestMV"; what: "artifact" | "subtype"; subtype?: string } // the greatest mana value among the artifacts (or Elementals) you control
@@ -499,6 +504,10 @@ export interface TriggeredAbility {
     attackersInclude?: string[];
     /** "When this creature enters, if you cast it": it came from a spell. */
     cast?: boolean;
+    /** "Whenever ~ attacks while you control a creature with power 4 or greater". */
+    creaturePowerAtLeast?: number;
+    /** "Whenever you attack with three or more creatures". */
+    attackersAtLeast?: number;
   };
   /** "Whenever you cast a noncreature or Dragon spell": a creature spell of this type counts too. */
   orSpellSubtype?: string;

@@ -64,7 +64,7 @@ const LABELS = new Set([
   "enchant", "cycling", "regenerate", "scry", "mill", "surveil", "devoid", "partner", "changeling", "landwalk",
   "treasure", "battalion", "pack tactics", "double", "food", "investigate", "equip", "landcycling", "typecycling", "basic landcycling", "airbend", "connive", "power-up", "plainscycling", "islandcycling", "swampcycling", "mountaincycling", "forestcycling", "kicker", "flashback", "protection", "landfall", "ward", "crew",
   "heal", "fight", "swampwalk", "islandwalk", "forestwalk", "mountainwalk", "plainswalk",
-  "eerie", "prepared", "raid",
+  "eerie", "prepared", "raid", "hexproof from", "alliance", "formidable",
   "explore", "solved", "infusion", "warp", "blight", "offspring", "toxic", "exalted", "delve", "ferocious", "delirium", "plot", "flurry", "replicate",
   "opus", "harmonize", "echo", "cumulative upkeep", "threshold", "hellbent", "metalcraft", "morbid", "heroic", "bushido", "renown", "extort", "bloodthirst", "affinity", "buyback", "amass", "storm", "cascade", "convoke",
   // Jund Sacrifice and its sideboard

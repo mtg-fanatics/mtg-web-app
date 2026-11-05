@@ -1,5 +1,6 @@
 import type { Amount, Effect } from "../effects.js";
-import { toAmount } from "./words.js";
+import { isKeyword, toAmount } from "./words.js";
+import type { Keyword } from "../keywords.js";
 import { refFor } from "./targets.js";
 import type { Ctx } from "./targets.js";
 
@@ -45,4 +46,77 @@ const lifeLossPerCounters: SentenceParser = (s, ctx) => {
   return [{ type: "loseLife", amount: { count: { kind: "x" } }, who: { t: "opp" } }];
 };
 
-export const FDN_SENTENCES: SentenceParser[] = [namedCounters, discardHands, giftControl, lifeLossPerCounters];
+/** "Until end of turn, creatures you control get +1/+1 and gain haste." (Heroic Reinforcements) */
+const teamPumpAndGain: SentenceParser = (s) => {
+  const m = /^until end of turn, creatures you control get \+(\d+)\/\+(\d+) and gain ([a-z ]+)$/.exec(s);
+  if (!m || !isKeyword(m[3])) return null;
+  const what = { t: "allCreatures" as const, scope: "yours" as const };
+  return [{ type: "pump", power: Number(m[1]), toughness: Number(m[2]), what }, { type: "grant", keyword: m[3] as Keyword, what }];
+};
+
+/** "Other creatures you control get +1/+1 until end of turn." (Syr Alin) */
+const otherTeamPump: SentenceParser = (s) => {
+  const m = /^other creatures you control get \+(\d+)\/\+(\d+) until end of turn$/.exec(s);
+  return m ? [{ type: "pump", power: Number(m[1]), toughness: Number(m[2]), what: { t: "allCreatures", scope: "yours", notSelf: true } }] : null;
+};
+
+/** "Another target creature you control gains trample and gets +X/+X until end of turn, where X is ~'s power." (Ashroot Animist) */
+const ashroot: SentenceParser = (s, ctx) => {
+  if (s !== "another target creature you control gains trample and gets +x/+x until end of turn, where x is ~'s power") return null;
+  ctx.targets.push({ kind: "creature", controller: "you", other: true, label: "another target creature you control" });
+  const what = { t: "target" as const, i: ctx.targets.length - 1 };
+  return [{ type: "grant", keyword: "trample", what }, { type: "pump", power: 1, toughness: 1, what, per: { kind: "selfPower" } }];
+};
+
+/** "Double target creature's power until end of turn." (Bulk Up) */
+const doublePower: SentenceParser = (s, ctx) => {
+  if (s !== "double target creature's power until end of turn") return null;
+  ctx.targets.push({ kind: "creature", label: "target creature" });
+  const i = ctx.targets.length - 1;
+  return [{ type: "pump", power: 1, toughness: 0, what: { t: "target", i }, per: { kind: "targetPower", i } }];
+};
+
+/** "Return all attacking creatures to their owner's hand." (Aetherize) */
+const bounceAttackers: SentenceParser = (s) => (s === "return all attacking creatures to their owner's hand" ? [{ type: "bounce", what: { t: "attackingCreatures" } }] : null);
+
+/** "Return up to one other target permanent you control to its owner's hand." (Mischievous Pup) */
+const bounceOwnOther: SentenceParser = (s, ctx) => {
+  if (s !== "return up to one other target permanent you control to its owner's hand") return null;
+  ctx.targets.push({ kind: "permanent", controller: "you", other: true, optional: true, label: "up to one other target permanent you control" });
+  return [{ type: "bounce", what: { t: "target", i: ctx.targets.length - 1 } }];
+};
+
+/** "You may have it fight target creature you don't control." (Affectionate Indrik: "it" is the creature that entered) */
+const mayFight: SentenceParser = (s, ctx) => {
+  if (s !== "you may have it fight target creature you don't control" || !ctx.allowSelf) return null;
+  ctx.targets.push({ kind: "creature", controller: "opponent", label: "target creature you don't control" });
+  return [{ type: "fight", a: { t: "self" }, b: { t: "target", i: ctx.targets.length - 1 } }];
+};
+
+const discardUnlessAttacked: SentenceParser = (s) => (s === "then discard a card unless you attacked this turn" ? [{ type: "discardUnlessAttacked" }] : null);
+
+/** "Return all creature cards with mana value 2 or less from your graveyard to the battlefield." (Raise the Past) */
+const raiseThePast: SentenceParser = (s) => {
+  const m = /^return all creature cards with mana value (\d+) or less from your graveyard to the battlefield$/.exec(s);
+  return m ? [{ type: "reanimateAll", maxMV: Number(m[1]) }] : null;
+};
+
+/** "If target player has exactly 10 life, ~ deals 10 damage to that player." (Hidetsugu's Second Rite) */
+const exactLifeBurn: SentenceParser = (s, ctx) => {
+  const m = /^if target player has exactly (\d+) life, ~ deals (\d+) damage to that player$/.exec(s);
+  if (!m) return null;
+  const who = refFor("target player", ctx);
+  return who ? [{ type: "damageIfLife", who, life: Number(m[1]), amount: Number(m[2]) }] : null;
+};
+
+/** "Draw a card for each different mana value among nonland permanents you control." (Lunar Insight) */
+const drawPerMV: SentenceParser = (s) => (s === "draw a card for each different mana value among nonland permanents you control" ? [{ type: "draw", amount: { count: { kind: "distinctMV" } }, who: { t: "you" } }] : null);
+
+/** "Target opponent loses X life, where X is the amount of life you gained this turn." (Midnight Snack) */
+const lifeGainedDrain: SentenceParser = (s, ctx) => {
+  if (s !== "target opponent loses x life, where x is the amount of life you gained this turn") return null;
+  const who = refFor("target opponent", ctx);
+  return who ? [{ type: "loseLife", amount: { count: { kind: "lifeGainedThisTurn" } }, who }] : null;
+};
+
+export const FDN_SENTENCES: SentenceParser[] = [namedCounters, discardHands, giftControl, lifeLossPerCounters, teamPumpAndGain, otherTeamPump, ashroot, doublePower, bounceAttackers, bounceOwnOther, mayFight, discardUnlessAttacked, raiseThePast, exactLifeBurn, drawPerMV, lifeGainedDrain];

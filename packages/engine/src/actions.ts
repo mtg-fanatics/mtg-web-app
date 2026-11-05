@@ -354,11 +354,11 @@ export function applyAction(state: GameState, player: PlayerId, action: Action):
       next.phase = "blockers";
       chosen.forEach((p) => queueTriggers(next, p.card, player, "attacks", { attackers: chosen.map((c) => c.card.iid) }));
       if (chosen.length >= 3) chosen.forEach((p) => queueTriggers(next, p.card, player, "battalion")); // "Battalion — whenever this and at least two other creatures attack"
-      if (chosen.length >= 2) for (const p of me.battlefield) queueTriggers(next, p.card, player, "attackTwo");
+      if (chosen.length >= 2) for (const p of me.battlefield) queueTriggers(next, p.card, player, "attackTwo", { attackers: chosen.map((c) => c.card.iid) });
       if (chosen.length === 1) for (const p of me.battlefield) queueTriggers(next, p.card, player, "attacksAlone", { other: chosen[0].card.iid, self: p.card.iid === chosen[0].card.iid });
       for (const p of me.battlefield) queueTriggers(next, p.card, player, "youAttack", { attackers: chosen.map((c) => c.card.iid) });
       // "Whenever a Bat you control attacks": once for each attacking Bat.
-      for (const attacker of chosen) for (const p of me.battlefield) queueTriggers(next, p.card, player, "allyAttacks", { subtypes: subtypesOf(next, attacker), other: attacker.card.iid }); // "Whenever one or more creatures you control attack" // "Whenever you attack with two or more creatures"
+      for (const attacker of chosen) for (const p of me.battlefield) queueTriggers(next, p.card, player, "allyAttacks", { subtypes: subtypesOf(next, attacker), other: attacker.card.iid, spellColors: qualityOfPerm(next, attacker).colors }); // "Whenever one or more creatures you control attack" // "Whenever you attack with two or more creatures"
       events.push({ type: "attackersDeclared", player, attackers: [...ids] });
       events.push({ type: "phaseChanged", phase: "blockers" });
       // The attacking player gets priority first, so a trick like "attacking creatures get +2/+0" can be cast now that there are attackers.

@@ -210,7 +210,7 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
       if (source.sacOnDamage) sacrifice.add(source);
       hostDamageLife(state, source, amount, events); // Spirit Link
       if (toPlayer && onBoard(source.card.iid)) {
-        queueTriggers(state, source.card, source.card.owner, "combatDamagePlayer");
+        queueTriggers(state, source.card, source.card.owner, "combatDamagePlayer", { count: amount });
         queueTriggers(state, source.card, source.card.owner, "damageOpp"); // "whenever ~ deals damage to an opponent" (combat damage is damage too)
         queueDamageDraws(state, source);
         // Auras on the creature: "Whenever enchanted creature deals damage to an opponent, ..."

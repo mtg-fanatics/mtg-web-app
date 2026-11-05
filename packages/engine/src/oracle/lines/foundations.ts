@@ -1,7 +1,10 @@
-import type { ParsedCard, StaticEffect } from "../../effects.js";
+import type { ParsedCard, StaticEffect, TriggeredAbility } from "../../effects.js";
+import { newCtx } from "../targets.js";
+import { parseEffectText } from "../effectText.js";
 import type { Keyword } from "../../keywords.js";
 import { COLOR_OF, isKeyword, singularType } from "../words.js";
 import { parseCreatureLine } from "../lines.js";
+import { selfStatic } from "../abilities.js";
 
 // Lines of the cards of Foundations that no older deck had: one reader for each kind of line, tried before the general ones.
 
@@ -29,6 +32,14 @@ function hexproofFrom(line: string, out: ParsedCard): boolean {
 
 /** Statics about the permanent itself that depend on how it is right now. */
 function selfConditional(line: string, out: ParsedCard): boolean {
+  // Tempest Djinn: "~ gets +1/+0 for each basic island you control"
+  if (/^~ gets [+-]\d+\/[+-]\d+ for each [a-z ]+$/.test(line)) {
+    const st = selfStatic(line);
+    if (st) {
+      (out.statics ??= []).push(st);
+      return true;
+    }
+  }
   let m = /^~ gets \+(\d+)\/\+(\d+) as long as any player controls an? (white|blue|black|red|green) permanent$/.exec(line);
   if (m) {
     (out.statics ??= []).push(self({ power: Number(m[1]), toughness: Number(m[2]), keywords: [], cond: { colorPermAny: COLOR_OF[m[3]] } }));
@@ -84,6 +95,37 @@ function gameRules(line: string, out: ParsedCard): boolean {
   return false;
 }
 
+/** A trigger whose effects are read from the sentence after the comma. */
+function trigger(out: ParsedCard, line: string, event: TriggeredAbility["event"], body: string, extra: Partial<TriggeredAbility> = {}, tweak?: (ctx: ReturnType<typeof newCtx>) => void): true {
+  const ctx = newCtx(true);
+  const effects = parseEffectText(body, ctx);
+  if (effects && effects.length > 0) {
+    tweak?.(ctx);
+    out.triggers.push({ event, effects, targets: ctx.targets, text: line, ...extra });
+  } else out.unsupported.push(line);
+  return true;
+}
+
+/** Triggers of Foundations cards about combat and attacking. */
+function combatTriggers(line: string, out: ParsedCard): boolean {
+  // Trygon Predator: "you may destroy target artifact or enchantment that player controls" (the player who was hit is the opponent)
+  let m = /^whenever ~ deals combat damage to a player, you may destroy target artifact or enchantment that player controls$/.exec(line);
+  if (m) return trigger(out, line, "combatDamagePlayer", "destroy target artifact or enchantment an opponent controls", {}, (ctx) => (ctx.targets[0] = { ...ctx.targets[0], optional: true }));
+  // Goldvein Pick: "whenever equipped creature deals combat damage to a player, create a Treasure token"
+  m = /^whenever equipped creature deals combat damage to a player, (.+)$/.exec(line);
+  if (m) return trigger(out, line, "hostDamagesPlayer", m[1]);
+  // Linden: "whenever a white creature you control attacks, you gain 1 life"
+  m = /^whenever an? (white|blue|black|red|green) creature you control attacks, (.+)$/.exec(line);
+  if (m) return trigger(out, line, "allyAttacks", m[2], { spellColor: COLOR_OF[m[1]] });
+  // Armasaur Guide: "whenever you attack with three or more creatures, put a +1/+1 counter on target creature you control"
+  m = /^whenever you attack with (three|four|\d+) or more creatures, (.+)$/.exec(line);
+  if (m) return trigger(out, line, "attackTwo", m[2], { cond: { attackersAtLeast: num(m[1]) } });
+  // Courageous Goblin, Ruby: "whenever ~ attacks while you control a creature with power 4 or greater, ~ gets +1/+0 and gains menace until end of turn"
+  m = /^whenever ~ attacks while you control a creature with power (\d+) or greater, (.+)$/.exec(line);
+  if (m) return trigger(out, line, "attacks", m[2], { cond: { creaturePowerAtLeast: Number(m[1]) } });
+  return false;
+}
+
 export function readFoundations(line: string, out: ParsedCard): boolean {
-  return entersWithNamed(line, out) || hexproofFrom(line, out) || selfConditional(line, out) || cantBeBlockedBy(line, out) || gameRules(line, out);
+  return entersWithNamed(line, out) || combatTriggers(line, out) || hexproofFrom(line, out) || selfConditional(line, out) || cantBeBlockedBy(line, out) || gameRules(line, out);
 }

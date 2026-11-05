@@ -81,6 +81,9 @@ const createTokenCounted: SentenceParser = (s, ctx) => {
   if ((m = /^(create x .+ tokens?), where x is (.+)$/.exec(base))) {
     amount = amountOf(m[2], ctx);
     base = m[1];
+  } else if ((m = /^create that many (.+ tokens?)$/.exec(base))) {
+    amount = { count: { kind: "x" } }; // "that many": the damage that was just dealt
+    base = `create x ${m[1]}`;
   } else if ((m = /^create a number of (.+ tokens?) equal to (.+)$/.exec(base))) {
     amount = amountOf(m[2], ctx);
     base = `create x ${m[1]}`;

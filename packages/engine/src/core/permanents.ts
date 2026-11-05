@@ -221,6 +221,8 @@ const manaSymbols = (def: CardDef) => def.manaCost?.match(/\{[^}]+\}/g) ?? [];
 /** The count for a player: "the number of Mountains you control". */
 export function countFor(s: GameState, me: PlayerId, spec: CountSpec, sourceIid?: string): number {
   if (spec.kind === "hand") return s.players[me].hand.length;
+  if (spec.kind === "lifeGainedThisTurn") return s.players[me].lifeGainedThisTurn ?? 0;
+  if (spec.kind === "distinctMV") return new Set(s.players[me].battlefield.filter((p) => getCard(s, p.card.defId).type !== "land").map((p) => getCard(s, p.card.defId).cost)).size;
   if (spec.kind === "selfNamed") return s.players[me].battlefield.concat(s.players[OPPONENT[me]].battlefield).find((p) => p.card.iid === sourceIid)?.named?.[spec.name] ?? 0;
   if (spec.kind === "graveyard") {
     return s.players[me].graveyard.filter((c) => {

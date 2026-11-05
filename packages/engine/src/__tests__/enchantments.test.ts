@@ -30,7 +30,7 @@ const DEFS: Record<string, CardDef> = {
   banish: { id: "banish", name: "Banish", type: "instant", cost: 1, manaCost: "{R}", text: "Destroy target enchantment." },
   disenchant: { id: "disenchant", name: "Disenchant", type: "instant", cost: 1, manaCost: "{R}", text: "Destroy target artifact or enchantment." },
   kill: { id: "kill", name: "Kill", type: "instant", cost: 1, manaCost: "{R}", text: "Destroy target creature." },
-  equipment: { id: "equipment", name: "Equipment", type: "artifact", cost: 1, manaCost: "{R}", typeLine: "Artifact — Equipment", text: "Whenever equipped creature deals combat damage to a player, draw a card." },
+  equipment: { id: "equipment", name: "Equipment", type: "artifact", cost: 1, manaCost: "{R}", typeLine: "Artifact — Equipment", text: "Whenever equipped creature blocks a creature with flying, draw a card." },
   trinket: { id: "trinket", name: "Trinket", type: "artifact", cost: 1, manaCost: "{R}", typeLine: "Artifact", text: "" },
 };
 

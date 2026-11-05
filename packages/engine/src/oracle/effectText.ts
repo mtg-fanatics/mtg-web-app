@@ -245,7 +245,8 @@ export function parseEffectText(rawText: string, ctx: Ctx): Effect[] | null {
     // The older wording of a search: "..., reveal it, and put it into your hand. Then shuffle your library." says what "..., reveal it, put it into your hand, then shuffle" says.
     .replace(/(reveal (?:it|that card)), and put /g, "$1, put ")
     .replace(/[.,] then shuffle your library/g, ", then shuffle")
-    .replace(/^for each (land|creature|artifact|enchantment) you control, (create (?:a|an|one) [^,]+? tokens?)$/g, "$2 for each $1 you control") // Brass's Bounty
+    .replace(/^for each (land|creature|artifact|enchantment) you control, (create (?:a|an|one) [^,]+? tokens?)\.?$/g, "$2 for each $1 you control") // Brass's Bounty
+    .replace(/ named ~'s ([a-z]+)/g, " named $1") // Koma's Coil
     .replace(/you may draw a card for each artifact you control\. if you do, each opponent draws a card/g, "@@armorwars@@")
     .replace(/(you may put an? [a-z]+ creature card with mana value \d+ or less from your hand onto the battlefield)\. if you don't, draw a card/g, "$1, else draw a card")
     .replace(/remove a -1\/-1 counter from target creature\. if you do, you gain (\d+) life/g, "@@removeminus $1@@")
