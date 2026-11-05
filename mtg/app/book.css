@@ -21,11 +21,11 @@ html[data-theme="dark"] {
 /* One fixed layer behind everything: no clicks, no scrolling, no layout. It starts under the top bar. */
 .book-layer {
   position: fixed;
-  top: 2.6rem;
+  top: var(--bar-h);
   bottom: 0;
   /* the book is stretched to the screen (so the panels at its sides stand on the pages), up to a very wide one, where it stays centred */
   left: 50%;
-  width: min(100vw, calc((100dvh - 2.6rem) * 2.6));
+  width: min(100vw, calc((100dvh - var(--bar-h)) * 2.6));
   transform: translateX(-50%);
   z-index: -10;
   overflow: hidden;

@@ -3,6 +3,7 @@ import { Alegreya_Sans, IM_Fell_English, IM_Fell_English_SC, Geist_Mono } from "
 import "mana-font/css/mana.css";
 import "./globals.css";
 import "./inkfall.css";
+import "./mobile.css";
 import UserBar from "./UserBar";
 import RegisterSW from "./RegisterSW";
 import AutoFullscreen from "./AutoFullscreen";

@@ -1,0 +1,24 @@
+/*
+ * INKFALL on a phone: the installed app and touch input. Everything here is behind the browser's own questions (is this a touch screen, is this the installed
+ * app, is the phone sideways), never the name of the browser.
+ */
+
+/* The height of the top bar, with the status bar or the notch above it (0 on a computer and in a browser tab). Every screen that fills the window takes this from here. */
+:root { --bar-h: calc(2.6rem + env(safe-area-inset-top, 0px)); }
+
+/* The installed app has no address bar, no reload and no back button: pulling the page down must not reload it, and the page must not bounce. */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior-y: contain; }
+}
+/* During a duel nothing scrolls the page at all (the boards and the hand scroll inside themselves). */
+html[data-duel] body { overscroll-behavior: none; }
+
+@media (hover: none) and (pointer: coarse) {
+  * { -webkit-tap-highlight-color: transparent; }
+  /* no double-tap zoom on the controls (a second tap is a second press) */
+  button, a, [role="button"], [role="tab"], summary, label, select, input[type="checkbox"], input[type="radio"], input[type="range"] { touch-action: manipulation; }
+  /* a card or a button is pressed, not selected: no text selection and no iOS callout when the finger rests on one */
+  button, [data-card-iid], .card-tile, .hand-slot, .topbar { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  /* iOS zooms the page when a field under 16px gets focus */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em); }
+}

@@ -143,10 +143,10 @@ export function OnlineGame() {
     setSeen(matchId);
     if (seen !== null) setVisit(visit + 1); // (from a match to none, or to a different match; from none to a match is the same visit)
   }
-  if (left) return <main className="battlefield-bg min-h-[calc(100dvh-2.6rem)]" />;
+  if (left) return <main className="battlefield-bg min-h-[calc(100dvh-var(--bar-h))]" />;
   if (choosing && snapshot) {
     return (
-      <main className="battlefield-bg min-h-[calc(100dvh-2.6rem)]">
+      <main className="battlefield-bg min-h-[calc(100dvh-var(--bar-h))]">
         <VotePopup room={snapshot} />
       </main>
     );
@@ -880,14 +880,14 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
 
   return (
     <main
-      className="battlefield-bg flex h-[calc(100dvh-2.6rem)] flex-col gap-1.5 overflow-hidden p-1.5 text-zinc-900 [--card-h:clamp(60px,9.5dvh,110px)] lg:gap-2 lg:p-2 lg:[--card-h:clamp(74px,11.8dvh,150px)] lg:h-[calc(100dvh-2.5rem)] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_17rem]"
+      className="battlefield-bg flex h-[calc(100dvh-var(--bar-h))] flex-col gap-1.5 overflow-hidden p-1.5 text-zinc-900 [--card-h:clamp(60px,9.5dvh,110px)] lg:gap-2 lg:p-2 lg:[--card-h:clamp(74px,11.8dvh,150px)] lg:h-[calc(100dvh-2.5rem)] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_17rem]"
       data-peek={peek ? "1" : undefined}
       style={{ "--bf-image": background.css, "--bf-dim": background.dim } as React.CSSProperties}
     >
       {/* Left: players, chat, log */}
       <aside className="contents lg:flex lg:min-h-0 lg:flex-col lg:gap-2 lg:overflow-y-auto lg:overflow-x-hidden">
         {/* On a phone these are a menu that covers the board; on a big screen they are the left column. */}
-        <div className={`${menuOpen ? "fixed inset-x-0 bottom-0 top-[2.6rem] z-40 flex flex-col gap-2 overflow-y-auto bg-slate-950/95 p-3" : "hidden"} lg:contents`}>
+        <div className={`${menuOpen ? "fixed inset-x-0 bottom-0 top-[var(--bar-h)] z-40 flex flex-col gap-2 overflow-y-auto bg-slate-950/95 p-3" : "hidden"} lg:contents`}>
         <div className="flex items-center justify-between lg:hidden">
           <h2 className="font-display text-base font-bold uppercase tracking-widest text-white">Menu</h2>
           <button onClick={() => setMenuOpen(false)} aria-label="Close the menu" className="flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-white/10 text-2xl leading-none text-white">
