@@ -1,0 +1,83 @@
+/*
+ * INKFALL, the duel on a phone. Landscape is the way to play (two battlefields and a hand all fit, and the buttons are under the thumbs); upright works too.
+ *
+ *   upright   top to bottom: the opponent, their field, your field, the question (a sheet), the one line of what to do, the turn strip with the big buttons, your hand, you
+ *   sideways  a slim rail at the left holds the two players; the fields and the hand fill the rest; the big buttons float at the lower right, under the right thumb;
+ *             the menu (chat, log, settings) is a drawer from the right; a question is a sheet from the right, so the board stays in sight
+ * Nothing here changes what a button does.
+ */
+
+/* ───────── both ways of holding the phone ───────── */
+@media (max-width: 1023px) {
+  .duel-center > .playmat ~ .playmat { order: 1; }
+  .duel-center > .peek-btn, .duel-center > .action-box { order: 2; }
+  .duel-center > .step-banner { order: 3; }
+  .duel-center > .ledger-strip { order: 4; }
+  .duel-center .hand-tray { order: 5; } /* (not a direct child: the hand sits in a display: contents wrapper) */
+
+  /* the turn strip is one slim row: the turn, the step we are in, the buttons */
+  .phase-ledger li:not([aria-current="step"]) { display: none; }
+  .phase-ledger li { padding: 0.1rem 0.5rem 0.35rem; font-size: 0.95rem; }
+  .ledger-strip .turn-plate { display: flex; align-items: center; gap: 0.3rem; padding: 0 0.5rem; }
+  .ledger-strip .turn-plate-label { font-size: 0.8rem; }
+  .ledger-strip .turn-plate-num { font-size: 1.15rem; }
+  .cmd-actions { gap: 0.4rem; }
+  .cmd-actions .btn-gold, .cmd-actions .btn-ghost { min-height: 48px; padding-inline: 1rem; }
+  .cmd-actions .btn-ghost { min-height: 44px; }
+  /* every player card is a tap target for the details */
+  .duel-opp .pl-card, .duel-me .pl-card { min-height: 44px; }
+
+  .duel-menu-backdrop { position: fixed; inset: 0; z-index: 39; background: rgba(0, 0, 0, 0.5); }
+  .duel-badge { position: absolute; top: -7px; right: -12px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #a8322a; color: #fff; font-size: 11px; font-weight: 800; line-height: 17px; text-align: center; font-family: var(--font-alegreya), sans-serif; }
+}
+
+/* ───────── sideways ───────── */
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) {
+  /* the top bar gives its place to the board (Back opens the menu, which has the way home) */
+  html[data-duel] { --bar-h: env(safe-area-inset-top, 0px); }
+  html[data-duel] .topbar { display: none; }
+
+  .duel-main {
+    display: grid;
+    height: calc(100dvh - var(--bar-h));
+    min-height: 0;
+    overflow: hidden;
+    grid-template-columns: clamp(8.6rem, 21vw, 11rem) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 4px;
+    padding: 4px max(4px, env(safe-area-inset-right, 0px)) max(4px, env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px));
+  }
+  .duel-opp { grid-area: 1 / 1; min-height: 0; }
+  .duel-me { grid-area: 3 / 1; min-height: 0; align-self: end; flex-direction: column; align-items: stretch; }
+  .duel-me > button { width: auto; min-height: 44px; flex-direction: row; gap: 0.4rem; }
+  .duel-center { grid-area: 1 / 2 / 4 / 3; min-height: 0; overflow: hidden; gap: 3px; }
+  .duel-center > .playmat { flex: 1 1 0; min-height: 0; padding-block: 2px; }
+  .duel-center > .step-banner { padding-block: 1px; font-size: 0.85rem; }
+  .duel-center > .step-banner .step-icon { display: none; }
+  .duel-center > .ledger-strip { border-width: 1px; box-shadow: none; }
+  .duel-center > .ledger-strip .ledger-trim { height: 2px; }
+  .ledger-strip > div:not(.ledger-trim) { padding-block: 1px; }
+
+  /* what the other player just cast is shown small over the top of their field (it is only there for a moment) */
+  .playmat > div.pointer-events-none.absolute.z-20 { zoom: 0.5; max-height: 100%; overflow: hidden; }
+
+  /* the hand: a row of cards at the foot, a little room kept at the right for the big buttons */
+  .duel-center .hand-tray { --card-h: clamp(52px, 17dvh, 86px); padding: 2px 4px; padding-right: 11rem; border-width: 1px; box-shadow: none; }
+
+  /* the big buttons: lower right, under the thumb, always what pressing them does */
+  .cmd-actions { position: fixed; z-index: 34; right: max(8px, env(safe-area-inset-right, 0px)); bottom: max(6px, env(safe-area-inset-bottom, 0px)); flex-wrap: nowrap; margin: 0; }
+  .cmd-actions .btn-gold { min-height: 52px; min-width: 6.5rem; font-size: 1rem !important; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55); }
+  .cmd-actions .btn-ghost { min-height: 48px; background: rgba(11, 17, 32, 0.9); }
+
+  /* a question (targets, costs, blocks) is a sheet from the right, the board stays in sight on the left */
+  .action-box { inset-inline: auto; right: max(4px, env(safe-area-inset-right, 0px)); top: 40px; bottom: max(4px, env(safe-area-inset-bottom, 0px)); width: min(24rem, 46vw); max-height: none; }
+  main[data-peek="1"] .action-box { transform: translateX(calc(100% + 2rem)); }
+  .peek-btn { position: fixed; z-index: 36; right: max(4px, env(safe-area-inset-right, 0px)); top: 4px; width: auto; padding: 5px 12px !important; font-size: 12.5px !important; min-height: 32px; }
+
+  /* the two players: slim cards in the rail */
+  .duel-opp .pl-card > div:first-child, .duel-me .pl-card > div:first-child { flex-wrap: wrap; row-gap: 2px; }
+  .duel-opp .pl-name, .duel-me .pl-name { max-width: 100% !important; }
+
+  /* the menu: a drawer from the right */
+  .duel-menu { inset-inline: auto !important; top: 0 !important; right: 0; width: min(28rem, 60vw); padding-top: max(0.75rem, env(safe-area-inset-top, 0px)); padding-right: max(0.75rem, env(safe-area-inset-right, 0px)); padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)); border-left: 2px solid rgba(255, 255, 255, 0.25); }
+}

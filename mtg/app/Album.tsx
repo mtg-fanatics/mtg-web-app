@@ -212,9 +212,18 @@ export default function Album({ pages, index, onIndex, prepare, renderPage, page
     const t = window.setTimeout(() => setExtras((prev) => [...prev.filter(inWide), ...(missing.length ? [missing[0]] : [])]), missing.length ? 90 : 400);
     return () => window.clearTimeout(t);
   }, [turn, fading, idx, extras, nearLo, nearHi, wideLo, wideHi, total]);
+  // On arrival only the pages on show are built (the screen is drawn with them, and the page appears sooner); the pages round them follow a moment later,
+  // always before anyone can turn to them (a turn builds them first), and a turn that starts sooner than that builds them itself.
+  const [arrived, setArrived] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setArrived(true), 450);
+    return () => window.clearTimeout(t);
+  }, []);
+  const early = arrived || turn !== null || prep !== null || fading || idx !== 0;
   const mounted: number[] = [];
   for (let i = Math.max(0, Math.min(nearLo, ...extras)); i <= Math.min(total - 1, Math.max(nearHi, ...extras)); i++) {
-    if ((i >= nearLo && i <= nearHi) || extras.includes(i)) mounted.push(i);
+    const onShow = i >= idx && i < idx + step;
+    if (onShow || (early && ((i >= nearLo && i <= nearHi) || extras.includes(i)))) mounted.push(i);
   }
 
   const prog = spreads > 1 ? idx / step / (spreads - 1) : 0;

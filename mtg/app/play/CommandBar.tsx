@@ -139,7 +139,7 @@ export default function CommandBar({ state, actor, mine, primary, skipping, conf
           </div>
         )}
         <PhaseSteps phase={state.phase} />
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="cmd-actions ml-auto flex flex-wrap items-center gap-2">
           {primary &&
             (skipping && confirmSkip ? (
               <SkipConfirm state={state} actor={actor} onYes={() => onAct(primary.action)} onBack={() => onConfirmSkip(false)} />

@@ -82,7 +82,7 @@ export default function CardBrowser() {
   };
 
   return (
-    <main className="cards-glass relative flex h-[calc(100dvh-2.7rem)] flex-none flex-col gap-3 overflow-hidden p-3 text-slate-100">
+    <main className="cards-glass relative flex h-[calc(100dvh-var(--bar-h)-0.1rem)] flex-none flex-col gap-3 overflow-hidden p-3 text-slate-100">
       <div className="page-atmosphere" aria-hidden="true" />
       <div className="album-strip flex shrink-0 flex-col gap-3 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">

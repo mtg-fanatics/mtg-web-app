@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { flushSync } from "react-dom";
 import {
@@ -21,6 +22,7 @@ import {
 } from "@mtg/engine";
 import type { Action, Activatable, CardDef, GameEvent, GameState, Permanent, PlayerId, TargetChoice, TargetSpec } from "@mtg/engine";
 import { useBattlefieldBackground } from "@/lib/background";
+import { useWakeLock } from "@/lib/useWakeLock";
 import { dismissNotice, leaveRoom, send as netSend, useOnline } from "@/lib/online/session";
 import { Lightbox } from "./CardDetail";
 import { HoverDetail, HoverPreview } from "./HoverPanels";
@@ -143,10 +145,10 @@ export function OnlineGame() {
     setSeen(matchId);
     if (seen !== null) setVisit(visit + 1); // (from a match to none, or to a different match; from none to a match is the same visit)
   }
-  if (left) return <main className="battlefield-bg min-h-[calc(100dvh-2.6rem)]" />;
+  if (left) return <main className="battlefield-bg min-h-[calc(100dvh-var(--bar-h))]" />;
   if (choosing && snapshot) {
     return (
-      <main className="battlefield-bg min-h-[calc(100dvh-2.6rem)]">
+      <main className="battlefield-bg min-h-[calc(100dvh-var(--bar-h))]">
         <VotePopup room={snapshot} />
       </main>
     );
@@ -231,6 +233,17 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   const background = useBattlefieldBackground(); // the picture behind the battlefield
   const look = useAppearance(online ? (net.game?.looks ?? null) : null); // each player's card sleeves and playmat (online: what each chose before the match)
   const [menuOpen, setMenuOpen] = useState(false); // phones: the side panels (chat, log, looks) are a menu over the board
+  const [chatSeen, setChatSeen] = useState(0); // how many chat lines were there when the menu was last open
+  // The installed app: the page knows a duel is on (so Back opens the menu instead of leaving, and the top bar can give way), and the screen stays awake until it ends.
+  useEffect(() => {
+    document.documentElement.dataset.duel = "1";
+    const onBack = () => setMenuOpen(true);
+    window.addEventListener("ink:duel-back", onBack);
+    return () => {
+      delete document.documentElement.dataset.duel;
+      window.removeEventListener("ink:duel-back", onBack);
+    };
+  }, []);
   const [peek, setPeek] = useState(false); // phones: the choice sheet is tucked away to see the board under it
   // a new panel in the sheet (a different question) always opens it
   const watchSheet = useCallback((el: HTMLDivElement | null) => {
@@ -261,6 +274,10 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   const [assign, setAssign] = useState<Record<string, Record<string, number>>>({}); // attacker -> blocker -> damage
   const [localChat, setChat] = useState<ChatMessage[]>([]);
   const chat: ChatMessage[] = online ? net.chat.map((m) => ({ id: m.id, from: m.from, text: m.text })) : localChat;
+  useEffect(() => {
+    if (menuOpen) setChatSeen(chat.length);
+  }, [menuOpen, chat.length]);
+  const unreadChat = menuOpen ? 0 : chat.slice(chatSeen).filter((m) => m.from !== actor).length; // (lines from the other player that the menu has not shown yet)
   const [zoomed, setZoomed] = useState<CardDef | null>(null); // card shown large in the popup
   const [resigning, setResigning] = useState<PlayerId | null>(null); // player being asked to confirm a resignation
   // A spell or ability being set up: its targets are picked one by one, then `build` makes the action.
@@ -513,6 +530,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   // Space passes priority (go on / resolve the top of the chain), only when the Pass or Resolve button is there for this player to press.
   const canSpacePass = !watching && !state.winner && state.priority?.holder === actor && !state.pendingPick && !state.pendingChoice;
   spacePass.current = canSpacePass ? () => void act({ type: "passPriority" }) : null;
+  useWakeLock(!state.winner);
 
   /**
    * Shows the result of an action: cards that died fly to the graveyard first, then the new state appears and
@@ -880,14 +898,18 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
 
   return (
     <main
-      className="battlefield-bg flex h-[calc(100dvh-2.6rem)] flex-col gap-1.5 overflow-hidden p-1.5 text-zinc-900 [--card-h:clamp(60px,9.5dvh,110px)] lg:gap-2 lg:p-2 lg:[--card-h:clamp(74px,11.8dvh,150px)] lg:h-[calc(100dvh-2.5rem)] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_17rem]"
+      className="duel-main battlefield-bg flex h-[calc(100dvh-var(--bar-h))] flex-col gap-1.5 overflow-hidden p-1.5 text-zinc-900 [--card-h:clamp(60px,9.5dvh,110px)] lg:gap-2 lg:p-2 lg:[--card-h:clamp(74px,11.8dvh,150px)] lg:h-[calc(100dvh-var(--bar-h))] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_17rem]"
       data-peek={peek ? "1" : undefined}
       style={{ "--bf-image": background.css, "--bf-dim": background.dim } as React.CSSProperties}
     >
       {/* Left: players, chat, log */}
       <aside className="contents lg:flex lg:min-h-0 lg:flex-col lg:gap-2 lg:overflow-y-auto lg:overflow-x-hidden">
         {/* On a phone these are a menu that covers the board; on a big screen they are the left column. */}
-        <div className={`${menuOpen ? "fixed inset-x-0 bottom-0 top-[2.6rem] z-40 flex flex-col gap-2 overflow-y-auto bg-slate-950/95 p-3" : "hidden"} lg:contents`}>
+        {menuOpen && <div className="duel-menu-backdrop lg:hidden" aria-hidden="true" onClick={() => setMenuOpen(false)} />}
+        <div
+          className={`${menuOpen ? "duel-menu fixed inset-x-0 bottom-0 top-[var(--bar-h)] z-40 flex flex-col gap-2 overflow-y-auto bg-slate-950/95 p-3" : "hidden"} lg:contents`}
+          {...(menuOpen ? { role: "dialog", "aria-modal": true, "aria-label": "Menu: chat, log and settings" } : {})}
+        >
         <div className="flex items-center justify-between lg:hidden">
           <h2 className="font-display text-base font-bold uppercase tracking-widest text-white">Menu</h2>
           <button onClick={() => setMenuOpen(false)} aria-label="Close the menu" className="flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-white/10 text-2xl leading-none text-white">
@@ -895,6 +917,14 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
           </button>
         </div>
         <p className="rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-sm text-slate-100 lg:hidden">Tip: press and hold any card to see it big.</p>
+        <div className="flex gap-2 lg:hidden">
+          <Link href="/" className="panel-strip btn-row flex min-h-11 flex-1 items-center justify-center px-3 py-2 text-center">
+            ← Front room
+          </Link>
+          <button type="button" onClick={() => location.reload()} className="panel-strip btn-row flex min-h-11 flex-1 items-center justify-center px-3 py-2">
+            ↻ Reload
+          </button>
+        </div>
         {fullscreen.available && (
           <button
             onClick={fullscreen.toggle}
@@ -939,22 +969,25 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
         )}
         </div>
         {/* You: bottom left */}
-        <div className="order-3 flex shrink-0 items-stretch gap-1.5 lg:order-none lg:block">
+        <div className="duel-me order-3 flex shrink-0 items-stretch gap-1.5 lg:order-none lg:block">
           <div className="min-w-0 flex-1">
             <PlayersPanel state={state} order={[actor]} actor={actor} onResign={watching ? undefined : setResigning} heading={watching ? "Player" : "You"} manaNotes={manaNote} />
             <div className="max-lg:hidden">
               <KeepRandomDecks className="mt-2" decks={{ [actor]: playedDecks[actor] }} saved={savedDecks} onSaved={keepDeck} label={() => "Save my random deck"} />
             </div>
           </div>
-          <button onClick={() => setMenuOpen(true)} aria-label="Open the menu: chat, log and settings" className="flex w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-white/30 bg-slate-950/60 text-white lg:hidden">
-            <span className="text-xl leading-none" aria-hidden="true">☰</span>
+          <button onClick={() => setMenuOpen(true)} aria-label={unreadChat > 0 ? `Open the menu: chat (${unreadChat} new), log and settings` : "Open the menu: chat, log and settings"} className="flex w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-white/30 bg-slate-950/60 text-white lg:hidden">
+            <span className="relative text-xl leading-none" aria-hidden="true">
+              ☰
+              {unreadChat > 0 && <span className="duel-badge">{unreadChat > 9 ? "9+" : unreadChat}</span>}
+            </span>
             <span className="text-[11px] font-bold uppercase tracking-wide">Menu</span>
           </button>
         </div>
       </aside>
 
       {/* Center: the battle */}
-      <section className="order-2 flex min-h-0 flex-1 flex-col gap-1.5 lg:order-none lg:flex-initial lg:[--hand-h:clamp(74px,11.8dvh,150px)] lg:has-[.action-box>*]:[--hand-h:clamp(58px,9dvh,110px)]">
+      <section className="duel-center order-2 flex min-h-0 flex-1 flex-col gap-1.5 lg:order-none lg:flex-initial lg:[--hand-h:clamp(74px,11.8dvh,150px)] lg:has-[.action-box>*]:[--hand-h:clamp(58px,9dvh,110px)]">
         <Battlefield
           owner={other}
           top
@@ -1178,7 +1211,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
       {/* Right: the card under the mouse, big */}
       <aside className="contents lg:flex lg:min-h-0 lg:flex-col lg:gap-2">
         {/* Your opponent: top right */}
-        <div className="order-1 shrink-0 lg:order-none">
+        <div className="duel-opp order-1 shrink-0 lg:order-none">
           <PlayersPanel state={state} order={[other]} actor={actor} onResign={online ? undefined : setResigning} heading={watching ? "Player" : "Opponent"} manaNotes={manaNote} />
         </div>
         <div className="hidden min-h-0 flex-1 lg:block lg:overflow-y-auto">

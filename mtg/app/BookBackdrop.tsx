@@ -309,9 +309,8 @@ export default function BookBackdrop() {
         <path d="M0 0V800" stroke="#2a1a0c" strokeOpacity="0.5" strokeWidth="3" />
       </svg>
 
-      {/* lamplight: a warm pool toward the middle, and the corners darkened */}
+      {/* lamplight: a warm pool toward the middle, and the corners darkened (one still layer) */}
       <div className="book-glow" />
-      <div className="book-vignette" />
     </div>
   );
 }

@@ -134,14 +134,12 @@ const ChainStrand = memo(function ChainStrand({ len, angle, seed }: { len: numbe
           <rect x={-LINK_LEN / 2 + 2} y={-R} width={LINK_LEN - 4} height={2 * R} rx={R} fill="none" stroke="#070d18" strokeWidth="6.4" />
           <rect x={-LINK_LEN / 2 + 2} y={-R} width={LINK_LEN - 4} height={2 * R} rx={R} fill="none" stroke={`url(#m${uid})`} strokeWidth="4" />
           <path d={`M${-LINK_LEN / 2 + 7} ${-R + 0.2} H${LINK_LEN / 2 - 7}`} stroke="#fff" strokeOpacity="0.8" strokeWidth="1" strokeLinecap="round" />
-          <rect className="chain-spark" style={{ "--i": l.k } as React.CSSProperties} x={-LINK_LEN / 2 + 2} y={-R} width={LINK_LEN - 4} height={2 * R} rx={R} fill="none" stroke="#e0fbff" strokeWidth="4" />
         </g>
       ))}
       {links.filter((l) => !l.face).map((l) => (
         <g key={l.k} transform={`translate(${l.x.toFixed(1)} ${l.y.toFixed(1)}) rotate(${l.a.toFixed(1)})`}>
           <rect x={-LINK_LEN / 2 + 1} y={-3.4} width={LINK_LEN - 2} height="6.8" rx="3.4" fill={`url(#m${uid})`} stroke="#070d18" strokeWidth="1.3" />
           <path d={`M${-LINK_LEN / 2 + 5} -1.6 H${LINK_LEN / 2 - 5}`} stroke="#fff" strokeOpacity="0.75" strokeWidth="1" strokeLinecap="round" />
-          <rect className="chain-spark" style={{ "--i": l.k } as React.CSSProperties} x={-LINK_LEN / 2 + 1} y={-3.4} width={LINK_LEN - 2} height="6.8" rx="3.4" fill="#e0fbff" />
         </g>
       ))}
     </svg>

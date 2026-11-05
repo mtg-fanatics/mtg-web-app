@@ -29,7 +29,7 @@ export default function ReplayView({ id }: { id: string }) {
   }, [id]);
 
   return (
-    <main className="cards-glass relative flex flex-1 flex-col gap-3 p-3 text-slate-100 lg:h-[calc(100dvh-2.7rem)] lg:flex-none lg:overflow-hidden">
+    <main className="cards-glass relative flex flex-1 flex-col gap-3 p-3 text-slate-100 lg:h-[calc(100dvh-var(--bar-h)-0.1rem)] lg:flex-none lg:overflow-hidden">
       <div className="page-atmosphere" aria-hidden="true" />
       {error && (
         <div className="glass glass-flat mx-auto mt-16 flex max-w-lg flex-col items-center gap-4 p-8 text-center">

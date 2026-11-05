@@ -57,7 +57,7 @@ function Pager({ page, pages, onPage }: { page: number; pages: number; onPage: (
 export default function DeckList() {
   const [tab, setTab] = useState<"mine" | "official">("mine");
   return (
-    <main className="relative flex h-[calc(100dvh-2.6rem)] min-h-0 flex-none flex-col overflow-hidden p-4 text-slate-100 sm:p-6">
+    <main className="relative flex h-[calc(100dvh-var(--bar-h))] min-h-0 flex-none flex-col overflow-hidden p-4 text-slate-100 sm:p-6">
       <LiveWallpaper name="decks" />
       <div className="panel-glass mx-auto flex max-h-full min-h-0 w-full max-w-6xl flex-col gap-4 p-5 text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)] sm:p-6">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">

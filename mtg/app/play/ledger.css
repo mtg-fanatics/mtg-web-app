@@ -220,9 +220,10 @@
 .phase-ledger li svg.ink-icon { flex: none; }
 .phase-ink { position: absolute; left: 0.55rem; right: 0.55rem; bottom: 0.1rem; width: auto; height: 8px; overflow: visible; color: var(--wax-hi); }
 .phase-ink path { fill: none; stroke: currentColor; stroke-width: 2.4px; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-/* the underline is written in once when the step starts (only while the game's Motion switch is on) */
-.phase-ink[data-draw="on"] path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: phase-draw 0.5s ease-out forwards; }
-@keyframes phase-draw { to { stroke-dashoffset: 0; } }
+/* the underline is written in once when the step starts (only while the game's Motion switch is on): it grows from the left by scale, which the graphics chip does
+   by itself (animating the stroke of an SVG path re-lays out the path on every frame) */
+.phase-ink[data-draw="on"] { transform-origin: left center; animation: phase-draw 0.45s ease-out backwards; }
+@keyframes phase-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .skip-confirm { color: var(--paper); background: rgba(8, 5, 3, 0.4); border: 2px dashed var(--wax-hi); border-radius: 4px 8px 4px 7px; }
 
 /* ───────── the banner: what to do now ───────── */
