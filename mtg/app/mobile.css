@@ -87,3 +87,205 @@ html[data-duel] .update-toast { bottom: auto; top: calc(var(--bar-h) + 0.5rem); 
   .victory-backdrop .victory-sub, .victory-backdrop .victory-reason { margin-block: 0.25rem; font-size: 1rem; }
   .victory-backdrop .result-stamp { transform: rotate(9deg) scale(0.7); top: -0.9rem; }
 }
+
+/* ───────── the top bar on a phone: the sound button and one menu ───────── */
+.bar-menu-btn { display: none; }
+@media (max-width: 767px), (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .topbar .bar-full { display: none !important; }
+  .topbar .bar-menu-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+  .topbar .bar-btn { min-height: 44px; }
+  .topbar { height: var(--bar-h); }
+}
+.bar-sheet-backdrop { position: fixed; inset: 0; z-index: 58; background: rgba(0, 0, 0, 0.5); }
+.bar-sheet {
+  position: fixed; z-index: 59; top: 0; right: 0; bottom: 0; width: min(22rem, 100vw);
+  display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto;
+  padding: max(0.75rem, env(safe-area-inset-top, 0px)) max(0.9rem, env(safe-area-inset-right, 0px)) max(0.9rem, env(safe-area-inset-bottom, 0px)) 0.9rem;
+  background: #0b1120; color: #e2e8f0; border-left: 2px solid rgba(255, 255, 255, 0.22); box-shadow: -12px 0 40px rgba(0, 0, 0, 0.6);
+}
+.bar-sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.bar-sheet-x { min-width: 44px; min-height: 44px; border: 0; background: none; color: #e8dcc0; font-size: 1.7rem; }
+.bar-sheet-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 52px; padding: 0.4rem 1rem;
+  border-radius: 8px; border: 2px solid rgba(232, 220, 192, 0.35); background: rgba(255, 255, 255, 0.06); color: #f1e8d0; font-size: 1.05rem; text-align: left;
+}
+.bar-sheet-row b { font-weight: 700; color: #8fc4a5; }
+.bar-sheet-row:disabled { opacity: 0.45; }
+.bar-sheet-danger { margin-top: auto; border-color: rgba(251, 113, 133, 0.6); }
+.bar-sheet-danger b { color: #fda4af; }
+
+/* the install notes on the front room */
+.install-hint {
+  display: flex; align-items: center; gap: 0.6rem; margin: 0.5rem 0.75rem; padding: 0.35rem 0.4rem 0.35rem 0.9rem;
+  border-radius: 10px; background: #efe3c2; color: #2a1c10; border: 2px solid #4a120c; font-size: 1rem; font-weight: 600;
+}
+.install-hint-x { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.5rem; color: #46331f; }
+.install-hint-go { min-height: 44px; padding: 0 1rem; border-radius: 8px; background: #a8322a; color: #fff; border: 0; font-weight: 800; }
+
+/* ───────── the front room on a phone: one page, the profile and the tables above, the three buttons stacked at the foot (the big one last, under the thumb) ───────── */
+@media (max-width: 767px) {
+  .book-page { justify-content: flex-start; }
+  .book-page .install-hint { align-self: stretch; margin-inline: 0; }
+  .book-page .hero-page { order: 99; margin-top: auto; width: 100%; padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)); }
+  .book-page .hero-actions { flex-direction: column-reverse; align-items: stretch; width: 100%; gap: 0.7rem; margin-top: 0.5rem; }
+  .book-page .hero-actions > * { width: 100%; justify-content: center; min-height: 52px; }
+  .book-page .hero-actions > :first-child { min-height: 60px; font-size: 1.15rem; }
+}
+/* sideways: the three buttons in a row again */
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) {
+  .book-page .hero-page { order: 99; margin-top: 0.5rem; width: 100%; }
+  .book-page .hero-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+  .book-page .hero-actions > * { width: auto; flex: 1 1 12rem; min-height: 52px; }
+}
+
+/* ───────── pop-ups on a phone: full-screen sheets ─────────
+ * A window made for a wide screen (a table to open, the decks to pick, a profile, the looks of the cards, a graveyard) fills the whole screen on a phone, with the title bar
+ * kept at the top while the rest scrolls, and what it asks for kept at the foot. Mark a window with the class `sheet` on its backdrop. */
+@media (max-width: 767px), (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .sheet { padding: 0 !important; align-items: stretch !important; justify-content: stretch !important; background: #0b1120 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; overflow: hidden; }
+  .sheet > * {
+    width: 100% !important; max-width: none !important; min-height: 0; height: 100% !important; max-height: 100dvh !important; margin: 0 !important; border-radius: 0 !important;
+    overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+    padding: 0 max(0.9rem, env(safe-area-inset-right, 0px)) max(5.5rem, calc(env(safe-area-inset-bottom, 0px) + 4.5rem)) max(0.9rem, env(safe-area-inset-left, 0px)) !important;
+  }
+  /* the title bar stays at the top */
+  .sheet > * > header:first-child, .sheet > * > :first-child:is(h1, h2) {
+    position: sticky; top: 0; z-index: 5; margin: 0 calc(-1 * max(0.9rem, env(safe-area-inset-right, 0px))) 0.6rem calc(-1 * max(0.9rem, env(safe-area-inset-left, 0px))) !important;
+    padding: max(0.6rem, env(safe-area-inset-top, 0px)) max(0.9rem, env(safe-area-inset-right, 0px)) 0.6rem max(0.9rem, env(safe-area-inset-left, 0px)); background: #14100c; border-bottom: 1px solid rgba(232, 220, 192, 0.25);
+  }
+  /* what the window asks for (Open the table, Ready, Play) stays in reach at the foot */
+  .sheet > * button[type="submit"]:last-of-type, .sheet > * .sheet-action {
+    position: sticky; bottom: 0.6rem; z-index: 4; min-height: 52px; width: 100%; box-shadow: 0 -14px 18px 6px #0b1120;
+  }
+  .sheet button, .sheet [role="button"], .sheet input:not([type="checkbox"]):not([type="radio"]), .sheet select { min-height: 44px; }
+}
+
+/* ───────── the library on a phone: a slim top bar and the filters in a sheet from the foot ───────── */
+.lib-filter-btn { display: none; }
+@media (max-width: 767px) {
+  .lib-bar .lib-filter-btn { display: inline-flex; align-items: center; min-height: 48px; }
+  .lib-bar .btn-ghost, .lib-bar .tool-field { min-height: 48px; }
+  .lib-bar .page-title { font-size: 1.25rem; }
+  .lib-bar .tool-field { min-width: 0; flex: 1 1 100%; }
+}
+.foot-sheet {
+  position: fixed; z-index: 59; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 0.8rem; max-height: 80dvh; overflow-y: auto;
+  padding: 0.6rem max(1rem, env(safe-area-inset-right, 0px)) max(1rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px));
+  background: #14100c; color: #e2e8f0; border-top: 2px solid rgba(232, 220, 192, 0.35); border-radius: 16px 16px 0 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.6);
+}
+.foot-sheet .icon-seg button { min-width: 48px; min-height: 48px; }
+.foot-sheet-done { min-height: 52px; width: 100%; }
+@media (min-width: 768px) { .foot-sheet { display: none; } }
+/* the sheets above sit over whatever the front room puts last */
+.book-page > aside { order: 90; }
+.sheet > form > button[type="submit"]:last-of-type, .sheet > div > button[type="submit"]:last-of-type { margin-top: auto; }
+
+/* ───────── the deck editor on a phone ───────── */
+.deck-progress { position: sticky; top: var(--bar-h); z-index: 25; display: flex; flex-direction: column; gap: 0.35rem; margin: 0 -0.25rem; padding: 0.4rem 0.5rem; background: rgba(20, 16, 12, 0.96); border-bottom: 1px solid rgba(232, 220, 192, 0.25); }
+.deck-progress-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.deck-progress-count { font-size: 1.1rem; font-weight: 700; color: #e8dcc0; }
+.deck-progress-save { min-height: 44px; padding-inline: 1.2rem; }
+.deck-progress-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.deck-progress-bar > i { display: block; height: 100%; background: #f4b743; transition: width 0.2s ease; }
+.deck-progress-bar > i[data-full="yes"] { background: #6fbf8e; }
+.deck-progress-bar > i[data-full="over"] { background: #e0705f; }
+.deck-stats-toggle { min-height: 44px; text-align: left; font-weight: 700; color: #e8dcc0; border-radius: 8px; background: rgba(255, 255, 255, 0.08); padding: 0 0.8rem; }
+@media (hover: none) and (pointer: coarse), (max-width: 767px) {
+  .qty-btn { min-width: 44px; min-height: 44px; font-size: 1.25rem; }
+  .deck-row-li { min-height: 52px; }
+  [role="tab"] { min-height: 44px; }
+}
+
+/* ───────── tap targets: at least 44 px on a touch screen ───────── */
+@media (hover: none) and (pointer: coarse) {
+  .btn-ghost, .btn-gold, .btn-danger, .btn-resign, .hero-btn, .pager-btn, .seg button, .icon-seg button, .switch, .count-chip, .tool-field, summary,
+  a.deck-row, .deck-row button, .deck-row a { min-height: 44px; }
+  .icon-seg button { min-width: 44px; }
+  .btn-ghost, .btn-gold, .btn-danger { display: inline-flex; align-items: center; justify-content: center; }
+  .deck-row { min-height: 56px; }
+  /* long lists of buttons keep a little air between them, so a thumb does not hit two */
+  .icon-seg { gap: 0.25rem; }
+}
+/* the smallest print on a phone: nothing under 12 px except card art */
+@media (max-width: 767px) {
+  .text-\[10px\], .text-\[11px\], [class*="text-[10px]"], [class*="text-[11px]"] { font-size: 12px !important; }
+}
+
+/* the second row of the library bar (the switch, the count and the card types) is in the filter sheet on a phone; the editor's Save is in the progress bar */
+@media (max-width: 767px), (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .lib-bar .switch, .lib-bar .count-chip, .lib-bar .icon-seg { display: none !important; }
+  .lib-bar .lib-filter-btn { display: inline-flex; align-items: center; min-height: 48px; }
+  .lib-bar .page-title { font-size: 1.25rem; }
+  .lib-bar { padding-block: 0.4rem; }
+  .lib-bar .tool-field { min-width: 0; flex: 1 1 8rem; }
+}
+@media (max-width: 1023px) { .deck-save-top { display: none !important; } }
+
+/* an app in the background draws nothing that moves */
+html[data-hidden] *, html[data-hidden] *::before, html[data-hidden] *::after { animation-play-state: paused !important; }
+/* a phone: flatter paper. The grain layers are the costly part of the front room on a small graphics chip, and the page keeps its colour without them */
+@media (hover: none) and (pointer: coarse) {
+  .perf-lite .paper-surface, .perf-lite .paper-slip, .perf-lite .paper-card { background-image: none !important; }
+}
+
+/* the big lettering is filtered (rough ink edges): on a phone it is plain, which is where the first paint of every page was slowest */
+.perf-lite .paper-surface .hero-title, .perf-lite .hero-title { filter: none !important; }
+
+/* the library held sideways: the page is only as tall as the screen, so the captions under the cards (which overlap at that size) give way to the cards */
+@media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .alb-caption { display: none; }
+}
+
+/* "Add to deck" under a card shown large in the library */
+.add-to-deck { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem; width: min(30rem, 92vw); }
+.add-to-deck-pick { flex: 1 1 11rem; min-width: 0; }
+.add-to-deck-pick select { width: 100%; min-height: 48px; padding: 0 0.75rem; border-radius: 8px; border: 2px solid rgba(232, 220, 192, 0.5); background: #1d1610; color: #f1e8d0; font-size: 16px; }
+.add-to-deck-go { min-height: 48px; padding-inline: 1.25rem; }
+.add-to-deck-note { flex: 1 1 100%; margin: 0; text-align: center; font-size: 0.95rem; color: #d7e8dc; }
+.add-to-deck-bad { color: #fda4af; }
+
+/* a long list of results on a phone: the browser leaves out what is scrolled far off screen (nothing of it is drawn or laid out until it comes near) */
+@media (max-width: 1023px) {
+  .pool-grid > * { content-visibility: auto; contain-intrinsic-size: auto 150px auto 215px; }
+}
+
+/* the library held sideways: a wide page of two rows of five, so the cards are about twice as tall as in a narrow page of three rows (the page is only as tall as the screen; the selectors are one level more specific than the album's own, which is loaded after this file) */
+@media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .alb-fit .alb[data-mode="single"] { --aspect: 2.3; }
+  .alb-fit .alb[data-mode="single"] .alb-grid { inset: 2cqw 3cqw 4.2cqw; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(2, 1fr); --card-h: 15.5cqw; }
+  .alb-fit .alb[data-mode="single"] .alb-slot { padding: 0.6cqw; }
+  .alb-fit .alb[data-mode="single"] .alb-folio { bottom: 0.8cqw; font-size: max(11px, 1.9cqw); }
+}
+
+/* ───────── the replay on a phone: the controls stay at the foot, the list of moves is a short scrolling box under the table ───────── */
+@media (max-width: 1023px) {
+  main:has([aria-label="What happened"]) { padding-bottom: 0; }
+  main:has([aria-label="What happened"]) > footer {
+    position: sticky; bottom: 0; z-index: 20; margin-inline: -0.25rem; border-radius: 12px 12px 0 0 !important;
+    padding: 0.5rem max(0.75rem, env(safe-area-inset-right, 0px)) max(0.6rem, env(safe-area-inset-bottom, 0px)) max(0.75rem, env(safe-area-inset-left, 0px));
+    background: rgba(20, 16, 12, 0.97) !important;
+  }
+  [aria-label="What happened"] { max-height: 38dvh; }
+  [aria-label="The table"] > div { min-height: 11rem; }
+  [aria-label="Speed"] button { min-width: 44px; min-height: 44px; font-size: 0.85rem; }
+  [aria-label="What happened"] li > button { min-height: 44px; }
+  main:has([aria-label="What happened"]) input[type="range"] { min-height: 44px; min-width: 8rem; }
+}
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) {
+  /* sideways there is room for the table and the moves side by side, and each scrolls inside its own box (the page itself does not scroll) */
+  main:has([aria-label="What happened"]) { height: calc(100dvh - var(--bar-h)); overflow: hidden; padding-bottom: 0.25rem; }
+  main:has([aria-label="What happened"]) > div.grid { grid-template-columns: minmax(0, 1fr) 15rem; min-height: 0; flex: 1 1 0; }
+  main:has([aria-label="What happened"]) > footer { position: static; margin: 0; border-radius: 12px !important; padding: 0.35rem 0.75rem; }
+  [aria-label="What happened"] { max-height: none; min-height: 0; }
+  [aria-label="The table"] { overflow-y: auto; }
+}
+
+/* the replay controls on a phone: two rows (the buttons, then the slider and the count), the four speeds as one button that goes round them */
+.speed-cycle { min-width: 52px; }
+@media (max-width: 1023px) {
+  [aria-label="Speed"] { display: none !important; }
+  main:has([aria-label="What happened"]) > footer { row-gap: 0.15rem; column-gap: 0.6rem; }
+  main:has([aria-label="What happened"]) > footer input[type="range"] { flex: 1 1 7rem; min-width: 0; }
+}
+/* the link under the sign-in form is a button for a thumb */
+.login-switch { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding-inline: 0.5rem; }

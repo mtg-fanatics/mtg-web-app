@@ -167,7 +167,7 @@ export default function LoginForm() {
               setMode(signup ? "login" : "signup");
               setError(null);
             }}
-            className="text-sm text-slate-300 underline-offset-4 hover:text-[#e8dcc0] hover:underline"
+            className="login-switch text-sm text-slate-300 underline-offset-4 hover:text-[#e8dcc0] hover:underline"
           >
             {signup ? "Already written in? Come in" : "Not in the ledger yet? Add your name"}
           </button>

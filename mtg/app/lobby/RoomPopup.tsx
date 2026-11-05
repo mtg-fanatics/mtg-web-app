@@ -32,7 +32,7 @@ export default function RoomPopup({ room }: { room: RoomSnapshot }) {
           : "You marked different lengths. Settle on one to go on.";
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={`Room ${room.name}`} className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+    <div role="dialog" aria-modal="true" aria-label={`Room ${room.name}`} className="sheet fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
       <div className="leather flex w-full max-w-xl flex-col gap-5 p-7 text-white">
         {/* the room's name and its host */}
         <header className="flex items-start gap-3">

@@ -14,7 +14,7 @@ export default function CreateRoomDialog({ busy, ready, error, onCreate, onClose
   }, [onClose]);
   const missing = locked && password.trim() === "";
   return (
-    <div role="dialog" aria-modal="true" aria-label="Open a table" className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label="Open a table" className="sheet fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4" onClick={onClose}>
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={(e) => {

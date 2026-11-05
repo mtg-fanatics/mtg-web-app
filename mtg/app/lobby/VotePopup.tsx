@@ -37,7 +37,7 @@ export default function VotePopup({ room }: { room: RoomSnapshot }) {
   const guest = room.you === room.host ? room.players.find((p) => p.seat !== room.host) : undefined; // the host may still remove the guest
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Choosing decks" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
+    <div role="dialog" aria-modal="true" aria-label="Choosing decks" className="sheet fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
       <div className={`flex max-h-[calc(100dvh-1rem)] w-full min-w-0 flex-col gap-4 overflow-x-hidden overflow-y-auto sm:max-h-[calc(100dvh-2rem)] sm:gap-5 leather ${room.stage === "decks" ? "max-w-[88rem] p-3 sm:p-7 lg:overflow-y-hidden" :"max-w-lg p-3 sm:p-6"} text-white`}>
         <header className="flex items-center gap-3">
           <ol className="flex flex-1 items-center gap-2" aria-label="Steps">
@@ -206,7 +206,7 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
       <button
         onClick={() => void confirm()}
         disabled={ready || busy || options === null}
-        className="btn-gold !px-8 !py-3.5 !text-xl sm:!py-4 sm:!text-2xl"
+        className="sheet-action btn-gold !px-8 !py-3.5 !text-xl sm:!py-4 sm:!text-2xl"
       >
         {ready ? "Ready, and waiting" : busy ? "Shuffling…" : "I am ready"}
       </button>

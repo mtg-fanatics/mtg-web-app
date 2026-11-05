@@ -14,6 +14,7 @@ import { Skeleton } from "../Skeleton";
 import TypeButton from "./TypeButton";
 import { ALBUM_PAGE_CARDS, useAlbumPages } from "./useAlbumPages";
 import { Back, Lens } from "../Icons";
+import AddToDeck from "./AddToDeck";
 
 type Filter = "all" | CardType;
 const TYPES: Filter[] = ["all", "creature", "land", "instant", "sorcery", "enchantment", "artifact", "planeswalker"];
@@ -23,6 +24,7 @@ export default function CardBrowser() {
   const [query, setQuery] = useState("");
   const [type, setType] = useState<Filter>("all");
   const [playableOnly, setPlayableOnly] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false); // phones: the filters are a sheet from the foot of the screen
   const [index, setIndex] = useState(0); // the album page at the left of the spread (the page itself on a narrow screen)
   const filters = { query, type, playableOnly };
   const { cardsOf, ensure, total, loading, error, ready } = useAlbumPages(filters, index);
@@ -84,7 +86,7 @@ export default function CardBrowser() {
   return (
     <main className="cards-glass relative flex h-[calc(100dvh-var(--bar-h)-0.1rem)] flex-none flex-col gap-3 overflow-hidden p-3 text-slate-100">
       <div className="page-atmosphere" aria-hidden="true" />
-      <div className="album-strip flex shrink-0 flex-col gap-3 p-3 sm:p-4">
+      <div className="album-strip lib-bar flex shrink-0 flex-col gap-3 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           <Link href="/" className="btn-ghost" aria-label="Back to the home page">
             <Back width={15} height={15} />
@@ -104,7 +106,10 @@ export default function CardBrowser() {
               className="w-full"
             />
           </label>
-          <label className="switch" title="Cards the game engine can play today">
+          <button type="button" className="btn-ghost lib-filter-btn" aria-haspopup="dialog" onClick={() => setFiltersOpen(true)}>
+            Filters{type !== "all" || playableOnly ? " •" : ""}
+          </button>
+          <label className="switch max-md:hidden" title="Cards the game engine can play today">
             <input
               type="checkbox"
               checked={playableOnly}
@@ -116,10 +121,10 @@ export default function CardBrowser() {
             <i />
             Playable only
           </label>
-          <span className="count-chip ml-auto">{loading && total === 0 ? "Loading…" : `${total.toLocaleString()} cards`}</span>
+          <span className="count-chip ml-auto max-md:hidden">{loading && total === 0 ? "Loading…" : `${total.toLocaleString()} cards`}</span>
         </div>
 
-        <div className="icon-seg self-start" role="group" aria-label="Card type">
+        <div className="icon-seg self-start max-md:hidden" role="group" aria-label="Card type">
           {TYPES.map((t) => (
             <TypeButton
               key={t}
@@ -134,6 +139,49 @@ export default function CardBrowser() {
           ))}
         </div>
       </div>
+
+      {filtersOpen && (
+        <>
+          <div className="bar-sheet-backdrop" aria-hidden="true" onClick={() => setFiltersOpen(false)} />
+          <div role="dialog" aria-modal="true" aria-label="Filters" className="foot-sheet">
+            <div className="bar-sheet-head">
+              <span className="font-title text-lg text-[#e8dcc0]">Filters</span>
+              <button type="button" aria-label="Close the filters" onClick={() => setFiltersOpen(false)} className="bar-sheet-x">
+                ×
+              </button>
+            </div>
+            <label className="switch" title="Cards the game engine can play today">
+              <input
+                type="checkbox"
+                checked={playableOnly}
+                onChange={(e) => {
+                  setPlayableOnly(e.target.checked);
+                  setIndex(0);
+                }}
+              />
+              <i />
+              Playable only
+            </label>
+            <div className="icon-seg flex-wrap" role="group" aria-label="Card type">
+              {TYPES.map((t) => (
+                <TypeButton
+                  key={t}
+                  type={t}
+                  active={type === t}
+                  glass
+                  onClick={() => {
+                    setType(t);
+                    setIndex(0);
+                  }}
+                />
+              ))}
+            </div>
+            <button type="button" className="btn-gold foot-sheet-done" onClick={() => setFiltersOpen(false)}>
+              Show {loading && total === 0 ? "the cards" : `${total.toLocaleString()} cards`}
+            </button>
+          </div>
+        </>
+      )}
 
       {error && <p className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#f0bfb0]">Could not load cards: {error}</p>}
       {ready && !error && !loading && total === 0 && (
@@ -160,9 +208,9 @@ export default function CardBrowser() {
         <Lightbox
           def={zoomed}
           onClose={() => setZoomedIdx(null)}
-          onPrev={() => step(-1)}
-          onNext={() => step(1)}
+          {...(shown.length > 1 ? { onPrev: () => step(-1), onNext: () => step(1) } : {})}
           caption={`Card ${zoomedIdx! + 1} of ${shown.length} on show`}
+          actions={<AddToDeck key={zoomed.id} def={zoomed} />}
         />
       )}
     </main>

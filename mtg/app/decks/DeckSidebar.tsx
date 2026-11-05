@@ -33,6 +33,7 @@ interface Props {
 /** The deck at a glance, next to both tabs: whether it can be played, its shape, its cards and the basic lands. */
 export default function DeckSidebar({ rows, groups, entries, status, emptyText, onChange, onZoom }: Props) {
   const zoom = useHoverZoom(); // the big card next to the row the mouse is over
+  const [statsOpen, setStatsOpen] = useState(false); // phones: the curve and the basic lands fold away
   return (
     <aside className="glass flex h-fit flex-col gap-3 p-4 lg:sticky lg:top-4">
       <div className="flex items-baseline justify-between">
@@ -41,12 +42,17 @@ export default function DeckSidebar({ rows, groups, entries, status, emptyText, 
       </div>
       <Status status={status} />
       {groups.length > 0 && <p className="text-xs text-slate-300">{groups.map((g) => `${copies(g.cards, entries)} ${g.label.toLowerCase()}`).join(" · ")}</p>}
-      <Curve rows={rows} entries={entries} />
-      <BasicLands entries={entries} onChange={onChange} />
+      <button type="button" className="deck-stats-toggle lg:hidden" aria-expanded={statsOpen} onClick={() => setStatsOpen((o) => !o)}>
+        Mana curve and basic lands {statsOpen ? "▴" : "▾"}
+      </button>
+      <div className={`flex flex-col gap-3 ${statsOpen ? "" : "max-lg:hidden"}`}>
+        <Curve rows={rows} entries={entries} />
+        <BasicLands entries={entries} onChange={onChange} />
+      </div>
       {rows.length === 0 && <p className="text-sm text-slate-400">{emptyText}</p>}
       <ul className="flex max-h-[50vh] flex-col gap-1 overflow-y-auto">
         {rows.map((def) => (
-          <li key={def.id} className="flex items-center gap-2 rounded bg-white/10 px-2 py-1 text-sm" {...zoom.on(def)}>
+          <li key={def.id} className="deck-row-li flex items-center gap-2 rounded bg-white/10 px-2 py-1 text-sm" {...zoom.on(def)}>
             <span className="flex w-6 justify-center">
               <ManaSymbol symbol={String(def.cost)} />
             </span>

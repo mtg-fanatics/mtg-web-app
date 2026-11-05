@@ -122,6 +122,7 @@ export function Lightbox({
   onPrev,
   onNext,
   caption,
+  actions,
 }: {
   def: CardDef;
   onClose: () => void;
@@ -129,6 +130,8 @@ export function Lightbox({
   onNext?: () => void;
   /** Small text under the card, e.g. "Main deck · 12 of 98". */
   caption?: string;
+  /** Buttons under the card (the library's "Add to deck"). */
+  actions?: React.ReactNode;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -141,7 +144,7 @@ export function Lightbox({
   }, [onClose, onPrev, onNext]);
 
   const arrow =
-    "absolute top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-4xl leading-none text-zinc-900 shadow-lg hover:bg-white";
+    `absolute ${actions ? "top-[36%]" : "top-1/2"} flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-4xl leading-none text-zinc-900 shadow-lg hover:bg-white`; // (with buttons under the card the arrows sit over the card, clear of them)
 
   return (
     <div
@@ -158,7 +161,7 @@ export function Lightbox({
           key={def.id}
           def={def}
           size="large"
-          className={`${caption ? "max-h-[84vh]" : "max-h-[90vh]"} w-auto max-w-[90vw] rounded-2xl shadow-2xl`}
+          className={`${actions ? "max-h-[68vh]" : caption ? "max-h-[84vh]" : "max-h-[90vh]"} w-auto max-w-[90vw] rounded-2xl shadow-2xl`}
           fallback={
             <div className="flex w-80 flex-col gap-2 rounded-2xl border border-zinc-400 bg-zinc-100 p-5 shadow-2xl">
               <div className="flex items-baseline justify-between gap-2">
@@ -189,6 +192,7 @@ export function Lightbox({
             {(onPrev || onNext) && <span className="text-white/50"> · use ← → to browse</span>}
           </p>
         )}
+        {actions}
       </div>
 
       {/* Arrows sit at the screen edges; clicking them must not close the popup. */}

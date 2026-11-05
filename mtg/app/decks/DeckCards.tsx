@@ -11,11 +11,11 @@ export function Quantity({ def, qty, onChange }: { def: CardDef; qty: number; on
   const over = qty > MAX_COPIES && !isBasicLand(def);
   return (
     <>
-      <button onClick={() => onChange(def, -1)} className="rounded bg-white/15 px-2 hover:bg-white/30" aria-label={`Remove one ${def.name}`}>
+      <button onClick={() => onChange(def, -1)} className="qty-btn rounded bg-white/15 px-2 hover:bg-white/30" aria-label={`Remove one ${def.name}`}>
         −
       </button>
       <span className={`w-5 text-center ${over ? "font-bold text-amber-200" : ""}`}>{qty}</span>
-      <button onClick={() => onChange(def, 1)} className="rounded bg-white/15 px-2 hover:bg-white/30" aria-label={`Add one ${def.name}`}>
+      <button onClick={() => onChange(def, 1)} className="qty-btn rounded bg-white/15 px-2 hover:bg-white/30" aria-label={`Add one ${def.name}`}>
         +
       </button>
     </>
