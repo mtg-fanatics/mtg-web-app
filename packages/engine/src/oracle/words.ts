@@ -55,6 +55,8 @@ export function amountOf(phrase: string, ctx: Ctx): Amount | null {
 
 /** "for each attacking creature you control": singular phrase to a count. */
 export function forEachCount(phrase: string): CountSpec | null {
+  const basic = /^basic (plains|island|swamp|mountain|forest) you control$/.exec(phrase);
+  if (basic) return { kind: "permanents", what: "landType", landType: basic[1].charAt(0).toUpperCase() + basic[1].slice(1), basic: true, scope: "you" };
   if (phrase === "card discarded this way") return { kind: "x" };
   if (phrase === "card you've discarded this turn") return { kind: "discardedThisTurn" };
   const otherTyped = /^other ([a-z]+) you control$/.exec(phrase);

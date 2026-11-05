@@ -502,6 +502,12 @@ export function activateAbility(state: GameState, player: PlayerId, iid: string,
     if (yard.length < ability.exileFromYard) return `${def.name}: you need ${ability.exileFromYard} cards in your graveyard.`;
     state.players[player].exile.push(...yard.splice(0, ability.exileFromYard));
   }
+  if (ability.costNamed) {
+    const have = found.perm.named?.[ability.costNamed.name] ?? 0;
+    if (!ability.costNamed.put && have < ability.costNamed.n) return `${def.name} has no ${ability.costNamed.name} counter to remove.`;
+    found.perm.named = { ...found.perm.named, [ability.costNamed.name]: ability.costNamed.put ? have + ability.costNamed.n : have - ability.costNamed.n };
+    if (found.perm.named[ability.costNamed.name] === 0) delete found.perm.named[ability.costNamed.name];
+  }
   if (ability.payLife) {
     if (state.players[player].life < ability.payLife) return `Not enough life to pay ${ability.payLife}.`;
     changeLife(state, player, -ability.payLife, events);

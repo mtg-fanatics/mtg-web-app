@@ -419,6 +419,8 @@ export function applyAction(state: GameState, player: PlayerId, action: Action):
         if (kw(next, attackerPerm, "flying") && !kw(next, perm, "flying") && !kw(next, perm, "reach")) {
           return fail(`${nameOf(next, perm)} can't block ${nameOf(next, attackerPerm)}: it has flying (only creatures with flying or reach can block it).`);
         }
+        const bySubtype = parseCard(attackerDef).cantBeBlockedBySubtypes;
+        if (bySubtype?.some((t) => subtypesOf(next, perm).includes(t))) return fail(`${nameOf(next, perm)} can't block ${nameOf(next, attackerPerm)}: it can't be blocked by creatures of that type.`);
         const power = parseCard(attackerDef).cantBeBlockedByPower;
         if (power && (power.op === "max" ? powerOf(next, perm) <= power.n : powerOf(next, perm) >= power.n)) {
           return fail(`${nameOf(next, perm)} can't block ${nameOf(next, attackerPerm)}: creatures with power ${power.n} or ${power.op === "max" ? "less" : "greater"} can't block it.`);

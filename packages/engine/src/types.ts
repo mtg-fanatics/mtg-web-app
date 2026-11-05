@@ -106,6 +106,8 @@ export interface Permanent {
   attachedTo?: string;
   /** +1/+1 counters. */
   counters?: number;
+  /** Counters of any other kind, by name ("bait", "incubation", "page"...): the cards that use them say what they do. */
+  named?: Record<string, number>;
   /** -1/-1 counters. A +1/+1 and a -1/-1 counter on the same permanent cancel each other out. */
   minusCounters?: number;
   /** Dealt damage by a source with infect: some of its -1/-1 counters came from infect. */

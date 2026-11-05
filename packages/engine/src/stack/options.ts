@@ -307,6 +307,8 @@ export function getActivatable(state: GameState, player: PlayerId): Activatable[
       if (ability.tapTwoSharing && !tapPair(state, player)) return;
       if (forbidden(state, perm, "noActivated")) return;
       if (ability.costCard && costChoices(state, player, ability, perm.card.iid).length === 0) return;
+      if (ability.costNamed && !ability.costNamed.put && (perm.named?.[ability.costNamed.name] ?? 0) < ability.costNamed.n) return;
+      if (ability.needLands !== undefined && state.players[player].battlefield.filter((p) => getCard(state, p.card.defId).type === "land").length < ability.needLands) return;
       const xCost = ability.mana ? abilityManaCost(state, perm, ability) : null;
       let maxX: number | undefined;
       if (xCost?.x) {
@@ -351,6 +353,8 @@ export function abilityLockReason(state: GameState, player: PlayerId, perm: Perm
   if (ability.tapTwoSharing && !tapPair(state, player)) return "it needs two untapped creatures that share a creature type";
   if (forbidden(state, perm, "noActivated")) return "something stops its abilities from being used";
   if (ability.costCard && costChoices(state, player, ability, perm.card.iid).length === 0) return `you have nothing to pay it with (${ability.costCard.label})`;
+  if (ability.costNamed && !ability.costNamed.put && (perm.named?.[ability.costNamed.name] ?? 0) < ability.costNamed.n) return `it has no ${ability.costNamed.name} counter to remove`;
+  if (ability.needLands !== undefined && state.players[player].battlefield.filter((p) => getCard(state, p.card.defId).type === "land").length < ability.needLands) return `it needs ${ability.needLands} lands`;
   return null;
 }
 

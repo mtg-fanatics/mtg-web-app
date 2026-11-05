@@ -50,6 +50,7 @@ export function enterBattlefield(state: GameState, card: CardInstance, controlle
   events.push({ type: "permanentEntered", player: controller, iid: card.iid });
   const entered = state.players[controller].battlefield[state.players[controller].battlefield.length - 1];
   if (counters > 0) putCounters(state, entered, controller, counters);
+  if (parsed.entersWithNamed && (!parsed.entersWithNamed.ifCast || cast)) entered.named = { ...entered.named, [parsed.entersWithNamed.name]: parsed.entersWithNamed.n };
   askAsEnters(state, entered, controller);
   if (parsed.saga) {
     entered.lore = 1; // a Saga enters with a lore counter: chapter I

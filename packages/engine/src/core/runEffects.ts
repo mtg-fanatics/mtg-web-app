@@ -14,10 +14,11 @@ import { INFECT_EFFECTS } from "./handlers/infect.js";
 import { GREEN_EFFECTS } from "./handlers/green.js";
 import { STUN_EFFECTS } from "./handlers/stun.js";
 import { THEME_EFFECTS } from "./handlers/theme.js";
+import { FDN_EFFECTS } from "./handlers/foundations.js";
 
 // Running a spell's or ability's effects, one after another. What each kind of effect does is in handlers/.
 
-const HANDLERS: Required<EffectHandlers> = { ...DAMAGE_EFFECTS, ...PERMANENT_EFFECTS, ...ZONE_EFFECTS, ...LIBRARY_EFFECTS, ...STACK_EFFECTS, ...MARVEL_EFFECTS, ...SACRIFICE_EFFECTS, ...INFECT_EFFECTS, ...GREEN_EFFECTS, ...STUN_EFFECTS, ...THEME_EFFECTS };
+const HANDLERS: Required<EffectHandlers> = { ...DAMAGE_EFFECTS, ...PERMANENT_EFFECTS, ...ZONE_EFFECTS, ...LIBRARY_EFFECTS, ...STACK_EFFECTS, ...MARVEL_EFFECTS, ...SACRIFICE_EFFECTS, ...INFECT_EFFECTS, ...GREEN_EFFECTS, ...STUN_EFFECTS, ...THEME_EFFECTS, ...FDN_EFFECTS };
 
 /** Runs a spell's or ability's effects in order. State-based actions are checked by the caller afterwards. */
 export function runEffects(state: GameState, effects: Effect[], ctx: RunContext, events: GameEvent[]): void {
@@ -34,6 +35,7 @@ export function runEffects(state: GameState, effects: Effect[], ctx: RunContext,
     const n =
       c.kind === "selfPower" ? (self ? Math.max(0, powerOf(state, self)) : 0)
       : c.kind === "selfCounters" ? (self?.counters ?? 0)
+      : c.kind === "selfNamed" ? (self?.named?.[c.name] ?? 0)
       : c.kind === "selfToughness" ? (self ? Math.max(0, toughnessOf(state, self)) : 0)
       : c.kind === "equipmentOnSelf" ? Object.values(state.players).flatMap((pl) => pl.battlefield).filter((p) => p.attachedTo === ctx.sourceId && subtypesOf(state, p).includes("equipment")).length
       : c.kind === "ifTargetSubtype" ? (() => {

@@ -31,6 +31,7 @@ export function ignoresHexproof(state: GameState, player: PlayerId): boolean {
 export function isLegalTarget(state: GameState, spec: TargetSpec, choice: TargetChoice, controller: PlayerId, ignoreStackId?: string): boolean {
   switch (choice.kind) {
     case "player":
+      if (choice.id !== controller && state.players[choice.id].battlefield.some((p) => parseCard(getCard(state, p.card.defId)).youHexproof)) return false; // "You have hexproof"
       return (spec.kind === "player" || spec.kind === "any" || spec.kind === "playerOrPlaneswalker") && (!spec.opponentOnly || choice.id !== controller);
     case "permanent": {
       const found = findPermanentOrNull(state, choice.iid);
@@ -40,6 +41,9 @@ export function isLegalTarget(state: GameState, spec: TargetSpec, choice: Target
       if (spec.source && isProtectedFrom(state, found.perm, spec.source)) return false;
       // Hexproof: only its controller can target it (unless the targeting player has Nowhere to Run).
       if (found.owner.id !== controller && kw(state, found.perm, "hexproof") && !ignoresHexproof(state, controller)) return false;
+      // "Hexproof from white": spells and abilities of that color (or kind) an opponent controls can't target it
+      const hexFrom = parseCard(def).hexproofFrom;
+      if (hexFrom && found.owner.id !== controller && spec.source && (spec.source.colors.some((c) => hexFrom.includes(c)) || (spec.source.type !== undefined && hexFrom.includes(spec.source.type)))) return false;
       if (kw(state, found.perm, "shroud")) return false; // shroud: nobody can target it, not even its controller
       if (found.perm.untargetableBy?.includes(controller)) return false; // "can't be the target of spells or abilities your opponents control this turn"
       if (spec.except && spec.except === choice.iid) return false; // "another target creature"

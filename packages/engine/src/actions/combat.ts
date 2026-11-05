@@ -1,5 +1,5 @@
 import { getCard } from "../cards.js";
-import { absorbDamage, hostDamageLife } from "../core/prevention.js";
+import { damageDoublings, absorbDamage, hostDamageLife } from "../core/prevention.js";
 import { parseCard } from "../oracle.js";
 import {
   addPoison,
@@ -172,6 +172,10 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
       if (amount <= 0) continue; // rule 510.1a: 0 or less damage isn't dealt
       const toPlayer = "battlefield" in target;
       if (toPlayer && state.players[source.card.owner].doubleDamage && target.id !== source.card.owner) amount *= 2;
+      amount *= 2 ** damageDoublings(state, source.card.owner, true, toPlayer ? target.id : Object.values(state.players).find((pl) => pl.battlefield.includes(target))?.id);
+      // "Prevent all combat damage that would be dealt to and dealt by ~"
+      if (preventable && (parseCard(getCard(state, source.card.defId)).fogSelf || (!toPlayer && parseCard(getCard(state, target.card.defId)).fogSelf))) amount = 0;
+      if (amount <= 0) continue;
       // "Prevent the next 3 damage that would be dealt to it this turn", "prevent 1 of that damage" (a planeswalker has no shield)
       if (toPlayer || getCard(state, target.card.defId).type !== "planeswalker") {
         const through = absorbDamage(state, toPlayer ? { k: "player", id: target.id } : { k: "perm", perm: target }, amount);

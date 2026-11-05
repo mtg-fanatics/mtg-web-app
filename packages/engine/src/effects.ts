@@ -88,6 +88,9 @@ export type Effect =
   | { type: "returnFromYard" } // "when this dies, return it to its owner's hand"
   | { type: "counterUnlessPay"; what: Ref; cost: string } // counter target spell unless its controller pays
   | { type: "noRegen" } // "it can't be regenerated": the destroy/damage of the same spell can't be saved by a shield
+  | { type: "discardHands"; who: Ref; thenDraw?: number } // "each opponent discards their hand" (then draws that many cards)
+  | { type: "giftControl"; what: Ref } // "an opponent gains control of ~"
+  | { type: "namedCounters"; name: string; amount: Amount; what: Ref; remove?: boolean } // counters of another kind (bait, incubation...): put on, or taken off ("remove a bait counter")
   | { type: "addCounters"; amount: Amount; what: Ref; kind?: "minus" } // +1/+1 counters (or -1/-1 with kind "minus")
   | { type: "fight"; a: Ref; b: Ref } // each deals damage equal to its power to the other
   | { type: "bite"; from: Ref; to: Ref; times?: number; trampleExcess?: boolean } // "target creature you control deals damage equal to its power to target creature" (`trampleExcess`: with trample, the excess goes to that creature's controller instead)
@@ -259,6 +262,8 @@ export interface LastKnown {
 
 /** The qualities of a source that protection looks at. */
 export interface SourceQuality {
+  /** instant, sorcery, creature...: what the spell or ability's source is ("hexproof from instants"). */
+  type?: string;
   colors: string[];
   artifact: boolean;
 }
@@ -359,7 +364,7 @@ export interface StaticEffect {
   /** "Other Goblin creatures you control attack each combat if able." */
   mustAttack?: boolean;
   /** "As long as you've drawn two or more cards this turn" / "as long as this Aura entered this turn". */
-  cond?: { artifactCreatureOrPlan?: boolean; powerAtMost?: number; selfCounteredThisTurn?: boolean; yardCreatures?: number; drawnAtLeast?: number; lifeAtLeast?: number; yourTurn?: boolean; enteredThisTurn?: boolean; controls?: string; attacking?: boolean; lostLife?: boolean; /** Four or more card types among the cards in its controller's graveyard. */ delirium?: boolean; /** Threshold: this many cards in its controller's graveyard. */ yardAtLeast?: number; /** Hellbent: its controller has no cards in hand. */ handEmpty?: boolean; /** Metalcraft: its controller controls this many artifacts. */ artifactsAtLeast?: number };
+  cond?: { artifactCreatureOrPlan?: boolean; powerAtMost?: number; selfCounteredThisTurn?: boolean; yardCreatures?: number; drawnAtLeast?: number; lifeAtLeast?: number; yourTurn?: boolean; enteredThisTurn?: boolean; controls?: string; attacking?: boolean; lostLife?: boolean; /** Four or more card types among the cards in its controller's graveyard. */ delirium?: boolean; /** Threshold: this many cards in its controller's graveyard. */ yardAtLeast?: number; /** Hellbent: its controller has no cards in hand. */ handEmpty?: boolean; /** Metalcraft: its controller controls this many artifacts. */ artifactsAtLeast?: number; /** It has this many +1/+1 counters. */ selfCountersAtLeast?: number; /** It has this many counters of that kind ("as long as it has a divinity counter"). */ selfNamedAtLeast?: { name: string; n: number }; /** "As long as any player controls a white permanent". */ colorPermAny?: string; /** "While you control a creature with power 4 or greater". */ creaturePowerAtLeast?: number; /** "Threshold": this many cards in its controller's graveyard (as a condition for the thing it gives). */ yardAtLeastN?: number; /** "As long as there are seven or more cards in your graveyard". */ };
   /** "Tapped creatures you control have hexproof." */
   tappedOnly?: boolean;
   /** "Other untapped creatures you control have hexproof." */
@@ -386,6 +391,8 @@ export interface StaticEffect {
   landwalk?: string[];
   /** "Other creatures you control": not the permanent itself. */
   other?: boolean;
+  /** "Creatures you control of the chosen type / color": the type or color chosen as the permanent entered. */
+  chosen?: "color" | "type";
   /** "Other Minotaur creatures you control get +1/+1": only creatures with one of these types. */
   subtypes?: string[];
   power: number;
@@ -403,7 +410,7 @@ export interface StaticEffect {
  * It is recomputed every time it matters, so it always follows the board.
  */
 export type CountSpec =
-  | { kind: "permanents"; what: "creature" | "land" | "artifact" | "enchantment" | "landType" | "subtype"; landType?: string; subtype?: string; nontoken?: boolean; other?: boolean; scope: "you" | "opponents" | "all" }
+  | { kind: "permanents"; what: "creature" | "land" | "artifact" | "enchantment" | "landType" | "subtype"; landType?: string; /** only basic lands of that type */ basic?: boolean; subtype?: string; nontoken?: boolean; other?: boolean; scope: "you" | "opponents" | "all" }
   | { kind: "hand" }
   | { kind: "graveyard"; creaturesOnly: boolean; spellsOnly?: boolean; adventures?: boolean } // `adventures`: "and/or have an Adventure" counts too
   | { kind: "attackers"; subtype?: string; other?: boolean } // creatures you control that are attacking
@@ -413,6 +420,7 @@ export type CountSpec =
   | { kind: "opponents" } // the number of opponents you have
   | { kind: "selfPower" } // the power of the permanent the ability belongs to
   | { kind: "selfCounters" } // counters on it
+  | { kind: "selfNamed"; name: string } // counters of that kind on it ("the number of soul counters on this artifact")
   | { kind: "excessDamage" } // the excess of the damage the same spell or ability just dealt
   | { kind: "greatestMV"; what: "artifact" | "subtype"; subtype?: string } // the greatest mana value among the artifacts (or Elementals) you control
   | { kind: "greatestMVYard" } // the greatest mana value among the cards in your graveyard
@@ -582,6 +590,10 @@ export interface ActivatedAbility {
   minLife?: number;
   /** "Exile two cards from your graveyard" as a cost. */
   exileFromYard?: number;
+  /** "Remove a wish counter from this artifact" / "Put a page counter on this artifact" as part of the cost. */
+  costNamed?: { name: string; n: number; put?: boolean };
+  /** "Activate only if you control five or more lands." */
+  needLands?: number;
   /** "Tap two untapped creatures you control that share a creature type" as a cost. */
   tapTwoSharing?: boolean;
   /** "Activate only if there are two or more creature cards in your graveyard." */
@@ -740,6 +752,22 @@ export interface ParsedCard {
   entersTappedUnless?: { /** "enters tapped if it's not your turn" */ yourTurn?: boolean; basics?: number; otherLands?: number; fewerOtherLands?: number; planeswalker?: boolean; lifeAtMost?: number; opponentLands?: number; never?: boolean; /** "unless you control a Forest or an Island" */ landTypes?: string[] };
   /** "Can't be blocked by creatures with power 2 or less / 4 or greater." */
   cantBeBlockedByPower?: { n: number; op: "max" | "min" };
+  /** "~ can't be blocked by Humans" / "by Walls": creature types that can't block it. */
+  cantBeBlockedBySubtypes?: string[];
+  /** "Hexproof from white" / "hexproof from instants": colors (W U B R G) or spell types it can't be targeted by. */
+  hexproofFrom?: string[];
+  /** "Prevent all combat damage that would be dealt to and dealt by ~." */
+  fogSelf?: boolean;
+  /** "Instant and sorcery spells you control can't be countered." */
+  spellsUncounterable?: boolean;
+  /** "If a source you control would deal damage to an opponent or a permanent an opponent controls, it deals double that damage instead" (and the creature-only version). */
+  damageDoubler?: { creaturesOnly: boolean; opponentSideOnly: boolean };
+  /** "Prevent all noncombat damage that would be dealt to other creatures you control." */
+  preventNoncombatOthers?: boolean;
+  /** "You have hexproof." */
+  youHexproof?: boolean;
+  /** "You can't lose the game and your opponents can't win the game." */
+  cantLose?: boolean;
   /** "This creature can't attack unless defending player controls an Island." */
   attackOnlyIfDefenderControls?: string;
   /** "All creatures able to block this creature do so." */
@@ -804,6 +832,8 @@ export interface ParsedCard {
   entersWithStun?: number;
   /** "~ enters with two +1/+1 counters on it" (or X). */
   entersWithCounters?: number | "X";
+  /** "This artifact enters with three wish counters on it" / "...if you cast it from your hand". */
+  entersWithNamed?: { name: string; n: number; ifCast?: boolean };
   /** "Enchant creature": the card is an Aura and needs a target when it is cast. */
   aura?: TargetSpec;
   statics?: StaticEffect[];

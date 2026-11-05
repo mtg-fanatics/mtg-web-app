@@ -78,10 +78,10 @@ export const isPlaneswalker = (s: GameState, p: Permanent) => getCard(s, p.card.
 export const isEnchantmentDef = (def: CardDef) => def.type === "enchantment" || (def.typeLine ?? "").split("—")[0].includes("Enchantment");
 
 /** What protection looks at: the colors of a source, and whether it is an artifact. */
-export const qualityOfDef = (def: CardDef): SourceQuality => ({ colors: def.colors ?? [], artifact: isArtifactDef(def) });
+export const qualityOfDef = (def: CardDef): SourceQuality => ({ type: def.type, colors: def.colors ?? [], artifact: isArtifactDef(def) });
 /** A permanent's colors now: its card's, unless something made it another color until end of turn. */
 export const colorsOfPerm = (s: GameState, p: Permanent): string[] => p.tempColors ?? getCard(s, p.card.defId).colors ?? [];
-export const qualityOfPerm = (s: GameState, p: Permanent): SourceQuality => ({ colors: colorsOfPerm(s, p), artifact: isArtifactDef(getCard(s, p.card.defId)) });
+export const qualityOfPerm = (s: GameState, p: Permanent): SourceQuality => ({ type: getCard(s, p.card.defId).type, colors: colorsOfPerm(s, p), artifact: isArtifactDef(getCard(s, p.card.defId)) });
 
 /** Is this permanent protected from sources with these qualities? ("Protection from red") */
 /** Can damage be prevented right now? Not this turn after "damage can't be prevented this turn", nor while a permanent says "Damage can't be prevented." */
@@ -156,12 +156,18 @@ export function staticEffectsOn(s: GameState, target: Permanent): StaticEffect[]
         if (st.cond?.drawnAtLeast !== undefined && (s.players[owner.id].drawnThisTurn ?? 0) < st.cond.drawnAtLeast) continue;
         if (st.cond?.lifeAtLeast !== undefined && s.players[owner.id].life < st.cond.lifeAtLeast) continue;
         if (st.cond?.lostLife && !(s.players[owner.id].lifeLostThisTurn ?? 0)) continue;
+        if (st.chosen === "color" && !(source.chosenColor && colorsOfPerm(s, target).includes(source.chosenColor))) continue;
+        if (st.chosen === "type" && !(source.chosenType && subtypesOf(s, target).includes(source.chosenType))) continue;
         if (st.tokensOnly && !isToken(target.card)) continue;
         if (st.withCounters && !((target.counters ?? 0) > 0)) continue;
         if (st.withKeyword && !ownKeyword(s, target, st.withKeyword)) continue;
         if (st.cond?.artifactCreatureOrPlan && !s.players[owner.id].battlefield.some((p) => { const d = getCard(s, p.card.defId); return (isArtifactDef(d) && d.type === "creature") || defSubtypes(d).includes("plan"); })) continue;
         if (st.cond?.powerAtMost !== undefined && basePT(s, source, "power") + (source.counters ?? 0) - (source.minusCounters ?? 0) + (source.powerBonus ?? 0) > st.cond.powerAtMost) continue;
         if (st.cond?.selfCounteredThisTurn && !(source.countersThisTurn ?? 0)) continue;
+        if (st.cond?.selfCountersAtLeast !== undefined && ((source.counters ?? 0) - (source.minusCounters ?? 0)) < st.cond.selfCountersAtLeast) continue;
+        if (st.cond?.selfNamedAtLeast && (source.named?.[st.cond.selfNamedAtLeast.name] ?? 0) < st.cond.selfNamedAtLeast.n) continue;
+        if (st.cond?.colorPermAny && !Object.values(s.players).some((pl) => pl.battlefield.some((p) => colorsOfPerm(s, p).includes(st.cond!.colorPermAny!)))) continue;
+        if (st.cond?.creaturePowerAtLeast !== undefined && !s.players[owner.id].battlefield.some((p) => isCreature(s, p) && powerOf(s, p) >= st.cond!.creaturePowerAtLeast!)) continue;
         if (st.targetCounteredThisTurn && !(target.countersThisTurn ?? 0)) continue;
         if (st.cond?.yardCreatures !== undefined && yardCreatureCards(s, owner.id) < st.cond.yardCreatures) continue;
         if (st.cond?.delirium && !hasDelirium(s, owner.id)) continue;
@@ -215,6 +221,7 @@ const manaSymbols = (def: CardDef) => def.manaCost?.match(/\{[^}]+\}/g) ?? [];
 /** The count for a player: "the number of Mountains you control". */
 export function countFor(s: GameState, me: PlayerId, spec: CountSpec, sourceIid?: string): number {
   if (spec.kind === "hand") return s.players[me].hand.length;
+  if (spec.kind === "selfNamed") return s.players[me].battlefield.concat(s.players[OPPONENT[me]].battlefield).find((p) => p.card.iid === sourceIid)?.named?.[spec.name] ?? 0;
   if (spec.kind === "graveyard") {
     return s.players[me].graveyard.filter((c) => {
       const def = getCard(s, c.defId);
@@ -256,6 +263,7 @@ export function countFor(s: GameState, me: PlayerId, spec: CountSpec, sourceIid?
       const def = getCard(s, perm.card.defId);
       if (spec.other && perm.card.iid === sourceIid) continue;
       if (spec.nontoken && isToken(perm.card)) continue;
+      if (spec.basic && !isBasicLand(def)) continue;
       if (spec.what === "subtype") {
         if (subtypesOf(s, perm).includes(spec.subtype ?? "?")) n++;
         continue;

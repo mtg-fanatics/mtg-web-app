@@ -204,7 +204,8 @@ export const STACK_EFFECTS = {
         const min = parseCard(getCard(state, p.card.defId)).uncounterableMinMV;
         return min !== undefined && getCard(state, (s.item as { card: CardInstance }).card.defId).cost >= min;
       });
-      if (s.item.kind === "spell" && (shielded || parseCard(getCard(state, s.item.card.defId)).cantBeCountered)) {
+      const spellShield = s.item.kind === "spell" && ["instant", "sorcery"].includes(getCard(state, s.item.card.defId).type) && state.players[s.item.controller].battlefield.some((p) => parseCard(getCard(state, p.card.defId)).spellsUncounterable); // Sphinx of the Final Word
+      if (s.item.kind === "spell" && (shielded || spellShield || parseCard(getCard(state, s.item.card.defId)).cantBeCountered)) {
         say(`${getCard(state, s.item.card.defId).name} can't be countered.`);
         if (effect.exileCopies) exileCopiesOf(state, s.item.controller, getCard(state, s.item.card.defId).name, events, say);
         continue;
