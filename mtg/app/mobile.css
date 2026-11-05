@@ -159,3 +159,39 @@ html[data-duel] .update-toast { bottom: auto; top: calc(var(--bar-h) + 0.5rem); 
   }
   .sheet button, .sheet [role="button"], .sheet input:not([type="checkbox"]):not([type="radio"]), .sheet select { min-height: 44px; }
 }
+
+/* ───────── the library on a phone: a slim top bar and the filters in a sheet from the foot ───────── */
+.lib-filter-btn { display: none; }
+@media (max-width: 767px) {
+  .lib-bar .lib-filter-btn { display: inline-flex; align-items: center; min-height: 48px; }
+  .lib-bar .btn-ghost, .lib-bar .tool-field { min-height: 48px; }
+  .lib-bar .page-title { font-size: 1.25rem; }
+  .lib-bar .tool-field { min-width: 0; flex: 1 1 100%; }
+}
+.foot-sheet {
+  position: fixed; z-index: 59; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 0.8rem; max-height: 80dvh; overflow-y: auto;
+  padding: 0.6rem max(1rem, env(safe-area-inset-right, 0px)) max(1rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px));
+  background: #14100c; color: #e2e8f0; border-top: 2px solid rgba(232, 220, 192, 0.35); border-radius: 16px 16px 0 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.6);
+}
+.foot-sheet .icon-seg button { min-width: 48px; min-height: 48px; }
+.foot-sheet-done { min-height: 52px; width: 100%; }
+@media (min-width: 768px) { .foot-sheet { display: none; } }
+/* the sheets above sit over whatever the front room puts last */
+.book-page > aside { order: 90; }
+.sheet > form > button[type="submit"]:last-of-type, .sheet > div > button[type="submit"]:last-of-type { margin-top: auto; }
+
+/* ───────── the deck editor on a phone ───────── */
+.deck-progress { position: sticky; top: var(--bar-h); z-index: 25; display: flex; flex-direction: column; gap: 0.35rem; margin: 0 -0.25rem; padding: 0.4rem 0.5rem; background: rgba(20, 16, 12, 0.96); border-bottom: 1px solid rgba(232, 220, 192, 0.25); }
+.deck-progress-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.deck-progress-count { font-size: 1.1rem; font-weight: 700; color: #e8dcc0; }
+.deck-progress-save { min-height: 44px; padding-inline: 1.2rem; }
+.deck-progress-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.deck-progress-bar > i { display: block; height: 100%; background: #f4b743; transition: width 0.2s ease; }
+.deck-progress-bar > i[data-full="yes"] { background: #6fbf8e; }
+.deck-progress-bar > i[data-full="over"] { background: #e0705f; }
+.deck-stats-toggle { min-height: 44px; text-align: left; font-weight: 700; color: #e8dcc0; border-radius: 8px; background: rgba(255, 255, 255, 0.08); padding: 0 0.8rem; }
+@media (hover: none) and (pointer: coarse), (max-width: 767px) {
+  .qty-btn { min-width: 44px; min-height: 44px; font-size: 1.25rem; }
+  .deck-row-li { min-height: 52px; }
+  [role="tab"] { min-height: 44px; }
+}

@@ -144,6 +144,21 @@ export default function DeckEditor({ deckId }: { deckId?: string }) {
         )}
       </div>
 
+      {/* a phone: how full the deck is, and the save button, stay in view above whatever is scrolled */}
+      <div className="deck-progress lg:hidden">
+        <div className="deck-progress-row">
+          <span className="deck-progress-count" aria-live="polite">
+            {status.count} / 60 cards
+          </span>
+          <button onClick={save} disabled={saving || !dirty} className="btn-gold deck-progress-save">
+            {saving ? "Saving…" : dirty ? "Save" : "Saved"}
+          </button>
+        </div>
+        <div className="deck-progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={60} aria-valuenow={Math.min(status.count, 60)} aria-label="Cards in the deck">
+          <i data-full={status.count === 60 ? "yes" : status.count > 60 ? "over" : "no"} style={{ width: `${Math.min(100, (status.count / 60) * 100)}%` }} />
+        </div>
+      </div>
+
       <div className="glass relative flex w-fit gap-1 !rounded-full p-1" role="tablist">
         <button role="tab" aria-selected={tab === "deck"} onClick={() => setTab("deck")} className={tabClass(tab === "deck")}>
           Deck ({status.count})
