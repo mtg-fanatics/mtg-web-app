@@ -123,6 +123,7 @@ export const PERMANENT_EFFECTS = {
       s.perm.named = { ...s.perm.named, [effect.name]: next };
       if (next === 0) delete s.perm.named[effect.name];
       say(`${nameOf(state, s.perm)} ${effect.remove ? "loses" : "gets"} ${plural(effect.remove ? now - next : n, `${effect.name} counter`)}.`);
+      if (!effect.remove) queueTriggers(state, s.perm.card, s.owner, "namedLimit");
     }
   },
   addCounters({ state, ctx, say, value }, effect) {

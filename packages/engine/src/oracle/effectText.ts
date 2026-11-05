@@ -461,7 +461,8 @@ export function parseEffectText(rawText: string, ctx: Ctx): Effect[] | null {
       if (other) si++;
       continue;
     }
-    const parsed = parseClause(sentence, ctx);
+    // a sentence that asks for a choice (a search) may be followed by other sentences: they run once it is answered
+    const parsed = (/^search your library/.test(sentence) ? parseChoiceText(sentence, ctx) : null) ?? parseClause(sentence, ctx);
     if (!parsed) return null;
     lastGroup = effects.length;
     effects.push(...parsed);

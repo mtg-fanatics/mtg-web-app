@@ -507,6 +507,7 @@ export function activateAbility(state: GameState, player: PlayerId, iid: string,
     if (!ability.costNamed.put && have < ability.costNamed.n) return `${def.name} has no ${ability.costNamed.name} counter to remove.`;
     found.perm.named = { ...found.perm.named, [ability.costNamed.name]: ability.costNamed.put ? have + ability.costNamed.n : have - ability.costNamed.n };
     if (found.perm.named[ability.costNamed.name] === 0) delete found.perm.named[ability.costNamed.name];
+    if (ability.costNamed.put) queueTriggers(state, found.perm.card, player, "namedLimit");
   }
   if (ability.payLife) {
     if (state.players[player].life < ability.payLife) return `Not enough life to pay ${ability.payLife}.`;

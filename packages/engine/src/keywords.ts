@@ -57,7 +57,9 @@ export const KEYWORD_RULES: Record<Keyword, string> = {
 };
 
 export const hasKeyword = (def: CardDef, keyword: Keyword): boolean =>
-  (def.keywords ?? []).some((k) => k.toLowerCase() === keyword);
+  (def.keywords ?? []).some((k) => k.toLowerCase() === keyword) &&
+  // "Hexproof from white" is listed as both "Hexproof from" and "Hexproof": only a printed plain "hexproof" is hexproof
+  !(keyword === "hexproof" && (def.keywords ?? []).some((k) => k.toLowerCase() === "hexproof from") && !/(^|\n|, )hexproof(?! from)/i.test(def.text ?? ""));
 
 /** Keywords that are just labels for a line the text reader handles itself ("Enchant creature"). */
 const LABELS = new Set([

@@ -32,6 +32,9 @@ function hexproofFrom(line: string, out: ParsedCard): boolean {
 
 /** Statics about the permanent itself that depend on how it is right now. */
 function selfConditional(line: string, out: ParsedCard): boolean {
+  // Elenda: two sentences on one line, each a static of its own
+  const two = /^(as long as your life total is greater than your starting life total, ~ gets .+?)\. (~ gets an additional .+)$/.exec(line);
+  if (two) return selfConditional(two[1], out) && selfConditional(two[2], out);
   // Tempest Djinn: "~ gets +1/+0 for each basic island you control"
   if (/^~ gets [+-]\d+\/[+-]\d+ for each [a-z ]+$/.test(line)) {
     const st = selfStatic(line);
@@ -106,6 +109,14 @@ function trigger(out: ParsedCard, line: string, event: TriggeredAbility["event"]
   return true;
 }
 
+/** Mazemind Tome: "When there are four or more page counters on this artifact, exile it. If you do, you gain 4 life." */
+function counterLimit(line: string, out: ParsedCard): boolean {
+  const m = /^when there are (two|three|four|five|six|seven|\d+) or more ([a-z]+) counters on ~, exile it\. if you do, you gain (\d+) life$/.exec(line);
+  if (!m) return false;
+  out.triggers.push({ event: "namedLimit", cond: { namedAtLeast: { name: m[2], n: num(m[1]) } }, effects: [{ type: "exile", what: { t: "self" } }, { type: "gainLife", amount: Number(m[3]), who: { t: "you" } }], targets: [], text: line });
+  return true;
+}
+
 /** Triggers of Foundations cards about combat and attacking. */
 function combatTriggers(line: string, out: ParsedCard): boolean {
   // Trygon Predator: "you may destroy target artifact or enchantment that player controls" (the player who was hit is the opponent)
@@ -127,5 +138,5 @@ function combatTriggers(line: string, out: ParsedCard): boolean {
 }
 
 export function readFoundations(line: string, out: ParsedCard): boolean {
-  return entersWithNamed(line, out) || combatTriggers(line, out) || hexproofFrom(line, out) || selfConditional(line, out) || cantBeBlockedBy(line, out) || gameRules(line, out);
+  return entersWithNamed(line, out) || counterLimit(line, out) || combatTriggers(line, out) || hexproofFrom(line, out) || selfConditional(line, out) || cantBeBlockedBy(line, out) || gameRules(line, out);
 }

@@ -466,7 +466,7 @@ export interface TriggeredAbility {
   /** "When this enters, if it was kicked, ...": only triggers when it was cast kicked. */
   ifKicked?: boolean;
   event: "oppPermTapped" | "youTapOpp" | "oppArtifactAbility" | "enters" | "dies" | "attacks" | "noncreatureSpell" | "instantOrSorcery" | "landfall" | "lifeGained" | "allyEnters" | "combatDamagePlayer" | "blocks" | "blocked" | "damagedDies" | "drawCard" | "drawSecond" | "battalion" | "attackTwo" | "becomesTarget"
-    | "youSacrifice" | "anySacrifice"
+    | "youSacrifice" | "anySacrifice" | "namedLimit"
     | "upkeep" | "upkeepEach" | "endStep" | "endStepEach" | "beginCombat" | "allyLeaves" | "anyCreatureEnters" | "youCast" | "opponentCasts" | "anyCasts" | "oppCreatureDies" | "youAttack" | "hostDamagesPlayer" | "drawFifth" | "enchantedDies"
     | "allyDies" | "allyCountersAdded" | "allyAttacks" | "allyTargeted" | "youDiscard" | "excessDamage" | "damaged" | "anyDies" | "teamworkTap" | "attacksAlone" | "selfTapped" | "hostTapped" | "allyTapped" | "tokenEnters" | "yourAbilityTargets" | "anyDrawSecond" | "allyDamaged" | "hostUpkeep" | "discardedByOpp" | "damageOpp";
   /** An "intervening if": the trigger only happens when this is true as the event occurs. */
@@ -504,6 +504,8 @@ export interface TriggeredAbility {
     attackersInclude?: string[];
     /** "When this creature enters, if you cast it": it came from a spell. */
     cast?: boolean;
+    /** "When there are four or more page counters on ~". */
+    namedAtLeast?: { name: string; n: number };
     /** "Whenever ~ attacks while you control a creature with power 4 or greater". */
     creaturePowerAtLeast?: number;
     /** "Whenever you attack with three or more creatures". */
