@@ -1185,13 +1185,6 @@ html.perf-lite .mat-lowlife-moving { animation: none; }
   main[data-peek="1"] .action-box { transform: translateY(calc(100% + 8rem)); pointer-events: none; }
 }
 
-/* A phone held sideways (the player chose to carry on): the board is taller than the screen, so the page scrolls instead of squeezing it. */
-@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px) {
-  main.battlefield-bg { height: auto; min-height: calc(100dvh - var(--bar-h)); overflow: visible; }
-  main.battlefield-bg > section, main.battlefield-bg > aside { flex: none; }
-  main.battlefield-bg .playmat { min-height: 13rem; }
-}
-
 /* Phones: headings, buttons and chips on the dashboard and deck pages were made for a wide screen. */
 @media (max-width: 639px) {
   .page-title { font-size: 1.45rem; letter-spacing: 0.06em; }

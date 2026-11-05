@@ -46,3 +46,27 @@ html[data-duel] body { overscroll-behavior: none; }
 .update-toast-go { min-height: 44px; padding: 0 1rem; border-radius: 999px; background: #a8322a; color: #fff; border: 0; font-weight: 800; }
 .update-toast-x { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.4rem; color: #46331f; }
 html[data-duel] .update-toast { bottom: auto; top: calc(var(--bar-h) + 0.5rem); }
+
+/* "Landscape is roomier": one line over the top of an upright duel, closed once and gone for good. */
+.landscape-hint {
+  position: fixed; z-index: 70; left: 50%; transform: translateX(-50%);
+  top: calc(var(--bar-h) + 0.4rem);
+  display: flex; align-items: center; gap: 0.5rem; width: max-content; max-width: calc(100vw - 1rem);
+  padding: 0.15rem 0.2rem 0.15rem 0.8rem; border-radius: 999px;
+  background: rgba(239, 227, 194, 0.97); color: #2a1c10; border: 2px solid #4a120c; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  font-size: 0.95rem; font-weight: 600;
+}
+.landscape-hint-x { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.4rem; color: #46331f; }
+
+/* Dragging a card up from the hand to play it (touch): the card stays, a copy follows the finger, and the zone it has to reach is said in words at the top. */
+@media (hover: none) and (pointer: coarse) {
+  .hand-slot { touch-action: pan-x; } /* (sideways scrolls the hand; up and down belong to the drag) */
+}
+.hand-slot[data-dragging] > * { opacity: 0.35; }
+.hand-ghost { position: fixed; z-index: 90; pointer-events: none; transform: translate(-50%, -75%) scale(1.15) rotate(-3deg); filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.6)); --card-h: 120px; }
+.hand-drop {
+  position: fixed; z-index: 89; left: 50%; transform: translateX(-50%); top: calc(var(--bar-h) + 0.4rem);
+  padding: 0.5rem 1.1rem; border-radius: 999px; background: rgba(11, 17, 32, 0.94); color: #e8dcc0; border: 2px dashed rgba(232, 220, 192, 0.6);
+  font-size: 1rem; font-weight: 700; pointer-events: none; max-width: calc(100vw - 1rem); text-align: center;
+}
+.hand-drop[data-ready="yes"] { background: #2f6b4a; color: #fff; border-style: solid; border-color: #bfe0cb; }

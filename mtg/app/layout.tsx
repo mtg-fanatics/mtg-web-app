@@ -4,6 +4,7 @@ import "mana-font/css/mana.css";
 import "./globals.css";
 import "./inkfall.css";
 import "./mobile.css";
+import "./duel-mobile.css";
 import UserBar from "./UserBar";
 import RegisterSW from "./RegisterSW";
 import AutoFullscreen from "./AutoFullscreen";

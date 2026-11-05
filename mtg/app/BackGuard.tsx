@@ -24,19 +24,28 @@ export default function BackGuard() {
     };
     const modals = () => [...document.querySelectorAll(MODAL)].filter(shown);
 
+    let settle = 0;
     const sync = () => {
       const any = modals().length > 0;
-      if (any && pushedAt === null) {
-        push();
-        pushedAt = location.pathname + location.search;
-      } else if (!any && pushedAt !== null) {
-        const same = pushedAt === location.pathname + location.search;
-        pushedAt = null;
-        // (a window that closed because the page was left must not undo that: only an unchanged address gives the entry back)
-        if (same && history.state?.__ink) {
-          ignore++;
-          history.back();
+      if (any) {
+        window.clearTimeout(settle);
+        if (pushedAt === null) {
+          push();
+          pushedAt = location.pathname + location.search;
         }
+      } else if (pushedAt !== null) {
+        // A window that is gone may have gone because the page is being left (a button in it navigates). The navigation needs a moment to show in the address, and
+        // undoing the entry before that would undo the navigation, so look again a little later.
+        window.clearTimeout(settle);
+        settle = window.setTimeout(() => {
+          if (pushedAt === null || modals().length > 0) return;
+          const same = pushedAt === location.pathname + location.search;
+          pushedAt = null;
+          if (same && history.state?.__ink) {
+            ignore++;
+            history.back();
+          }
+        }, 400);
       }
     };
 
@@ -76,6 +85,7 @@ export default function BackGuard() {
     window.addEventListener("popstate", onPop);
     return () => {
       observer.disconnect();
+      window.clearTimeout(settle);
       window.removeEventListener("popstate", onPop);
     };
   }, []);

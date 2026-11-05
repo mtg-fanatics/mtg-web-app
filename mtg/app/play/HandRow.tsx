@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { castCostOf, getCastable, payMana } from "@mtg/engine";
 import type { CardDef, CardInstance, GameState, PlayerId } from "@mtg/engine";
 import CardView from "./CardView";
@@ -41,7 +43,7 @@ export default function HandRow({ state, actor, mine, playable, exiled = [], han
     const def = state.cards[c.defId];
     const notes = exiled.includes(c) ? { castable: true, castLabel: "✓ From exile", hint: exileHint(state, actor, c.iid) } : handNotes(state, actor, c.iid, c.defId, playable.has(c.iid));
     return (
-      <div key={c.iid} className="hand-slot shrink-0" onMouseEnter={(e) => onPreview(def, e.currentTarget)} onMouseLeave={onUnpreview}>
+      <DragSlot key={c.iid} def={def} enabled={!lookOnly && !!notes.castable} onPlay={() => onClick(c.iid, c.defId)} onMouseEnter={(e) => onPreview(def, e.currentTarget)} onMouseLeave={onUnpreview}>
         <CardView
           iid={c.iid}
           def={def}
@@ -54,7 +56,7 @@ export default function HandRow({ state, actor, mine, playable, exiled = [], han
           onHover={() => onInspect(def)}
           onZoom={() => onZoom(def)}
         />
-      </div>
+      </DragSlot>
     );
   };
 
@@ -124,4 +126,85 @@ function handNotes(state: GameState, actor: PlayerId, iid: string, defId: string
     return { dim: true, hint: paid.missing === "life" ? "Not enough life to pay for this." : paid.missing === "generic" ? `Not enough mana: it costs ${def.manaCost ?? def.cost}.` : `Not enough mana of the right color: it costs ${def.manaCost}.` };
   }
   return { dim: true, hint: "You have the mana, but can't cast it right now (wrong phase, something is on the stack, or it has no legal target)." };
+}
+
+const DRAG_START = 14; // px of upward travel before a touch becomes a drag (less than that is a tap, or the start of a sideways scroll)
+const DRAG_PLAY = 90; // px above where the card was picked up: past this the card is let go to be played
+
+/**
+ * A card in the hand. On a touch screen it can also be dragged up and let go to play it (the same thing a tap on it does: the very same handler). The drag uses pointer
+ * events, not the browser's own drag and drop (which does not exist on a touch screen); the card stays put and a copy follows the finger. Letting go early, or dragging back
+ * down, puts everything back. A sideways swipe still scrolls the hand.
+ */
+function DragSlot({ def, enabled, onPlay, onMouseEnter, onMouseLeave, children }: { def: CardDef; enabled: boolean; onPlay: () => void; onMouseEnter: React.MouseEventHandler<HTMLDivElement>; onMouseLeave: React.MouseEventHandler<HTMLDivElement>; children: React.ReactNode }) {
+  const start = useRef<{ x: number; y: number; id: number } | null>(null);
+  const swallow = useRef(false);
+  const [drag, setDrag] = useState<{ x: number; y: number; ready: boolean } | null>(null);
+  const dragging = useRef(false);
+
+  const end = (play: boolean) => {
+    if (dragging.current) swallow.current = true; // (the click that follows letting go is not a second press)
+    const wasReady = play && dragging.current;
+    dragging.current = false;
+    start.current = null;
+    setDrag(null);
+    if (wasReady) onPlay();
+  };
+
+  return (
+    <div
+      className="hand-slot shrink-0"
+      data-dragging={drag ? (drag.ready ? "ready" : "yes") : undefined}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onPointerDown={(e) => {
+        if (!enabled || e.pointerType !== "touch") return;
+        start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      }}
+      onPointerMove={(e) => {
+        const from = start.current;
+        if (!from || e.pointerId !== from.id) return;
+        const up = from.y - e.clientY;
+        if (!dragging.current) {
+          if (up > DRAG_START && up > Math.abs(e.clientX - from.x) * 1.2) {
+            dragging.current = true;
+            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            navigator.vibrate?.(8);
+          } else return;
+        }
+        const ready = up > DRAG_PLAY;
+        setDrag((d) => {
+          if (ready && !d?.ready) navigator.vibrate?.(12);
+          return { x: e.clientX, y: e.clientY, ready };
+        });
+      }}
+      onPointerUp={(e) => {
+        const from = start.current;
+        if (!from || e.pointerId !== from.id) return;
+        end(from.y - e.clientY > DRAG_PLAY);
+      }}
+      onPointerCancel={() => end(false)}
+      onClickCapture={(e) => {
+        if (swallow.current) {
+          swallow.current = false;
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      }}
+    >
+      {children}
+      {drag &&
+        createPortal(
+          <>
+            <div className="hand-drop" data-ready={drag.ready ? "yes" : "no"} role="status">
+              {drag.ready ? `Let go to play ${def.name}` : "Drag up to play it, back down to cancel"}
+            </div>
+            <div className="hand-ghost" style={{ left: drag.x, top: drag.y }}>
+              <CardView def={def} size="md" />
+            </div>
+          </>,
+          document.body,
+        )}
+    </div>
+  );
 }
