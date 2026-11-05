@@ -102,7 +102,7 @@ export default function Album({ pages, index, onIndex, prepare, renderPage, page
 
   const run = useCallback(
     async (from: number, to: number, quick: boolean) => {
-      const L = live.current;
+      const L = live.current; 
       running.current = true;
       L.onTurnStart?.();
       const turning = L.animated && Math.abs(to - from) === L.step;
