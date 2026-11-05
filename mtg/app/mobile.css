@@ -7,7 +7,7 @@
 :root { --bar-h: calc(2.6rem + env(safe-area-inset-top, 0px)); }
 
 /* The installed app has no address bar, no reload and no back button: pulling the page down must not reload it, and the page must not bounce. */
-@media (display-mode: standalone) {
+@media (display-mode: standalone), (display-mode: fullscreen) {
   html, body { overscroll-behavior-y: contain; }
 }
 /* During a duel nothing scrolls the page at all (the boards and the hand scroll inside themselves). */

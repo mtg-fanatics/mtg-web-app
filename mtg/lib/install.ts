@@ -33,7 +33,7 @@ if (typeof window !== "undefined") {
 /** Running as the installed app (no browser bars): the display-mode query, or the older iPhone flag. */
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return window.matchMedia("(display-mode: standalone)").matches || window.matchMedia("(display-mode: fullscreen)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 }
 
 /** iPhone or iPad Safari, the one place with no install prompt (other browsers on iOS cannot add the app, and a desktop browser has its own way). */
