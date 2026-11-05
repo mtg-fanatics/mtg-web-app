@@ -1,9 +1,10 @@
+import { shuffle } from "../state.js";
 import { getCard } from "../cards.js";
 import type { GameEvent } from "../actions.js";
 import type { StackItem, TokenSpec } from "../effects.js";
 import { parseCard } from "../oracle.js";
 import { OPPONENT, type CardDef, type CardInstance, type GameState, type Permanent, type PlayerId } from "../types.js";
-import { findPermanentOrNull, isArtifactDef, isCreature, nameOf, newId, powerOf, subtypesOf } from "./permanents.js";
+import { findPermanentOrNull, isArtifactDef, isCreature, nameOf, newId, powerOf, subtypesOf, toughnessOf } from "./permanents.js";
 import { creatureEntered, creatureMoved, queueTriggers } from "./triggers.js";
 
 // Life, drawing, counters, and cards leaving the battlefield or the stack.
@@ -30,7 +31,16 @@ export function changeLife(state: GameState, player: PlayerId, delta: number, ev
   state.players[player].life += delta;
   if (delta < 0) state.players[player].lifeLostThisTurn = (state.players[player].lifeLostThisTurn ?? 0) - delta;
   events.push(delta > 0 ? { type: "lifeGained", player, amount: delta } : { type: "lifeLost", player, amount: -delta });
-  if (delta > 0) onLifeGained(state, player);
+  if (delta < 0) lifeLostTriggers(state, player, -delta);
+  if (delta > 0) {
+    state.players[player].lifeGainEventsThisTurn = (state.players[player].lifeGainEventsThisTurn ?? 0) + 1;
+    onLifeGained(state, player);
+  }
+}
+
+/** "Whenever an opponent loses life": the opponent's permanents see it (damage that takes the life straight off calls this too). */
+export function lifeLostTriggers(state: GameState, player: PlayerId, amount: number): void {
+  for (const perm of state.players[OPPONENT[player]].battlefield) queueTriggers(state, perm.card, OPPONENT[player], "oppLosesLife", { count: amount });
 }
 
 /** Poison counters: from infect and toxic damage, and from "target opponent gets a poison counter". */
@@ -57,6 +67,7 @@ export function drawCards(state: GameState, player: PlayerId, count: number, eve
     }
     p.hand.push(card);
     events.push({ type: "cardDrawn", player, iid: card.iid });
+    for (const watcher of state.players[OPPONENT[player]].battlefield) queueTriggers(state, watcher.card, OPPONENT[player], "oppDraws");
     p.drawnThisTurn = (p.drawnThisTurn ?? 0) + 1;
     for (const perm of p.battlefield) {
       queueTriggers(state, perm.card, player, "drawCard");
@@ -101,19 +112,39 @@ export function putIntoGraveyard(state: GameState, perm: Permanent, controller: 
     events.push({ type: "effect", text: `${nameOf(state, perm)} is exiled instead of dying.` });
     return;
   }
+  // Progenitus, Darksteel Colossus: shuffled into the library instead of going to the graveyard
+  if (parseCard(getCard(state, perm.card.defId)).shuffleInstead && !isToken(perm.card)) {
+    const card = removeFromBattlefield(state, perm, controller);
+    if (card) {
+      const owner = state.players[card.owner];
+      owner.library.push(printedCard(card));
+      [owner.library, state.rng] = shuffle(owner.library, state.rng);
+      events.push({ type: "effect", text: `${nameOf(state, perm)} is shuffled into its owner's library instead.` });
+      events.push({ type: "libraryShuffled", player: card.owner });
+    }
+    return;
+  }
   const creature = isCreature(state, perm);
   const types = creature ? subtypesOf(state, perm) : [];
-  const lki = { power: creature ? powerOf(state, perm) : 0, counters: perm.counters ?? 0, minusCounters: perm.minusCounters ?? 0 };
+  const lki = { named: perm.named, subtypes: types, power: creature ? powerOf(state, perm) : 0, counters: perm.counters ?? 0, minusCounters: perm.minusCounters ?? 0 };
+  const wasAttacking = (state.combat?.attackers ?? []).some((a) => a.attacker === perm.card.iid);
   battlefield.splice(at, 1);
   leftBattlefield(state, controller);
   leaveCombat(state, perm);
   creatureMoved(state, perm, controller, "leaves");
   releaseHeld(state, perm);
-  if (!isToken(perm.card)) state.players[perm.card.owner].graveyard.push(printedCard(perm.card));
+  if (!isToken(perm.card)) {
+    state.players[perm.card.owner].graveyard.push(printedCard(perm.card));
+    if (creature) (state.yardedThisTurn ??= []).push(perm.card.iid);
+  }
+  if (perm.returnOnDeath && !isToken(perm.card)) {
+    // Fake Your Own Death: it comes back tapped under its owner's control and the player who cast the spell creates a Treasure
+    state.triggerQueue.push({ specs: [], item: { kind: "ability", id: newId(state), controller: perm.returnOnDeath, source: perm.card.iid, sourceName: getCard(state, perm.card.defId).name, effects: [{ type: "returnSelfToBattlefield", tapped: true }, { type: "createToken", amount: 1, token: { name: "Treasure", type: "artifact", colors: [], subtypes: "Treasure", keywords: [], text: "{T}, Sacrifice this artifact: Add one mana of any color." } }], targets: [], specs: [], text: "When this creature dies, return it to the battlefield tapped under its owner's control and you create a Treasure token." } });
+  }
   events.push({ type: "creatureDied", player: controller, iid: perm.card.iid, name: getCard(state, perm.card.defId).name, ...(creature ? {} : { noncreature: true as const }), ...(sacrificed ? { sacrificed: true as const } : {}) });
   queueTriggers(state, perm.card, controller, "dies", { died: lki }); // as it was on the battlefield ("if it was a creature")
   // "Whenever a Vampire you control dies" / "whenever this creature or another creature you control dies": the dying creature looks back too.
-  if (creature) for (const other of [perm, ...battlefield]) queueTriggers(state, other.card, controller, "allyDies", { subtypes: types, self: other === perm, token: isToken(perm.card) });
+  if (creature) for (const other of [perm, ...battlefield]) queueTriggers(state, other.card, controller, "allyDies", { subtypes: types, self: other === perm, token: isToken(perm.card), wasAttacking, other: perm.card.iid });
   // "Whenever this creature or another nontoken creature dies" (any player's): the dying creature looks back too.
   if (creature) {
     for (const owner of Object.values(state.players)) {
@@ -162,6 +193,7 @@ export function exilePlayable(state: GameState, player: PlayerId): CardInstance[
   const me = state.players[player];
   return (me.mayPlay ?? []).flatMap((entry) => {
     const card = me.exile.find((c) => c.iid === entry.iid);
+    if (entry.via) return card && state.active === player && findPermanentOrNull(state, entry.via) ? [card] : []; // Tinybones: during your turn, while it is out
     if (entry.always) return card ? [card] : []; // airbend: for as long as it stays exiled
     if (entry.throughTurn !== undefined) return card && state.turn <= entry.throughTurn ? [card] : []; // "until the end of your next turn"
     if (entry.fromTurn !== undefined) return card && state.turn >= entry.fromTurn ? [card] : []; // warp: "on a later turn"
@@ -246,6 +278,7 @@ function queueDeathLife(state: GameState): void {
  */
 export function sacrificePermanent(state: GameState, perm: Permanent, controller: PlayerId, events: GameEvent[]): void {
   const token = isToken(perm.card);
+  state.lastSacToughness = Math.max(0, toughnessOf(state, perm));
   const watchers = Object.values(state.players).flatMap((pl) => pl.battlefield.map((p) => ({ card: p.card, owner: pl.id })));
   putIntoGraveyard(state, perm, controller, events, true);
   for (const { card, owner } of watchers) {
@@ -313,7 +346,10 @@ export function spellLeavesStack(state: GameState, item: Extract<StackItem, { ki
     owner.mayPlay = [...(owner.mayPlay ?? []), { iid: card.iid, source: "adventure", always: true }];
     return;
   }
-  owner[item.flashback ? "exile" : to === "hand" ? "hand" : "graveyard"].push(card);
+  const spellType = getCard(state, card.defId).type;
+  const exileSpells = to === "graveyard" && (spellType === "instant" || spellType === "sorcery") && Object.values(state.players).some((pl) => pl.battlefield.some((p) => parseCard(getCard(state, p.card.defId)).exileSpellsInstead)); // Dryad Militant
+  const selfExiling = (getCard(state, card.defId).text ?? "").replace(/\([^)]*\)/g, "").trimEnd().endsWith(`Exile ${getCard(state, card.defId).name}.`); // "Exile Finale of Revelation."
+  owner[item.flashback || exileSpells || selfExiling ? "exile" : to === "hand" ? "hand" : "graveyard"].push(card);
 }
 
 export function counterStackItem(state: GameState, item: StackItem, events: GameEvent[], by?: string): void {
@@ -344,6 +380,7 @@ export function putCounters(state: GameState, perm: Permanent, controller: Playe
   if (n <= 0) return;
   // "If you would put one or more counters on a permanent you control, put that many plus one instead." (Doc Samson)
   if (state.players[controller].battlefield.some((p) => parseCard(getCard(state, p.card.defId)).countersPlusOne)) n += 1;
+  n *= 2 ** state.players[controller].battlefield.filter((p) => parseCard(getCard(state, p.card.defId)).doubleCounters).length; // Doubling Season
   perm.counters = (perm.counters ?? 0) + n;
   perm.countersThisTurn = (perm.countersThisTurn ?? 0) + n;
   if (!isCreature(state, perm)) return;

@@ -8,7 +8,9 @@ import {
   entersTappedNow,
   findPermanentOrNull,
   isLegalTarget,
+  isCreature,
   isPermanentCard,
+  powerOf,
   isProtectedFrom,
   kw,
   legalTargets,
@@ -36,7 +38,9 @@ export function enterBattlefield(state: GameState, card: CardInstance, controlle
   const loyalty = printed.type === "planeswalker" ? (printed.loyalty ?? printed.toughness ?? 0) : undefined;
   const entering = parsed.entersWithCounters;
   const thirsty = parsed.bloodthirst !== undefined && state.players[OPPONENT[controller]].damagedThisTurn === true ? parsed.bloodthirst : 0; // bloodthirst
-  const counters = (entering === "X" ? x : (entering ?? 0)) + (kicked ? (parsed.kickedCounters ?? 0) : 0) + thirsty;
+  const greatest = parsed.entersWithGreatestPower ? Math.max(0, ...state.players[controller].battlefield.filter((p) => isCreature(state, p)).map((p) => powerOf(state, p))) : 0;
+  const raid = parsed.entersWithCounterIfAttacked && state.players[controller].attackedThisTurn ? parsed.entersWithCounterIfAttacked : 0;
+  const counters = raid + greatest + (entering === "X" ? x : (entering ?? 0)) + (kicked ? (parsed.kickedCounters ?? 0) : 0) + thirsty;
   const minus = parsed.entersWithMinus ?? 0;
   const stun = parsed.entersWithStun ?? 0;
   const remembered = {

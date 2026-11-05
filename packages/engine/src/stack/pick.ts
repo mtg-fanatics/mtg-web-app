@@ -2,6 +2,7 @@ import type { GameEvent } from "../actions.js";
 import { getCard } from "../cards.js";
 import {
   askAsEnters,
+  fellowshipCounters,
   bindSpecs,
   cardsDiscarded,
   changeLife,
@@ -50,13 +51,13 @@ function afterYouDo(state: GameState, player: PlayerId, pick: PendingPick, event
 }
 
 /** A card from the top of the library is exiled, and its owner may play it this turn. */
-function exileToPlayThisTurn(state: GameState, player: PlayerId, iid: string, events: GameEvent[]): void {
+function exileToPlayThisTurn(state: GameState, player: PlayerId, iid: string, events: GameEvent[], next = false): void {
   const me = state.players[player];
   const at = me.library.findIndex((c) => c.iid === iid);
   if (at < 0) return;
   const [card] = me.library.splice(at, 1);
   me.exile.push(card);
-  me.mayPlay = [...(me.mayPlay ?? []), { iid, source: "thisTurn", throughTurn: state.turn }];
+  me.mayPlay = [...(me.mayPlay ?? []), { iid, source: "thisTurn", throughTurn: state.turn + (next ? 2 : 0) }];
   events.push({ type: "effect", text: `${playerLabelOf(player)} exiles ${getCard(state, card.defId).name}; they may play it this turn.` });
 }
 
@@ -94,10 +95,63 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
     return null;
   }
 
+  if (pick.kind === "payX") {
+    if (iid === undefined) {
+      finish();
+      return null;
+    }
+    if (!pick.options.includes(iid)) return "Choose how much to pay.";
+    const x = Number(iid);
+    const paid = payMana(state, player, { generic: x, colored: {} });
+    if (!paid.ok) return "You can't pay that much.";
+    applyPayment(state, player, paid, events);
+    state.pendingPick = null;
+    if (pick.thenEffects && pick.thenCtx) runEffects(state, pick.thenEffects, { ...pick.thenCtx, x }, events);
+    finish();
+    return null;
+  }
+
+  if (pick.kind === "cardName") {
+    if (!iid || !pick.options.includes(iid)) return "Choose a card name.";
+    const perm = owner.battlefield.find((p) => p.card.iid === pick.colorFor);
+    if (perm) perm.chosenName = iid;
+    events.push({ type: "effect", text: `${playerLabelOf(player)} names ${iid}.` });
+    finish();
+    return null;
+  }
+
+  if (pick.kind === "pileSplit") {
+    // Each pick moves a card into the face-up pile (or back); declining ends the split and the opponent chooses.
+    if (iid !== undefined) {
+      if (!pick.options.includes(iid)) return "That isn't one of the cards.";
+      pick.ordered = pick.ordered.includes(iid) ? pick.ordered.filter((o) => o !== iid) : [...pick.ordered, iid];
+      pick.prompt = `Pile split: ${pick.ordered.length} card(s) face up, ${pick.options.length - pick.ordered.length} face down. Pick a card to move it between piles; decline when done.`;
+      return null;
+    }
+    state.pendingPick = { ...pick, player: OPPONENT[pick.owner], kind: "pileChoose", prompt: "Choose a pile: you can see which cards are face up. The pile you choose goes to their hand, the other to their graveyard.", options: ["up", "down"], optional: false, pileAll: pick.options };
+    return null;
+  }
+
+  if (pick.kind === "pileChoose") {
+    if (iid !== "up" && iid !== "down") return "Choose the face-up or the face-down pile.";
+    const up = new Set(pick.ordered);
+    for (const id of pick.pileAll ?? []) {
+      const card = take(owner.library, id);
+      const toHand = (iid === "up") === up.has(id);
+      (toHand ? owner.hand : owner.graveyard).push(card);
+    }
+    events.push({ type: "effect", text: `${playerLabelOf(player)} chooses the ${iid === "up" ? "face-up" : "face-down"} pile: it goes to ${playerLabelOf(pick.owner)}'s hand, the other to their graveyard.` });
+    finish();
+    return null;
+  }
+
   if (pick.kind === "creatureType") {
     if (!iid || !pick.options.includes(iid)) return "Choose one of the creature types.";
     const perm = owner.battlefield.find((p) => p.card.iid === pick.colorFor);
-    if (perm) perm.chosenType = iid;
+    if (perm) {
+      perm.chosenType = iid;
+      fellowshipCounters(state, perm, pick.owner);
+    }
     finish();
     return null;
   }
@@ -377,6 +431,29 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
     return null;
   }
 
+  if (pick.kind === "ransom") {
+    if (iid === undefined) {
+      changeLife(state, pick.owner, -(pick.lose ?? 0), events);
+      finish();
+      return null;
+    }
+    if (!pick.options.includes(iid)) return "That isn't one of the choices.";
+    const onField = findPermanentOrNull(state, iid);
+    if (onField) {
+      events.push({ type: "effect", text: `${playerLabelOf(player)} sacrifices ${getCard(state, onField.perm.card.defId).name}.` });
+      sacrificePermanent(state, onField.perm, onField.owner.id, events);
+      checkStateBasedActions(state, events);
+    } else {
+      const card = take(owner.hand, iid);
+      owner.graveyard.push(card);
+      cardsDiscarded(state, player, [iid], events, true);
+    }
+    state.pendingPick = null;
+    afterYouDo(state, player, pick, events);
+    finish();
+    return null;
+  }
+
   if (pick.kind === "mayCost") {
     // The artifact or creature is sacrificed (it is on the battlefield) or the card is discarded (it is in the hand); then "if you do" happens.
     if (iid === undefined) {
@@ -422,6 +499,7 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
 
   if (iid === undefined) {
     if (!pick.optional) return "You have to choose a card.";
+    if (pick.kind === "keepTop" && pick.restToGraveyard) for (const other of pick.options) owner.graveyard.push(take(owner.library, other));
     if (pick.kind === "searchLand" || pick.kind === "searchAny") {
       [owner.library, state.rng] = shuffle(owner.library, state.rng);
       events.push({ type: "libraryShuffled", player: pick.owner });
@@ -520,12 +598,15 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
     }
     case "keepTop": {
       owner.library.unshift(take(owner.library, iid));
-      for (const other of pick.options.filter((o) => o !== iid)) owner.library.push(take(owner.library, other)); // to the bottom
+      for (const other of pick.options.filter((o) => o !== iid)) {
+        if (pick.restToGraveyard) owner.graveyard.push(take(owner.library, other));
+        else owner.library.push(take(owner.library, other)); // to the bottom
+      }
       events.push({ type: "effect", text: `${playerLabelOf(pick.owner)} keeps a card on top of their library and puts the other on the bottom.` });
       break;
     }
     case "playExile": {
-      exileToPlayThisTurn(state, pick.owner, iid, events);
+      exileToPlayThisTurn(state, pick.owner, iid, events, pick.playNext);
       for (const other of pick.options.filter((o) => o !== iid)) owner.library.push(take(owner.library, other));
       break;
     }
@@ -549,6 +630,20 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
       break;
     case "searchAny": {
       const found = take(owner.library, iid);
+      if (pick.yardTo === "exile") {
+        owner.exile.push({ ...found, exiledBy: pick.source?.iid });
+        events.push({ type: "effect", text: `${playerLabelOf(pick.owner)} searches their library and exiles ${getCard(state, found.defId).name}.` });
+        [owner.library, state.rng] = shuffle(owner.library, state.rng);
+        events.push({ type: "libraryShuffled", player: pick.owner });
+        break;
+      }
+      if (pick.yardTo === "top") {
+        [owner.library, state.rng] = shuffle(owner.library, state.rng);
+        owner.library.unshift(found);
+        events.push({ type: "libraryShuffled", player: pick.owner });
+        events.push({ type: "effect", text: `${playerLabelOf(pick.owner)} searches their library, reveals ${getCard(state, found.defId).name} and puts it on top.` });
+        break;
+      }
       if (pick.yardTo === "graveyard") {
         owner.graveyard.push(found);
         events.push({ type: "effect", text: `${playerLabelOf(pick.owner)} searches their library and puts ${getCard(state, found.defId).name} into their graveyard.` });
@@ -567,6 +662,20 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
       owner.battlefield.push({ card: land, tapped: pick.entersTapped !== false, summoningSick: true, damage: 0, enteredTurn: state.turn });
       events.push({ type: "permanentEntered", player: pick.owner, iid });
       landEntered(state, pick.owner);
+      // "Up to two basic land cards": ask again, over the kinds still in the library
+      if (pick.remaining > 1) {
+        const kinds = new Set(pick.options.map((o) => owner.library.find((c) => c.iid === o)?.defId ?? "").concat(land.defId));
+        const more = owner.library.filter((c) => kinds.has(c.defId));
+        const seenKinds = new Set<string>();
+        const next = more.filter((c) => !seenKinds.has(c.defId) && seenKinds.add(c.defId)).map((c) => c.iid);
+        if (next.length > 0) {
+          pick.remaining -= 1;
+          pick.options = next;
+          pick.prompt = pick.prompt.replace(/ \(\d+ left\)$/, "") + ` (${pick.remaining} left)`;
+          askAsEnters(state, owner.battlefield[owner.battlefield.length - 1], pick.owner);
+          return null;
+        }
+      }
       [owner.library, state.rng] = shuffle(owner.library, state.rng);
       events.push({ type: "libraryShuffled", player: pick.owner });
       state.pendingPick = null; // so the land can ask its own question as it enters

@@ -1,4 +1,5 @@
 import { getCard } from "../cards.js";
+import { isBasicLand } from "../deck.js";
 import type { Ref, RunContext, StackItem, TargetChoice, TargetSpec } from "../effects.js";
 import { manaCostOf } from "../mana.js";
 import { parseCard } from "../oracle.js";
@@ -63,7 +64,7 @@ export function isLegalTarget(state: GameState, spec: TargetSpec, choice: Target
         if (spec.controller === "opponent" && found.owner.id === controller) return false;
         return spec.owner !== "you" || found.perm.card.owner === controller;
       }
-      if (spec.kind === "land") return def.type === "land";
+      if (spec.kind === "land") return def.type === "land" && !(spec.nonbasic && isBasicLand(def));
       const walker = def.type === "planeswalker";
       if (spec.kind === "planeswalker") return walker;
       if (spec.kind === "playerOrPlaneswalker") return walker;
@@ -102,6 +103,7 @@ export function isLegalTarget(state: GameState, spec: TargetSpec, choice: Target
       const def = getCard(state, card.defId);
       const fits = spec.kind === "graveyardCreature" ? def.type === "creature" : spec.kind === "graveyardPermanent" ? isPermanentCard(def) || def.type === "land" : spec.kind === "graveyardCard" ? true : def.type === "instant" || def.type === "sorcery";
       if (!fits || (spec.subtype && !defSubtypes(def).includes(spec.subtype))) return false;
+      if (spec.thisTurn && !(state.yardedThisTurn ?? []).includes(choice.iid)) return false;
       if (spec.kind === "graveyardSpell" && spec.types && !spec.types.includes(def.type)) return false; // "target sorcery card"
       if (spec.kind === "graveyardPermanent" && spec.types && !spec.types.some((t) => (t === "artifact" ? isArtifactDef(def) : t === "enchantment" ? isEnchantmentDef(def) : def.type === t))) return false;
       if (spec.subtypes && !spec.subtypes.some((t) => defSubtypes(def).includes(t))) return false;
@@ -236,6 +238,7 @@ export function subjectsOf(state: GameState, ref: Ref, ctx: RunContext): Subject
       const choice = ctx.targets[ref.i];
       const spec = ctx.specs[ref.i];
       if (!choice || !spec || choice.kind !== "player" || !isLegalTarget(state, spec, choice, ctx.controller, ctx.stackId)) return [];
+      if (ref.nonland) return state.players[choice.id].battlefield.filter((perm) => getCard(state, perm.card.defId).type !== "land").map((perm): Subject => ({ k: "perm", perm, owner: choice.id }));
       return creaturesOfPlayer(state, choice.id);
     }
     case "target": {

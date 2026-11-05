@@ -83,10 +83,11 @@ function searchFilters(phrase: string): CardFilter[] | null {
       out.push({ keyword: "flash" });
       continue;
     }
-    const m = /^an? (basic )?(.+?) card(?: with mana value (\d+) or less)?$/.exec(part);
+    const m = /^an? (basic )?(.+?) card(?: with mana value (\d+)( or less| or greater)?)?$/.exec(part);
     const filter = m ? parseCardFilter(m[2]) : null;
     if (!filter) return null;
-    out.push({ ...filter, ...(m![1] ? { basic: true } : {}), ...(m![3] ? { maxMV: Number(m![3]) } : {}) });
+    const mv = m![3] ? (m![4] === " or less" ? { maxMV: Number(m![3]) } : m![4] === " or greater" ? { minMV: Number(m![3]) } : { exactMV: Number(m![3]) }) : {};
+    out.push({ ...filter, ...(m![1] ? { basic: true } : {}), ...mv });
   }
   return out;
 }
@@ -146,6 +147,9 @@ function parseChoiceText(text: string, ctx: Ctx): Effect[] | null {
   }
   m = new RegExp(`^reveal the top (${NUMBER_WORDS}) cards of your library\\. put all ([a-z]+) creature cards with mana value (\\d+) or less from among them onto the battlefield and the rest on the bottom of your library in a random order$`).exec(t);
   if (m) return [{ type: "revealPut", n: toNumber(m[1]) ?? 0, filter: { subtypes: [singularType(m[2])] }, maxMV: Number(m[3]) }];
+  if (t === "search your library for a basic land card, reveal it, then shuffle and put that card on top") return [{ type: "search", for: "basicLand", to: "top", reveal: true }];
+  m = /^search your library for up to two basic land cards, put them onto the battlefield( tapped)?, then shuffle$/.exec(t);
+  if (m) return [{ type: "search", tapped: m[1] !== undefined, count: 2 }];
   m = /^search your library for a basic land card, put (?:that card|it) onto the battlefield( tapped)?, then shuffle$/.exec(t);
   if (m) return [{ type: "search", tapped: m[1] !== undefined }];
   // A fetch land: "search your library for a mountain or plains card, put it onto the battlefield, then shuffle"
@@ -166,7 +170,7 @@ function parseChoiceText(text: string, ctx: Ctx): Effect[] | null {
   if (/^search your library for a card, put (?:that card|it) into your hand, then shuffle$/.test(t)) return [{ type: "search", for: "any", to: "hand" }];
   // Vile Entomber: the card goes to the graveyard, not the hand
   if (/^search your library for a card, put (?:that card|it) into your graveyard, then shuffle$/.test(t)) return [{ type: "search", for: "any", to: "graveyard" }];
-  m = /^search your library for (an? .+? card(?: with mana value \d+ or less)?(?: or an? .+? card(?: with mana value \d+ or less)?)?), (reveal (?:it|that card), )?put (?:that card|it) into your hand, then shuffle$/.exec(t);
+  m = /^search your library for (an? .+? card(?: with mana value \d+(?: or less| or greater)?)?(?: or (?:an? .+? card(?: with mana value \d+(?: or less| or greater)?)?|a card with flash))?), (reveal (?:it|that card), )?put (?:that card|it) into your hand, then shuffle$/.exec(t);
   const filters = m ? searchFilters(m[1]) : null;
   if (m && filters) return [{ type: "search", for: "any", to: "hand", filters, label: m[1].replace(/^an? /, ""), reveal: m[2] !== undefined }];
   const reveal = new RegExp(`^look at the top (${NUMBER_WORDS}|\\d+) cards of your library\\. you may reveal (?:a|an) (.+?) card(?: with power (\\d+) or less)? from among them and put (?:it|that card) into your hand\\. put the rest on the bottom of your library in (a random|any) order$`).exec(t);
@@ -182,6 +186,7 @@ const SAC_CHOICE_COST: Record<string, Extract<Effect, { type: "mayCost" }>["cost
   "sacrifice another creature or artifact": "otherCreatureOrArtifact",
   "sacrifice three other nonland permanents": "threeOtherNonland",
   "sacrifice a vampire": "vampire",
+  "sacrifice a land": "land",
 };
 
 /**
@@ -204,6 +209,11 @@ function linkedSentence(sentence: string, effects: Effect[], lastGroup: number, 
     const then = parseClause(tough[2], ctx);
     if (!then || previous.length === 0) return null;
     effects.splice(lastGroup, previous.length, { type: "ifSacrificedToughness", atLeast: Number(tough[1]), then, otherwise: previous });
+    return true;
+  }
+  if (sentence === "until end of turn, you don't lose this mana as steps and phases end") {
+    if (last?.type !== "addMana") return null;
+    effects[effects.length - 1] = { ...last, allTurn: true };
     return true;
   }
   if (sentence === "sacrifice it at the beginning of the next end step") {
@@ -247,6 +257,30 @@ export function parseEffectText(rawText: string, ctx: Ctx): Effect[] | null {
     .replace(/[.,] then shuffle your library/g, ", then shuffle")
     .replace(/^for each (land|creature|artifact|enchantment) you control, (create (?:a|an|one) [^,]+? tokens?)\.?$/g, "$2 for each $1 you control") // Brass's Bounty
     .replace(/ named ~'s ([a-z]+)/g, " named $1") // Koma's Coil
+    .replace(/put x \+1\/\+1 counters on another target creature you control, where x is ~'s power\. that creature gains haste until end of turn/g, "@@halana@@")
+    .replace(/target creature you control gains indestructible until end of turn\. if ~ was kicked, instead any number of target creatures you control gain indestructible until end of turn/g, "@@divine@@")
+    .replace(/, except it has haste and "at the beginning of the end step, sacrifice (?:~|this token|it)\.?"/g, ", except it has haste. sacrifice it at the beginning of the next end step")
+    .replace(/exile another target creature you (own|control)\. return (?:it|that card) to the battlefield under (your|its owner's) control at the beginning of the next end step/g, "@@blinkend $1 $2@@")
+    .replace(/each player mills (x|\d+) cards\. for each creature card put into a graveyard this way, you create a tapped 2\/2 black zombie creature token/g, "@@dread $1@@")
+    .replace(/search your library for a basic land card, put it onto the battlefield, then shuffle\. if ~ was kicked, instead search your library for two basic land cards, put them onto the battlefield, then shuffle/g, "@@grow@@")
+    .replace(/exile the top (two|three) cards of your library\. choose one( of them)?\. (you may play that card this turn|until the end of your next turn, you may play that card)/g, (_, n: string, __, t: string) => `@@exilechoose ${n === "two" ? 2 : 3}${t.startsWith("until") ? " next" : ""}@@`)
+    .replace(/look at the top three cards of your library\. you may put one of those cards back on top of your library\. put the rest into your graveyard/g, "@@toporyard 3@@")
+    .replace(/you get an emblem with "whenever a player casts a spell, you create a 2\/1 blue ninja creature token\.?"/g, "@@ninjaemblem@@")
+    .replace(/when you next cast an instant or sorcery spell this turn, copy that spell\. you may choose new targets for the copy/g, "@@copynext@@")
+    .replace(/draw x cards\. if x is 10 or more, instead shuffle your graveyard into your library, draw x cards, untap up to five lands, and you have no maximum hand size for the rest of the game\. exile ~/g, "@@finale@@")
+    .replace(/reveal the top x cards of your library\. you may put any number of permanent cards with mana value x or less from among them onto the battlefield\. then put all cards revealed this way that weren't put onto the battlefield into your graveyard/g, "@@genesis@@")
+    .replace(/put a \+1\/\+1 counter on ~ and exile the top card of your library\. you may play that card this turn/g, "put a +1/+1 counter on ~. @@exiletopturn@@")
+    .replace(/(?<!@@ )exile the top card of your library\. you may play that card this turn/g, "@@exiletopturn@@")
+    .replace(/target instant or sorcery card in your graveyard gains flashback until end of turn\. the flashback cost is equal to that card's mana cost/g, "@@grantflashback@@")
+    .replace(/look at the top five cards of your library and separate them into a face-down pile and a face-up pile\. an opponent chooses one of those piles\. put that pile into your hand and the other into your graveyard/g, "@@curator@@")
+    .replace(/exile target creature card from a graveyard that was put there this turn\. create a token that's a copy of it, except it's a nightmare in addition to its other types\. then exile all other nightmare tokens you control/g, "@@harvest@@")
+    .replace(/exile target card from a graveyard\. if it was a creature card, put a \+1\/\+1 counter on ~ and you gain 1 life/g, "@@exileyard ooze@@")
+    .replace(/exile up to two target cards from a single graveyard\. if at least one creature card was exiled this way, each opponent loses 2 life and you gain 2 life/g, "@@exileyard zombie@@")
+    .replace(/exile up to one target card from a graveyard and put a \+1\/\+1 counter on ~/g, "@@exileyard immersturm@@")
+    .replace(/put a \+1\/\+1 counter on target creature\. it gains flying until end of turn\. prevent all combat damage that would be dealt to it this turn/g, "@@fleeting@@")
+    .replace(/permanents you control gain indestructible/g, "creatures you control gain indestructible")
+    .replace(/(tokens? with flying)\. when you do, tap target/g, "$1. tap target")
+    .replace(/each opponent loses (x|\d+) life\. you gain life equal to the life lost this way/g, "@@drain $1@@")
     .replace(/you may draw a card for each artifact you control\. if you do, each opponent draws a card/g, "@@armorwars@@")
     .replace(/(you may put an? [a-z]+ creature card with mana value \d+ or less from your hand onto the battlefield)\. if you don't, draw a card/g, "$1, else draw a card")
     .replace(/remove a -1\/-1 counter from target creature\. if you do, you gain (\d+) life/g, "@@removeminus $1@@")
@@ -301,12 +335,12 @@ export function parseEffectText(rawText: string, ctx: Ctx): Effect[] | null {
       continue;
     }
     // "You may sacrifice an artifact or discard a card. If you do, draw a card." / "...discard a nonland card. When you do, ~ deals 2 damage to any target."
-    const sacChoice = /^you may (sacrifice an artifact or discard a card|sacrifice an artifact or discard a nonland card|sacrifice another creature|sacrifice another creature or artifact|sacrifice three other nonland permanents|sacrifice a vampire)$/.exec(sentence);
+    const sacChoice = /^you may (sacrifice an artifact or discard a card|sacrifice an artifact or discard a nonland card|sacrifice another creature|sacrifice another creature or artifact|sacrifice three other nonland permanents|sacrifice a vampire|sacrifice a land)$/.exec(sentence);
     const doNext = /^(if|when) you do, (.+)$/.exec(sentences[si + 1] ?? "");
     if (sacChoice && doNext) {
       const targeted = doNext[1] === "when";
       const inner = targeted ? newCtx(true) : ctx;
-      const then = parseClause(doNext[2].replace(/^it deals /, "~ deals "), inner);
+      const then = (/^search your library/.test(doNext[2]) ? parseChoiceText(doNext[2], inner) : null) ?? parseClause(doNext[2].replace(/^it deals /, "~ deals "), inner);
       if (!then || then.length === 0) return null;
       lastGroup = effects.length;
       const cost = SAC_CHOICE_COST[sacChoice[1]];
@@ -462,7 +496,7 @@ export function parseEffectText(rawText: string, ctx: Ctx): Effect[] | null {
       continue;
     }
     // a sentence that asks for a choice (a search) may be followed by other sentences: they run once it is answered
-    const parsed = (/^search your library/.test(sentence) ? parseChoiceText(sentence, ctx) : null) ?? parseClause(sentence, ctx);
+    const parsed = (/^(?:you may )?search your library/.test(sentence) ? parseChoiceText(sentence, ctx) : null) ?? parseClause(sentence, ctx);
     if (!parsed) return null;
     lastGroup = effects.length;
     effects.push(...parsed);

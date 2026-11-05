@@ -90,6 +90,7 @@ export function dealDamage(
     state.players[target.id].damagedThisTurn = true;
     if (source.infect) addPoison(state, target.id, amount, events);
     else changeLife(state, target.id, -amount, events);
+    if (!source.infect && target.id !== source.controller) for (const watcher of state.players[source.controller].battlefield) queueTriggers(state, watcher.card, source.controller, "oppNoncombatDamage", { count: amount });
   } else if (isPlaneswalker(state, target.perm)) {
     target.perm.loyalty = (target.perm.loyalty ?? 0) - amount; // damage to a planeswalker removes that much loyalty
   } else {

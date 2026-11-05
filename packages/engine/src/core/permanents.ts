@@ -13,13 +13,14 @@ import { isToken } from "./zones.js";
 
 export const playerLabel = (id: PlayerId) => (id === "p1" ? "Player 1" : "Player 2");
 
-export const isCreature = (s: GameState, p: Permanent) => getCard(s, p.card.defId).type === "creature" || p.crewed === true;
+export const isCreature = (s: GameState, p: Permanent) => getCard(s, p.card.defId).type === "creature" || p.crewed === true || p.animated === true;
 
 /** Artifacts, including artifact creatures ("Artifact Creature — Construct"). */
 /** Does a land with "enters tapped unless ..." enter tapped, given what its controller has on the battlefield right now? */
 export function entersTappedNow(state: GameState, controller: PlayerId, def: CardDef): boolean {
   const parsed = parseCard(def);
   if (parsed.entersTapped) return true;
+  if (def.type === "creature" && state.players[OPPONENT[controller]].battlefield.some((p) => parseCard(getCard(state, p.card.defId)).oppCreaturesEnterTapped)) return true; // Authority of the Consuls
   const unless = parsed.entersTappedUnless;
   if (!unless) return false;
   if (unless.never) return true;
@@ -41,6 +42,8 @@ export function entersTappedNow(state: GameState, controller: PlayerId, def: Car
 export function cardMatches(def: CardDef, filter: CardFilter): boolean {
   if (filter.basic && !isBasicLand(def)) return false;
   if (filter.maxMV !== undefined && def.cost > filter.maxMV) return false;
+  if (filter.minMV !== undefined && def.cost < filter.minMV) return false;
+  if (filter.exactMV !== undefined && def.cost !== filter.exactMV) return false;
   if (filter.maxPower !== undefined && !(def.power !== undefined && def.power <= filter.maxPower)) return false;
   if (filter.keyword) return (def.keywords ?? []).some((k) => k.toLowerCase() === filter.keyword);
   if (filter.all) return true;
@@ -80,7 +83,16 @@ export const isEnchantmentDef = (def: CardDef) => def.type === "enchantment" || 
 /** What protection looks at: the colors of a source, and whether it is an artifact. */
 export const qualityOfDef = (def: CardDef): SourceQuality => ({ type: def.type, colors: def.colors ?? [], artifact: isArtifactDef(def) });
 /** A permanent's colors now: its card's, unless something made it another color until end of turn. */
-export const colorsOfPerm = (s: GameState, p: Permanent): string[] => p.tempColors ?? getCard(s, p.card.defId).colors ?? [];
+/** Sorcerous Spyglass: the names named by Spyglasses on the battlefield. */
+export const spyglassNames = (s: GameState): string[] =>
+  Object.values(s.players).flatMap((o) => o.battlefield.filter((p) => p.chosenName && parseCard(getCard(s, p.card.defId)).spyglass).map((p) => p.chosenName!));
+
+/** Witness Protection: an Aura on it makes it a 1/1 green and white Citizen with no abilities. */
+export const isWitnessed = (s: GameState, p: Permanent): boolean => {
+  for (const owner of Object.values(s.players)) for (const aura of owner.battlefield) if (aura.attachedTo === p.card.iid && parseCard(getCard(s, aura.card.defId)).witnessProtection) return true;
+  return false;
+};
+export const colorsOfPerm = (s: GameState, p: Permanent): string[] => (isWitnessed(s, p) ? ["G", "W"] : p.tempColors ?? getCard(s, p.card.defId).colors ?? []);
 export const qualityOfPerm = (s: GameState, p: Permanent): SourceQuality => ({ type: getCard(s, p.card.defId).type, colors: colorsOfPerm(s, p), artifact: isArtifactDef(getCard(s, p.card.defId)) });
 
 /** Is this permanent protected from sources with these qualities? ("Protection from red") */
@@ -92,6 +104,7 @@ export function canPrevent(s: GameState): boolean {
 export function isProtectedFrom(s: GameState, perm: Permanent, source: SourceQuality): boolean {
   const protection = parseCard(getCard(s, perm.card.defId)).protection;
   if (!protection) return false;
+  if (protection.everything) return true;
   return source.colors.some((c) => protection.colors.includes(c)) || (source.artifact && protection.artifacts);
 }
 
@@ -102,6 +115,7 @@ const controllerOf = (s: GameState, p: Permanent): PlayerId => (s.players.p1.bat
 
 /** A permanent's creature types (lowercase): the printed ones, plus any an Aura on it adds ("is an Angel in addition to its other types"). */
 export function subtypesOf(s: GameState, p: Permanent): string[] {
+  if (isWitnessed(s, p)) return ["citizen"];
   // A prepare card is its creature face on the battlefield: the spell's type line after " // " isn't part of it.
   // "~ becomes a Werewolf" replaces its creature types (unless an Aura has since made it something else).
   const override = p.card.defId.includes("@becomes-") ? undefined : p.subtypesOverride;
@@ -114,7 +128,8 @@ export function subtypesOf(s: GameState, p: Permanent): string[] {
   const def = getCard(s, p.card.defId);
   const owner = s.players.p1.battlefield.includes(p) ? "p1" : "p2";
   const everyType = (parseCard(def).statics ?? []).some((st) => st.allTypes && st.scope === "self" && (st.cond?.yardCreatures === undefined || yardCreatureCards(s, owner) >= st.cond.yardCreatures));
-  const all = everyType ? [...new Set([...printed, ...added, ...CREATURE_TYPES])] : added.length ? [...printed, ...added] : printed;
+  const chosen = p.chosenType && parseCard(def).isChosenType ? [p.chosenType] : [];
+  const all = everyType ? [...new Set([...printed, ...added, ...chosen, ...CREATURE_TYPES])] : added.length || chosen.length ? [...printed, ...added, ...chosen] : printed;
   return p.tempLostSubtypes ? all.filter((t) => !p.tempLostSubtypes!.includes(t)) : all;
 }
 
@@ -147,6 +162,7 @@ export function staticEffectsOn(s: GameState, target: Permanent): StaticEffect[]
   const creature = isCreature(s, target);
   for (const owner of Object.values(s.players)) {
     for (const source of owner.battlefield) {
+      if (source !== target && isWitnessed(s, source)) continue; // it has lost its abilities
       const sources = parseCard(s.cards[source.card.defId] ?? getCard(s, source.card.defId)).statics;
       if (sources === undefined || sources.length === 0) continue; // (most permanents have none: this is asked for every permanent on every power check)
       for (const st of sources) {
@@ -167,6 +183,7 @@ export function staticEffectsOn(s: GameState, target: Permanent): StaticEffect[]
         if (st.cond?.selfCountersAtLeast !== undefined && ((source.counters ?? 0) - (source.minusCounters ?? 0)) < st.cond.selfCountersAtLeast) continue;
         if (st.cond?.selfNamedAtLeast && (source.named?.[st.cond.selfNamedAtLeast.name] ?? 0) < st.cond.selfNamedAtLeast.n) continue;
         if (st.cond?.colorPermAny && !Object.values(s.players).some((pl) => pl.battlefield.some((p) => colorsOfPerm(s, p).includes(st.cond!.colorPermAny!)))) continue;
+        if (st.cond?.yardInstSorcAtLeast !== undefined && s.players[owner.id].graveyard.filter((c) => { const t = getCard(s, c.defId).type; return t === "instant" || t === "sorcery"; }).length < st.cond.yardInstSorcAtLeast) continue;
         if (st.cond?.creaturePowerAtLeast !== undefined && !s.players[owner.id].battlefield.some((p) => isCreature(s, p) && powerOf(s, p) >= st.cond!.creaturePowerAtLeast!)) continue;
         if (st.targetCounteredThisTurn && !(target.countersThisTurn ?? 0)) continue;
         if (st.cond?.yardCreatures !== undefined && yardCreatureCards(s, owner.id) < st.cond.yardCreatures) continue;
@@ -205,7 +222,7 @@ export function staticEffectsOn(s: GameState, target: Permanent): StaticEffect[]
 
 /** Does a continuous effect forbid this? ("Enchanted creature can't attack or block.") */
 export const forbidden = (s: GameState, p: Permanent, what: "cantAttack" | "cantBlock" | "noUntap" | "noActivated") =>
-  staticEffectsOn(s, p).some((st) => st[what] === true) || (what === "cantBlock" && p.cantBlockTurn === true);
+  (what === "noActivated" && (isWitnessed(s, p) || spyglassNames(s).includes(getCard(s, p.card.defId).name))) || staticEffectsOn(s, p).some((st) => st[what] === true) || (what === "cantBlock" && p.cantBlockTurn === true);
 export const nameOf = (s: GameState, p: Permanent) => getCard(s, p.card.defId).name;
 
 // "Until end of turn" bonuses count, so a pumped creature really is bigger.
@@ -278,6 +295,7 @@ export function countFor(s: GameState, me: PlayerId, spec: CountSpec, sourceIid?
 
 /** Printed power or toughness; a "*" is worked out from the board. */
 function basePT(s: GameState, p: Permanent, which: "power" | "toughness"): number {
+  if (isWitnessed(s, p)) return 1;
   if (p.tempBase) return p.tempBase[which]; // "becomes a 4/4 until end of turn"
   if (p.baseOverride) return p.baseOverride[which]; // "is a 1/1 Spirit in addition to its other types"
   if (which === "power" && p.powerFromHand) return s.players[s.players.p1.battlefield.includes(p) ? "p1" : "p2"].hand.length;
@@ -297,6 +315,7 @@ export const toughnessOf = (s: GameState, p: Permanent) =>
 /** Printed keywords plus ones granted until end of turn. */
 /** The most cards a player keeps in hand at the end of the turn: seven, or what a permanent of theirs says. */
 export function handLimit(s: GameState, player: PlayerId): number {
+  if (s.players[player].noHandLimit) return Infinity;
   let limit = 7;
   for (const p of s.players[player].battlefield) {
     const own = parseCard(getCard(s, p.card.defId)).maxHandSize;
@@ -310,13 +329,14 @@ const ownKeyword = (s: GameState, p: Permanent, keyword: Keyword) =>
   hasKeyword(getCard(s, p.card.defId), keyword) || (p.tempKeywords ?? []).includes(keyword) || (p.kwCounters ?? []).includes(keyword);
 
 export const kw = (s: GameState, p: Permanent, keyword: Keyword) =>
-  !(keyword === "defender" && p.tempNoDefender) && (
+  !isWitnessed(s, p) && !(keyword === "defender" && p.tempNoDefender) && (
   hasKeyword(getCard(s, p.card.defId), keyword) || (p.tempKeywords ?? []).includes(keyword) || (p.kwCounters ?? []).includes(keyword) || staticEffectsOn(s, p).some((st) => st.keywords.includes(keyword)));
 
 /** Which of `keywords` the permanent has right now: the same answer as asking kw() for each, but its static effects are worked out once, not once per keyword. */
 export function keywordsNow(s: GameState, p: Permanent, keywords: readonly Keyword[]): Keyword[] {
   const def = getCard(s, p.card.defId);
   const statics = staticEffectsOn(s, p);
+  if (isWitnessed(s, p)) return [];
   return keywords.filter((k) => !(k === "defender" && p.tempNoDefender) && (hasKeyword(def, k) || (p.tempKeywords ?? []).includes(k) || (p.kwCounters ?? []).includes(k) || statics.some((st) => st.keywords.includes(k))));
 }
 

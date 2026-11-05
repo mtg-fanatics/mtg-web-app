@@ -31,7 +31,7 @@ import type { TargetChoice } from "./effects.js";
 import type { ManaColor } from "./mana.js";
 import { parseCard } from "./oracle.js";
 import { BACK_SUFFIX } from "./oracle/doubleFaced.js";
-import { shuffle, STARTING_HAND } from "./state.js";
+import { beginWithOpeningHandCards, shuffle, STARTING_HAND } from "./state.js";
 import { activateAbility, activateLoyalty, castSpell, chooseTargets, crewVehicle, cycleCard, getCastable, openWindow, passPriority, pickCard, plotCard, settle } from "./stack.js";
 import type { Outcome } from "./stack.js";
 import { OPPONENT } from "./types.js";
@@ -54,7 +54,7 @@ export type Action =
   | { type: "shuffleDeck" } // before keeping or mulliganing: shuffle the OTHER player's library
   | { type: "playLand"; iid: string; back?: boolean } // `back`: a modal double-faced land played with its back face up
   | { type: "castCreature"; iid: string }
-  | { type: "castSpell"; iid: string; targets?: TargetChoice[]; x?: number; kicked?: boolean; from?: "graveyard" | "exile" | "prepared"; modes?: number[]; sacrifice?: string; warp?: boolean; /** Teamwork: the creatures tapped as an additional cost. */ teamwork?: string[]; /** Phyrexian symbols paid with 2 life each even where mana could pay them. */ phyrexianLife?: number; /** Delve: the graveyard cards exiled to pay for generic mana (left out: the engine chooses). */ delve?: string[]; /** Replicate: how many times it is paid (the targets of each copy follow the spell's). */ replicate?: number; /** An Adventure card: cast its Adventure spell instead of the creature. */ adventure?: boolean; /** Harmonize: the creature tapped to pay {X} of the cost. */ harmonizeTap?: string; /** Convoke: the creatures tapped to pay for part of the cost (left out: the engine taps as many as it needs when the mana alone is not enough). */ convoke?: string[] }
+  | { type: "castSpell"; iid: string; targets?: TargetChoice[]; x?: number; kicked?: boolean; from?: "graveyard" | "exile" | "prepared" | "library"; modes?: number[]; sacrifice?: string; warp?: boolean; /** Teamwork: the creatures tapped as an additional cost. */ teamwork?: string[]; /** Phyrexian symbols paid with 2 life each even where mana could pay them. */ phyrexianLife?: number; /** Delve: the graveyard cards exiled to pay for generic mana (left out: the engine chooses). */ delve?: string[]; /** Replicate: how many times it is paid (the targets of each copy follow the spell's). */ replicate?: number; /** An Adventure card: cast its Adventure spell instead of the creature. */ adventure?: boolean; /** Harmonize: the creature tapped to pay {X} of the cost. */ harmonizeTap?: string; /** Convoke: the creatures tapped to pay for part of the cost (left out: the engine taps as many as it needs when the mana alone is not enough). */ convoke?: string[] }
   | { type: "activateAbility"; iid: string; index: number; targets?: TargetChoice[]; payWith?: string; /** The X of a cost like "{X}{R}": what the player chose to pay. */ x?: number; /** Phyrexian symbols paid with 2 life each even where mana could pay them. */ phyrexianLife?: number }
   | { type: "crew"; iid: string } // crew a Vehicle: then choose the creatures to tap
   | { type: "cycle"; iid: string } // cycle a card from hand (pay its cycling cost, discard it, draw a card)
@@ -207,6 +207,7 @@ export function applyAction(state: GameState, player: PlayerId, action: Action):
       events.push({ type: "handKept", player, bottomed: taken });
       if (next.opening.kept.p1 && next.opening.kept.p2) {
         next.opening = null;
+        beginWithOpeningHandCards(next);
         next.phase = "main1"; // the starting player skips their first draw (rule 103.8a)
         next.active = next.startingPlayer;
         events.push({ type: "turnStarted", player: next.active, turn: 1 });
@@ -217,7 +218,7 @@ export function applyAction(state: GameState, player: PlayerId, action: Action):
 
     case "playLand": {
       if (!MAIN_PHASES.includes(next.phase)) return fail("Lands can only be played in a main phase.");
-      if (me.landsPlayedThisTurn >= MAX_LANDS_PER_TURN) return fail("You already played a land this turn.");
+      if (me.landsPlayedThisTurn >= MAX_LANDS_PER_TURN + me.battlefield.reduce((n, p) => n + (parseCard(getCard(next, p.card.defId)).extraLandDrops ?? 0), 0)) return fail("You already played a land this turn.");
       let idx = me.hand.findIndex((c) => c.iid === action.iid);
       let zone = me.hand;
       const { tappedLand } = exilePlayTerms(next, player, action.iid); // "each land played this way enters tapped"
@@ -353,6 +354,8 @@ export function applyAction(state: GameState, player: PlayerId, action: Action):
       next.combat = { attackers: chosen.map((p) => ({ attacker: p.card.iid, blockers: [], ...(action.targets?.[p.card.iid] ? { target: action.targets[p.card.iid] } : {}) })) };
       next.phase = "blockers";
       chosen.forEach((p) => queueTriggers(next, p.card, player, "attacks", { attackers: chosen.map((c) => c.card.iid) }));
+      // "Whenever enchanted creature attacks": the Auras on it
+      for (const aura of next.players[player].battlefield) if (aura.attachedTo && chosen.some((c) => c.card.iid === aura.attachedTo)) queueTriggers(next, aura.card, player, "hostAttacks");
       if (chosen.length >= 3) chosen.forEach((p) => queueTriggers(next, p.card, player, "battalion")); // "Battalion — whenever this and at least two other creatures attack"
       if (chosen.length >= 2) for (const p of me.battlefield) queueTriggers(next, p.card, player, "attackTwo", { attackers: chosen.map((c) => c.card.iid) });
       if (chosen.length === 1) for (const p of me.battlefield) queueTriggers(next, p.card, player, "attacksAlone", { other: chosen[0].card.iid, self: p.card.iid === chosen[0].card.iid });

@@ -18,6 +18,7 @@ const MAY_COST_PROMPT = {
   otherCreatureOrArtifact: "You may sacrifice another creature or an artifact",
   threeOtherNonland: "You may sacrifice three other nonland permanents: choose the first (or stop, and sacrifice none)",
   vampire: "You may sacrifice a Vampire",
+  land: "You may sacrifice a land",
 } as const;
 
 /** Effects of the Marvel Super Heroes set: keyword counters, Plan counters and the like. */
@@ -33,7 +34,8 @@ export const MARVEL_EFFECTS = {
     const otherNonland = me.battlefield.filter((p) => p.card.iid !== ctx.sourceId && getCard(state, p.card.defId).type !== "land").map((p) => p.card.iid);
     const vampires = me.battlefield.filter((p) => isCreature(state, p) && subtypesOf(state, p).includes("vampire")).map((p) => p.card.iid);
     const options =
-      effect.cost === "vampire" ? vampires
+      effect.cost === "land" ? me.battlefield.filter((p) => getCard(state, p.card.defId).type === "land").map((p) => p.card.iid)
+      : effect.cost === "vampire" ? vampires
       : effect.cost === "otherCreature" ? others
       : effect.cost === "otherCreatureOrArtifact" ? [...new Set([...others, ...artifacts.filter((iid) => iid !== ctx.sourceId)])]
       : effect.cost === "threeOtherNonland" ? otherNonland

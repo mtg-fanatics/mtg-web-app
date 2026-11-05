@@ -1,3 +1,4 @@
+import type { Effect, PendingPick } from "../../effects.js";
 import { getCard } from "../../cards.js";
 import type { EdictType } from "../../effects.js";
 import type { GameState, Permanent, PlayerId } from "../../types.js";
@@ -20,19 +21,32 @@ export const INFECT_EFFECTS = {
     for (const { perm, controller, kinds } of perms) addOneOfEach(state, perm, controller, kinds);
   },
   edict({ state, ctx, events, say, startPick }, effect) {
-    for (const s of subjectsOf(state, effect.who, ctx)) {
-      if (s.k !== "player" || state.pendingPick) continue;
-      const options = state.players[s.id].battlefield.filter((p) => fitsEdict(state, p, effect.types));
+    const players = subjectsOf(state, effect.who, ctx).flatMap((s) => (s.k === "player" ? [s.id] : []));
+    const count = effect.count ?? 1;
+    for (let at = 0; at < players.length; at++) {
+      const id = players[at];
+      if (state.pendingPick) break;
+      const options = state.players[id].battlefield.filter((p) => fitsEdict(state, p, effect.types));
       const kinds = effect.types.join(" or ");
       if (options.length === 0) {
-        say(`${playerLabel(s.id)} has no ${kinds} to sacrifice.`);
+        say(`${playerLabel(id)} has no ${kinds} to sacrifice.`);
         continue;
       }
-      if (options.length === 1) {
-        sacrificePermanent(state, options[0], s.id, events);
+      // Not enough to choose from: they all go
+      if (options.length <= count) {
+        for (const p of options) sacrificePermanent(state, p, id, events);
         continue;
       }
-      startPick({ player: s.id, prompt: `Choose a ${kinds} you control to sacrifice`, kind: "sacrificeOwn", options: options.map((p) => p.card.iid), optional: false, owner: s.id, remaining: 1, ordered: [] });
+      startPick({ player: id, prompt: `Choose ${count === 1 ? `a ${kinds}` : `${count} ${kinds}s (${count} left)`} you control to sacrifice`, kind: "sacrificeOwn", options: options.map((p) => p.card.iid), optional: false, owner: id, remaining: count, ordered: [] });
+      // The players after this one choose when this one is done
+      const later = players.slice(at + 1);
+      const started = state.pendingPick as PendingPick | null;
+      if (later.length > 0 && started) {
+        const next = later.map((p): Effect => ({ ...effect, who: p === ctx.controller ? { t: "you" } : { t: "opp" } }));
+        started.rest = [...next, ...(started.rest ?? [])];
+        started.ctx = started.ctx ?? ctx;
+      }
+      break;
     }
   },
 } satisfies EffectHandlers;

@@ -40,6 +40,11 @@ export function normalizeText(def: CardDef): string {
 /** "the number of goblins you control", "that creature's power", "~'s power": a number worked out when the effect happens. */
 export function amountOf(phrase: string, ctx: Ctx): Amount | null {
   let m: RegExpExecArray | null;
+  if (phrase === "the number of other creatures you control named ~") return { count: { kind: "otherNamedSelf" } }; // Hare Apparent
+  if (phrase === "your life total") return { count: { kind: "myLife" } }; // Ajani
+  if (phrase === "the amount of excess damage dealt to that creature this way") return { count: { kind: "excessDamage" } }; // Goblin Negotiation
+  if (phrase === "that creature's toughness" && !ctx.hasOther) return { count: { kind: "sacToughness" } }; // Tribute to Hunger
+  if (phrase === "the sacrificed creature's toughness") return { count: { kind: "sacToughness" } }; // Ayli
   if (phrase === "the excess damage dealt this way") return { count: { kind: "excessDamage" } }; // Razor Rings
   if ((m = /^the number of (.+)$/.exec(phrase))) {
     const c = parseCount(m[1]);
@@ -58,11 +63,13 @@ export function forEachCount(phrase: string): CountSpec | null {
   if (phrase === "creature card in your graveyard") return { kind: "graveyard", creaturesOnly: true };
   const basic = /^basic (plains|island|swamp|mountain|forest) you control$/.exec(phrase);
   if (basic) return { kind: "permanents", what: "landType", landType: basic[1].charAt(0).toUpperCase() + basic[1].slice(1), basic: true, scope: "you" };
+  const namedOnSelf = /^([a-z]+) counter on ~$/.exec(phrase);
+  if (namedOnSelf && !/^(\+1|loyalty)$/.test(namedOnSelf[1])) return { kind: "selfNamed", name: namedOnSelf[1] }; // Banner of Kinship
   if (phrase === "card discarded this way") return { kind: "x" };
   if (phrase === "card you've discarded this turn") return { kind: "discardedThisTurn" };
   const otherTyped = /^other ([a-z]+) you control$/.exec(phrase);
   if (otherTyped && !/^(creature|artifact|land|enchantment)$/.test(otherTyped[1])) return { kind: "permanents", what: "subtype", subtype: otherTyped[1], other: true, scope: "you" };
-  const atk = /^(other )?attacking ([a-z]+)$/.exec(phrase);
+  const atk = /^(other )?attacking ([a-z]+)(?: you control)?$/.exec(phrase);
   if (atk && atk[2] !== "creature") return { kind: "attackers", subtype: atk[2], ...(atk[1] ? { other: true } : {}) };
   if (phrase === "attacking creature") return { kind: "attackers" };
   if (phrase === "creature attacking you") return { kind: "attackingYou" };

@@ -20,7 +20,7 @@ export type Ref =
   | { t: "enchanted" } // the permanent this Aura is attached to
   | { t: "attackingCreatures"; other?: boolean } // every creature attacking right now (`other`: not the permanent itself)
   | { t: "other" } // "that creature": the creature that blocked this one, or that this one blocked
-  | { t: "creaturesOf"; i: number }; // every creature controlled by the i-th target (a player)
+  | { t: "creaturesOf"; i: number; nonland?: boolean }; // every creature controlled by the i-th target (a player); `nonland`: every nonland permanent instead
 
 /** A number printed on the card, or "X": the value chosen when the spell was cast. */
 export type Amount = number | "X" | { count: CountSpec; times?: number };
@@ -33,6 +33,47 @@ export type Effect =
   | { type: "draw"; amount: Amount; who: Ref }
   | { type: "gainLife"; amount: Amount; who: Ref }
   | { type: "loseLife"; amount: Amount; who: Ref }
+  | { type: "exileFromYards"; what: Ref[]; ifCreature?: Effect[] } // "exile target card from a graveyard. If it was a creature card, ..."
+  | { type: "blinkEndStep"; what: Ref; underYou?: boolean } // exile it; it returns at the beginning of the next end step
+  | { type: "returnDelayed"; iid: string; controller: PlayerId; named?: Record<string, number> }
+  | { type: "dreadSummons"; amount: Amount } // each player mills X; a tapped 2/2 Zombie for each creature card milled
+  | { type: "reviveLater"; name: string } // Nine-Lives Familiar: comes back at the next end step with one fewer counter of that kind
+  | { type: "winIfGates"; n: number } // Maze's End: you win with this many Gates of different names
+  | { type: "venom" } // Venom Connoisseur: deathtouch to itself; the second time this turn, to all your creatures
+  | { type: "loseUnless"; amount: number; discard: boolean; sacrifice: boolean } // "each opponent loses 3 life unless they sacrifice a nonland permanent or discard a card"
+  | { type: "exileChoosePlay"; n: number; next?: boolean } // exile the top n cards, choose one: it can be played this turn (or through your next turn)
+  | { type: "topOrYard"; n: number } // look at the top n: you may keep one on top, the rest go to the graveyard
+  | { type: "ninjaEmblem" } // Kaito: whenever a player casts a spell, you create a 2/1 Ninja
+  | { type: "damageDivided"; amount: number; to: Ref[] } // damage divided among the targets: lethal to each in turn, the rest to the last
+  | { type: "keepOnePerType" } // Liliana -9: each opponent keeps one permanent of each type (the most expensive) and sacrifices the rest
+  | { type: "becomeCreatureForever"; power: number; toughness: number; keywords: Keyword[]; allTypes: boolean } // Soulstone Sanctuary
+  | { type: "returnDiedWith"; counters: number; keyword: Keyword; subtype: string } // Valkyrie's Call: the creature that died comes back
+  | { type: "revealUntilCreature" } // Spinner of Souls
+  | { type: "copyNextSpell" } // Teach by Example: the next instant or sorcery you cast this turn is copied
+  | { type: "extraCombat" } // "after this phase, there is an additional combat phase"
+  | { type: "genesisWave"; amount: Amount } // reveal the top X: permanents with mana value X or less enter, the rest go to the graveyard
+  | { type: "finale"; amount: Amount } // Finale of Revelation
+  | { type: "endTurn" } // Time Stop
+  | { type: "demonTax" } // Desecration Demon
+  | { type: "exileTopTurn" } // exile the top card of your library; you may play it this turn
+  | { type: "exiledWithToHand" } // Hoarding Dragon: the card it exiled goes to its owner's hand
+  | { type: "sacIfHostCounters"; n: number; then: Effect[] } // Ordeal of Nylea: with this many counters on the enchanted creature, sacrifice the Aura (and then ...)
+  | { type: "yardCastTarget"; what: Ref } // "you may cast target Zombie creature card from your graveyard this turn"
+  | { type: "doubleCountersOn"; what: Ref[] } // Zimone: double the number of each kind of counter
+  | { type: "kellan"; step: 1 | 2 } // Kellan: scout -> detective -> rogue
+  | { type: "digCreature"; n: number } // Loot: look at the top n, a creature card with mana value up to your lands enters, the rest go to the bottom
+  | { type: "etali" } // exile the top card of each library: cast any of the spells free
+  | { type: "returnOnDeath"; what: Ref } // Fake Your Own Death
+  | { type: "grantFlashback"; what: Ref } // Sphinx of Forgotten Lore
+  | { type: "curator"; n: number } // Curator of Destinies
+  | { type: "payXCounters" } // Wildborn Preserver: you may pay {X}: X +1/+1 counters on ~
+  | { type: "baitFish" } // Fishing Pole: remove a bait counter; if you do, create a 1/1 blue Fish
+  | { type: "stashDiscard" } // Tinybones: the discarded card is exiled with a stash counter
+  | { type: "harvest"; what: Ref } // Abyssal Harvester
+  | { type: "shuffleYard" } // "shuffle your graveyard into your library"
+  | { type: "loseGame" } // "you lose the game"
+  | { type: "preventCombatTo"; what: Ref } // "prevent all combat damage that would be dealt to it this turn"
+  | { type: "drainLife"; amount: Amount } // each opponent loses that much life and you gain the life lost
   | { type: "destroy"; what: Ref }
   | { type: "destroyArtifacts"; mvAtMost: Amount } // "destroy each artifact with mana value X or less"
   | { type: "exile"; what: Ref }
@@ -50,7 +91,7 @@ export type Effect =
   // "Look at the top five cards. You may reveal a creature card from among them and put it into your hand. Put the rest on the bottom."
   | { type: "revealToHand"; n: number; filter: CardFilter; random: boolean; required?: boolean; restTo?: "bottom" | "graveyard"; reveal?: boolean; take?: number } // `take`: "put two of them into your hand"
   // Search your library for a card (a basic land card, or any card): onto the battlefield (tapped) or into your hand, then shuffle.
-  | { type: "search"; tapped?: boolean; for?: "basicLand" | "any"; to?: "hand" | "battlefield" | "graveyard"; who?: Ref; reveal?: boolean; filters?: CardFilter[]; label?: string } // `filters`: a card that fits any of them, `label` names it
+  | { type: "search"; tapped?: boolean; for?: "basicLand" | "any"; to?: "hand" | "battlefield" | "graveyard" | "top" | "exile"; who?: Ref; reveal?: boolean; filters?: CardFilter[]; label?: string; count?: number } // `filters`: a card that fits any of them, `label` names it
   | { type: "scry"; n: number } // look at the top n cards; any of them may go to the bottom (see PendingPick)
   | { type: "mill"; amount: Amount; who: Ref } // the top cards of the library go to the graveyard
   | { type: "regenerate"; what: Ref } // a regeneration shield until end of turn
@@ -88,7 +129,7 @@ export type Effect =
   | { type: "returnFromYard" } // "when this dies, return it to its owner's hand"
   | { type: "counterUnlessPay"; what: Ref; cost: string } // counter target spell unless its controller pays
   | { type: "noRegen" } // "it can't be regenerated": the destroy/damage of the same spell can't be saved by a shield
-  | { type: "reanimateAll"; maxMV: number } // "return all creature cards with mana value 2 or less from your graveyard to the battlefield"
+  | { type: "reanimateAll"; maxMV: number; fromAll?: boolean } // "return all creature cards with mana value 2 or less from your graveyard to the battlefield"
   | { type: "damageIfLife"; who: Ref; life: number; amount: number } // "if target player has exactly 10 life, ~ deals 10 damage to that player"
   | { type: "discardUnlessAttacked" } // "then discard a card unless you attacked this turn"
   | { type: "discardHands"; who: Ref; thenDraw?: number } // "each opponent discards their hand" (then draws that many cards)
@@ -114,7 +155,7 @@ export type Effect =
   | { type: "ifSubtype"; what: Ref; subtype: string; then: Effect[] } // "if it's a Zombie card, draw a card" (wherever the card is now)
   | { type: "mustBeBlocked"; what: Ref } // "must be blocked this turn if able"
   | { type: "becomeSubtype"; what: Ref; subtype: string } // "~ becomes a Werewolf": the new creature type replaces the others
-  | { type: "returnSelfToBattlefield"; tapped?: boolean; counters?: number; minusCounters?: number; finality?: boolean } // the card itself, from its owner's graveyard
+  | { type: "returnSelfToBattlefield"; addSubtype?: string; tapped?: boolean; counters?: number; minusCounters?: number; finality?: boolean } // the card itself, from its owner's graveyard
   | { type: "grantDiesReturn"; what: Ref } // until end of turn: "when this dies, return it to the battlefield tapped with a +1/+1 counter"
   | { type: "distributeCounters"; total: number; double?: boolean } // among the chosen targets, the first ones getting any extra; then double them
   | { type: "createToken"; token: TokenSpec; amount: Amount; who?: Ref }
@@ -143,7 +184,7 @@ export type Effect =
   | { type: "removeAllCounters"; what: Ref } // Blitz Leech: "remove all counters from that creature"
   | { type: "poisonBurn"; who: Ref } // Leeches: "target player loses all poison counters. ~ deals that much damage to that player"
   | { type: "powerFromHand" } // until end of turn: this creature's base power is the number of cards in your hand
-  | { type: "mayCost"; cost: "artifactOrCard" | "artifactOrNonland" | "otherCreature" | "otherCreatureOrArtifact" | "threeOtherNonland" | "vampire"; then: Effect[]; thenSpecs?: TargetSpec[] } // "you may sacrifice an artifact or discard a card. If you do, ..."
+  | { type: "mayCost"; cost: "artifactOrCard" | "artifactOrNonland" | "otherCreature" | "otherCreatureOrArtifact" | "threeOtherNonland" | "vampire" | "land"; then: Effect[]; thenSpecs?: TargetSpec[] } // "you may sacrifice an artifact or discard a card. If you do, ..."
   | { type: "ifYardCreatures"; n: number; then: Effect[]; otherwise?: Effect[] } // "...if there are two or more creature cards in your graveyard. Otherwise, mill two cards."
   | { type: "invasion" } // Alien Invasion: a 1/1 Alien with a +1/+1 counter for each invasion counter, then an invasion counter
   | { type: "discardUnless"; cardType: "artifact" | "creature" } // "discard two cards unless you discard an artifact card"
@@ -174,10 +215,10 @@ export type Effect =
   | { type: "exileReturnTransformed" } // "exile this Saga, then return it to the battlefield transformed under your control"
   | { type: "copyTokenOf"; what: Ref; haste?: boolean; sacAtEnd?: boolean } // "create a token that's a copy of target creature, except it has haste. Sacrifice it at the beginning of the next end step."
   | { type: "learn" } // reveal a Lesson card from outside the game and put it into your hand, or discard a card to draw a card
-  | { type: "addMana"; mana: ManaColor[]; anyColor?: number; combat?: boolean } // "add {R}{R}{R}{R}" / "add one mana of any color" (`anyColor`); `combat`: it lasts until end of combat
+  | { type: "addMana"; mana: ManaColor[]; anyColor?: number; combat?: boolean; allTurn?: boolean } // "add {R}{R}{R}{R}" / "add one mana of any color" (`anyColor`); `combat`: it lasts until end of combat
   | { type: "deathLifeThisTurn" } // "whenever a creature dies this turn, you gain 1 life"
   | { type: "proliferate" } // another counter of each kind on the players and permanents that already have one (the ones that help you)
-  | { type: "edict"; who: Ref; types: EdictType[] } // "each opponent sacrifices a creature or planeswalker of their choice"
+  | { type: "edict"; who: Ref; types: EdictType[]; count?: number } // "each opponent sacrifices a creature or planeswalker of their choice"
   | { type: "castCopy"; defId: string } // paradigm: a copy of the exiled spell is cast, with the targets chosen for it
   | { type: "prevent"; amount: number; to: Ref } // "prevent the next 3 damage that would be dealt to any target this turn": a shield on a creature or a player until end of turn
   | { type: "shuffleSelfFromYard" } // "you may shuffle it into its owner's library" (when it dies): the card goes from the graveyard into its owner's library
@@ -197,6 +238,9 @@ export interface CardFilter {
   /** Also required, on top of the terms above: "a basic Plains card", "a creature card with mana value 1 or less". */
   basic?: boolean;
   maxMV?: number;
+  /** "with mana value 6 or greater" / "with mana value 1". */
+  minMV?: number;
+  exactMV?: number;
   /** "a creature card with power 2 or less". */
   maxPower?: number;
   /** "a card with flash": the card has this keyword. */
@@ -259,6 +303,8 @@ export interface RunContext {
 /** A permanent as it last existed on the battlefield. */
 export interface LastKnown {
   power: number;
+  named?: Record<string, number>;
+  subtypes?: string[];
   counters: number;
   minusCounters: number;
 }
@@ -314,6 +360,10 @@ export interface TargetSpec {
   distinct?: boolean;
   /** "Up to one target ...": the player may choose no target at all (a "none" choice). */
   optional?: boolean;
+  /** "...that was put there this turn". */
+  thisTurn?: boolean;
+  /** "target nonbasic land". */
+  nonbasic?: boolean;
   /** "another target ...": not the permanent the ability belongs to (filled in as `except` when the ability is put on the stack). */
   other?: boolean;
   except?: string;
@@ -367,7 +417,7 @@ export interface StaticEffect {
   /** "Other Goblin creatures you control attack each combat if able." */
   mustAttack?: boolean;
   /** "As long as you've drawn two or more cards this turn" / "as long as this Aura entered this turn". */
-  cond?: { artifactCreatureOrPlan?: boolean; powerAtMost?: number; selfCounteredThisTurn?: boolean; yardCreatures?: number; drawnAtLeast?: number; lifeAtLeast?: number; yourTurn?: boolean; enteredThisTurn?: boolean; controls?: string; attacking?: boolean; lostLife?: boolean; /** Four or more card types among the cards in its controller's graveyard. */ delirium?: boolean; /** Threshold: this many cards in its controller's graveyard. */ yardAtLeast?: number; /** Hellbent: its controller has no cards in hand. */ handEmpty?: boolean; /** Metalcraft: its controller controls this many artifacts. */ artifactsAtLeast?: number; /** It has this many +1/+1 counters. */ selfCountersAtLeast?: number; /** It has this many counters of that kind ("as long as it has a divinity counter"). */ selfNamedAtLeast?: { name: string; n: number }; /** "As long as any player controls a white permanent". */ colorPermAny?: string; /** "While you control a creature with power 4 or greater". */ creaturePowerAtLeast?: number; /** "Threshold": this many cards in its controller's graveyard (as a condition for the thing it gives). */ yardAtLeastN?: number; /** "As long as there are seven or more cards in your graveyard". */ };
+  cond?: { artifactCreatureOrPlan?: boolean; powerAtMost?: number; selfCounteredThisTurn?: boolean; yardCreatures?: number; drawnAtLeast?: number; lifeAtLeast?: number; yourTurn?: boolean; enteredThisTurn?: boolean; controls?: string; attacking?: boolean; lostLife?: boolean; /** Four or more card types among the cards in its controller's graveyard. */ delirium?: boolean; /** Threshold: this many cards in its controller's graveyard. */ yardAtLeast?: number; /** Hellbent: its controller has no cards in hand. */ handEmpty?: boolean; /** Metalcraft: its controller controls this many artifacts. */ artifactsAtLeast?: number; /** It has this many +1/+1 counters. */ selfCountersAtLeast?: number; /** It has this many counters of that kind ("as long as it has a divinity counter"). */ selfNamedAtLeast?: { name: string; n: number }; /** "As long as any player controls a white permanent". */ colorPermAny?: string; /** "While you control a creature with power 4 or greater". */ creaturePowerAtLeast?: number; /** "Threshold": this many cards in its controller's graveyard (as a condition for the thing it gives). */ yardAtLeastN?: number; /** "As long as there are seven or more cards in your graveyard". */ /** "Two or more instant and/or sorcery cards in your graveyard". */ yardInstSorcAtLeast?: number; };
   /** "Tapped creatures you control have hexproof." */
   tappedOnly?: boolean;
   /** "Other untapped creatures you control have hexproof." */
@@ -426,6 +476,9 @@ export type CountSpec =
   | { kind: "lifeGainedThisTurn" } // the life you gained this turn
   | { kind: "distinctMV" } // "each different mana value among nonland permanents you control"
   | { kind: "selfNamed"; name: string } // counters of that kind on it ("the number of soul counters on this artifact")
+  | { kind: "myLife" } // your life total
+  | { kind: "otherNamedSelf" } // other permanents you control with the same name as the source
+  | { kind: "sacToughness" } // the toughness of the creature last sacrificed
   | { kind: "excessDamage" } // the excess of the damage the same spell or ability just dealt
   | { kind: "greatestMV"; what: "artifact" | "subtype"; subtype?: string } // the greatest mana value among the artifacts (or Elementals) you control
   | { kind: "greatestMVYard" } // the greatest mana value among the cards in your graveyard
@@ -468,7 +521,7 @@ export interface TriggeredAbility {
   event: "oppPermTapped" | "youTapOpp" | "oppArtifactAbility" | "enters" | "dies" | "attacks" | "noncreatureSpell" | "instantOrSorcery" | "landfall" | "lifeGained" | "allyEnters" | "combatDamagePlayer" | "blocks" | "blocked" | "damagedDies" | "drawCard" | "drawSecond" | "battalion" | "attackTwo" | "becomesTarget"
     | "youSacrifice" | "anySacrifice" | "namedLimit"
     | "upkeep" | "upkeepEach" | "endStep" | "endStepEach" | "beginCombat" | "allyLeaves" | "anyCreatureEnters" | "youCast" | "opponentCasts" | "anyCasts" | "oppCreatureDies" | "youAttack" | "hostDamagesPlayer" | "drawFifth" | "enchantedDies"
-    | "allyDies" | "allyCountersAdded" | "allyAttacks" | "allyTargeted" | "youDiscard" | "excessDamage" | "damaged" | "anyDies" | "teamworkTap" | "attacksAlone" | "selfTapped" | "hostTapped" | "allyTapped" | "tokenEnters" | "yourAbilityTargets" | "anyDrawSecond" | "allyDamaged" | "hostUpkeep" | "discardedByOpp" | "damageOpp";
+    | "allyDies" | "allyCountersAdded" | "allyAttacks" | "allyTargeted" | "youDiscard" | "excessDamage" | "damaged" | "anyDies" | "teamworkTap" | "attacksAlone" | "selfTapped" | "hostTapped" | "allyTapped" | "tokenEnters" | "yourAbilityTargets" | "anyDrawSecond" | "allyDamaged" | "hostUpkeep" | "discardedByOpp" | "damageOpp" | "oppLosesLife" | "oppDraws" | "oppCreatureEnters" | "allyDeathtouchHits" | "oppNoncombatDamage" | "allyDamagesPlayer" | "gateEnters" | "beginCombatEach" | "hostAttacks" | "allyDealsDamage" | "hostUntapped" | "oppDiscards";
   /** An "intervening if": the trigger only happens when this is true as the event occurs. */
   cond?: {
     lifeGainedAtLeast?: number;
@@ -508,6 +561,10 @@ export interface TriggeredAbility {
     namedAtLeast?: { name: string; n: number };
     /** "Whenever ~ attacks while you control a creature with power 4 or greater". */
     creaturePowerAtLeast?: number;
+    /** Formidable: the creatures you control have this much total power. */
+    totalPowerAtLeast?: number;
+    /** The creature with that power is not the source itself ("another creature"). */
+    creaturePowerOther?: boolean;
     /** "Whenever you attack with three or more creatures". */
     attackersAtLeast?: number;
   };
@@ -559,6 +616,24 @@ export interface TriggeredAbility {
   spellKeyword?: Keyword;
   /** "Whenever you cast a spell during an opponent's turn" / "your first spell during each opponent's turn". */
   opponentTurnOnly?: boolean;
+  /** "Whenever an opponent casts a blue or black spell": the spell has any of these colors. */
+  spellColorsAny?: string[];
+  /** "...a white or blue instant or sorcery spell". */
+  spellInstantSorcery?: boolean;
+  /** For "youCast": X is the mana value or the number of colors of the spell. */
+  xFrom?: "mv" | "colors";
+  /** The trigger works from the graveyard (Flamewake Phoenix, Gate Colossus). */
+  fromYard?: boolean;
+  /** For "dies": only if it had a counter of this kind (Nine-Lives Familiar). */
+  diedHadNamed?: string;
+  /** For "dies": only if the creature wasn't of this type (Infernal Vessel: "if it wasn't a Demon"). */
+  diedNotSubtype?: string;
+  /** For "allyDies": only if the creature was (true) or was not (false) attacking. */
+  diedAttacking?: boolean;
+  /** "Whenever you cast a spell of the chosen color". */
+  spellChosenColor?: boolean;
+  /** "Whenever you gain life for the first time each turn". */
+  firstLifeGain?: boolean;
   firstOnly?: boolean;
   /** Flurry: "whenever you cast your second spell each turn". */
   secondOnly?: boolean;
@@ -595,6 +670,14 @@ export interface LoyaltyAbility {
 export interface ActivatedAbility {
   /** "{T}, Sacrifice this land: ..." : the permanent is sacrificed as part of the cost. */
   sacrifice?: boolean;
+  /** Fishing Pole: the equipped creature is tapped as part of the cost (it must be untapped and able to use {T} abilities). */
+  tapHost?: boolean;
+  /** "Remove five +1/+1 counters from ~:" */
+  costCounters?: number;
+  /** "{3}, {T}, Return this land to its owner's hand: ..." */
+  returnSelfCost?: boolean;
+  /** "{T}, Exile this artifact: ...": the same, but it goes to exile and not the graveyard. */
+  exileCost?: boolean;
   /** "Activate only as a sorcery." */
   sorceryOnly?: boolean;
   /** "Activate only if you have at least 7 life more than your starting life total": the life needed. */
@@ -607,6 +690,8 @@ export interface ActivatedAbility {
   needLands?: number;
   /** "Tap two untapped creatures you control that share a creature type" as a cost. */
   tapTwoSharing?: boolean;
+  /** "Tap ten untapped Elves you control" (other than the permanent itself, which taps for {T}). */
+  tapSubtype?: { n: number; subtype: string };
   /** "Activate only if there are two or more creature cards in your graveyard." */
   needYardCreatures?: number;
   /** "Activate only if you control a creature with toughness 4 or greater." */
@@ -676,7 +761,35 @@ export interface ParsedCard {
   /** "Toxic 2": a player this deals combat damage to also gets that many poison counters. */
   toxic?: number;
   /** "Protection from red": colors, and whether it is also protected from artifacts. */
-  protection?: { colors: string[]; artifacts: boolean };
+  protection?: { colors: string[]; artifacts: boolean; everything?: boolean };
+  /** Banner of Kinship: it enters with a fellowship counter for each creature of the chosen type. */
+  fellowship?: boolean;
+  /** Loot: extra land plays each turn. */
+  extraLandDrops?: number;
+  /** Witness Protection: the enchanted creature loses all abilities and is a 1/1 green and white Citizen. */
+  witnessProtection?: boolean;
+  /** Sorcerous Spyglass: "as ~ enters, look at an opponent's hand, then choose any card name". */
+  chooseName?: boolean;
+  /** Sorcerous Spyglass: abilities of sources with the chosen name can't be activated. */
+  spyglass?: boolean;
+  /** Quilled Greatwurm: it can be cast from the graveyard by removing this many counters from creatures you control. */
+  graveyardCastCounters?: number;
+  /** Vizier of the Menagerie: you may cast creature spells from the top of your library, with mana of any type. */
+  castCreaturesFromTop?: boolean;
+  /** Leyline Axe: it can begin the game on the battlefield. */
+  beginsOnBattlefield?: boolean;
+  /** Harbinger of the Tides: it can be cast with flash if this much more is paid. */
+  flashPay?: number;
+  /** Pyromancer's Goggles: a red instant or sorcery spell paid for with mana from this is copied. */
+  copyRedSpellMana?: boolean;
+  /** Thousand-Year Storm: instants and sorceries you cast are copied once for each one you cast before them this turn. */
+  copyPerSpell?: boolean;
+  /** Blasphemous Edict: "you may pay {B} rather than pay this spell's mana cost if there are thirteen or more creatures on the battlefield". */
+  altCostIfCreatures?: { cost: string; n: number };
+  /** Progenitus, Darksteel Colossus: if it would be put into a graveyard, it is shuffled into its owner's library instead. */
+  shuffleInstead?: boolean;
+  /** Dryad Militant: instant and sorcery cards are exiled instead of going to a graveyard. */
+  exileSpellsInstead?: boolean;
   /** "Flashback {2}{R}": the cost to cast this from the graveyard. "Flashback—Sacrifice a Mountain": no mana ("{0}"), and a permanent of that type is sacrificed. */
   flashback?: string;
   flashbackSacrifice?: string;
@@ -803,7 +916,7 @@ export interface ParsedCard {
   /** "~ costs {1} less to cast if you control a Wizard" / "for each spell your opponents have cast this turn" / "if you control a creature with flying". */
   /** `ifTargetsTapped`: "if it targets a tapped permanent" (so the cost depends on the targets chosen). */
   /** `ifTargetsColor`: "if it targets a blue spell" (the color's letter). */
-  costReduction?: { n: number; ifYardCreatures?: number; ifTargetsAttacking?: boolean; ifControl?: string; ifFlyer?: boolean; perOpponentSpell?: boolean; per?: CountSpec; ifTargetsTapped?: boolean; ifTargetsColor?: string };
+  costReduction?: { n: number; ifLifeGained?: number; ifYardCreatures?: number; ifTargetsAttacking?: boolean; ifControl?: string; ifFlyer?: boolean; perOpponentSpell?: boolean; per?: CountSpec; ifTargetsTapped?: boolean; ifTargetsColor?: string };
   /** Permanents that make your spells cost less: "Goblin spells you cast cost {1} less", "during turns other than yours...". */
   /** "White spells you cast cost {W} more to cast" (the Leech cycle): one more mana of that color for each spell of that color the controller casts. */
   spellTax?: { color: string; extra: string }[];
@@ -844,6 +957,23 @@ export interface ParsedCard {
   /** "~ enters with two +1/+1 counters on it" (or X). */
   entersWithCounters?: number | "X";
   /** "This artifact enters with three wish counters on it" / "...if you cast it from your hand". */
+  /** "Enters with X +1/+1 counters, where X is the greatest power among other creatures you control." */
+  entersWithGreatestPower?: boolean;
+  /** Doubling Season. */
+  doubleTokens?: boolean;
+  doubleCounters?: boolean;
+  /** Omniscience: spells from the hand cost nothing. */
+  castFree?: boolean;
+  /** High Fae Trickster: spells can be cast as though they had flash. */
+  flashAll?: boolean;
+  /** Dictate of Kruphix: each player draws an extra card in their draw step. */
+  extraDraw?: boolean;
+  /** "~ is the chosen type in addition to its other types." */
+  isChosenType?: boolean;
+  /** "Creatures your opponents control enter tapped." */
+  oppCreaturesEnterTapped?: boolean;
+  /** Raid: "enters with a +1/+1 counter on it if you attacked this turn". */
+  entersWithCounterIfAttacked?: number;
   entersWithNamed?: { name: string; n: number; ifCast?: boolean };
   /** "Enchant creature": the card is an Aura and needs a target when it is cast. */
   aura?: TargetSpec;
@@ -930,9 +1060,11 @@ export interface PendingPick {
   /** The card the choice comes from. A resolving spell is already in the graveyard, so this is how both players see what is going on. */
   source?: { iid: string; name: string; defId?: string };
   prompt: string;
-  kind: "discard" | "bounceOwn" | "tapSome" | "topBottom" | "rummage" | "mayPay" | "tax" | "toggle" | "toHand" | "toGraveyard" | "searchLand" | "searchAny" | "revealToHand" | "arrange" | "scry" | "surveil" | "ward" | "crew" | "mode" | "color" | "creatureType" | "handExile" | "exileToPlay" | "handToField" | "mayCost" | "legend" | "look" | "playExile" | "keepTop" | "learn" | "discardDraw" | "fromYard" | "sacrificeOwn";
+  kind: "discard" | "bounceOwn" | "tapSome" | "topBottom" | "rummage" | "mayPay" | "tax" | "toggle" | "toHand" | "toGraveyard" | "ransom" | "payX" | "cardName" | "pileSplit" | "pileChoose" | "searchLand" | "searchAny" | "revealToHand" | "arrange" | "scry" | "surveil" | "ward" | "crew" | "mode" | "color" | "creatureType" | "handExile" | "exileToPlay" | "handToField" | "mayCost" | "legend" | "look" | "playExile" | "keepTop" | "learn" | "discardDraw" | "fromYard" | "sacrificeOwn";
   /** The cards to choose between (instance ids). They are shown to the chooser. */
   options: string[];
+  /** For "ransom": the life lost when the player declines to pay. */
+  lose?: number;
   /** The player may decline (eye spy, a search that finds nothing). */
   optional: boolean;
   /** Whose hand (discard) or library (look, search, arrange) the cards are in. */
@@ -960,6 +1092,8 @@ export interface PendingPick {
   conniver?: string;
   /** Color / creature type: the permanent that is choosing it as it enters. */
   colorFor?: string;
+  /** For the piles of Curator of Destinies: all the cards being split. */
+  pileAll?: string[];
   /** Search: the land enters tapped. */
   entersTapped?: boolean;
   /** Discard: one card of this type is enough ("discard two cards unless you discard an artifact card"). */
@@ -983,6 +1117,8 @@ export interface PendingPick {
   bottomIids?: string[];
   randomBottom?: boolean;
   restToGraveyard?: boolean;
+  /** For "playExile": the card can be played through the player's next turn. */
+  playNext?: boolean;
   /** MayPay / mayDiscard: the effects that happen if the cost is paid or a card is discarded. Tax: who draws if it isn't. */
   thenEffects?: Effect[];
   thenCtx?: RunContext;
@@ -1000,7 +1136,7 @@ export interface PendingPick {
   modeUnchosen?: boolean;
   modeItem?: Extract<StackItem, { kind: "ability" }>;
   /** From the graveyard: where the chosen card goes, and whether it gets a finality counter. */
-  yardTo?: "hand" | "battlefield" | "graveyard";
+  yardTo?: "hand" | "battlefield" | "graveyard" | "top" | "exile";
   finality?: boolean;
   /** Rummage: how many cards are drawn for the discarded one. */
   drawN?: number;

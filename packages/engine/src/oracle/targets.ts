@@ -107,8 +107,10 @@ function targetSpecBase(phrase: string): TargetSpec | null {
   // Devout Decree: "target creature or planeswalker that's black or red"
   const walkerColors = /^target creature or planeswalker that's (white|blue|black|red|green) or (white|blue|black|red|green)$/.exec(phrase);
   if (walkerColors) return { kind: "permanent", types: ["creature", "planeswalker"], colorsAny: [COLOR_OF[walkerColors[1]], COLOR_OF[walkerColors[2]]], label: phrase };
+  if (phrase === "target creature card from a graveyard that was put there this turn") return { kind: "graveyardCreature", thisTurn: true, label: phrase };
   if (phrase === "target card from a graveyard") return { kind: "graveyardCard", label: phrase };
   if (phrase === "target land") return { kind: "land", label: phrase };
+  if (phrase === "target nonbasic land an opponent controls") return { kind: "land", nonbasic: true, controller: "opponent", label: phrase };
   if (phrase === "target artifact or land") return { kind: "artifactOrLand", label: phrase };
   if (phrase === "target artifact") return { kind: "artifact", label: phrase };
   if (phrase === "target noncreature artifact") return { kind: "artifact", noncreature: true, label: phrase };

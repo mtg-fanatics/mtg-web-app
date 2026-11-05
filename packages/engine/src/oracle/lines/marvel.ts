@@ -178,7 +178,7 @@ export function readCounteredThisTurn(line: string, out: ParsedCard): boolean {
 /** "Attacking creature tokens you control have first strike." / "Creatures you control with +1/+1 counters on them have trample." */
 export function readTokenAndCounterLords(line: string, out: ParsedCard): boolean {
   const tokens = /^attacking creature tokens you control have ([a-z ,]+)$/.exec(line);
-  const counters = /^creatures you control with \+1\/\+1 counters on them have ([a-z ,]+)$/.exec(line);
+  const counters = /^(?:creatures you control with \+1\/\+1 counters on them have|each creature you control with a \+1\/\+1 counter on it has) ([a-z ,]+)$/.exec(line);
   const m = tokens ?? counters;
   const keywords = m ? keywordList(m[1]) : null;
   if (!m || !keywords) return false;

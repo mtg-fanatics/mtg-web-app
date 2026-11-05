@@ -188,6 +188,26 @@ export function parseCard(def: CardDef): ParsedCard {
         result.costReduction = { n: Number(reduction[1]), ifControl: reduction[2] };
         return false;
       }
+      const altCost = /^you may pay ((?:\{[^}]+\})+) rather than pay (?:this spell's|~'s) mana cost if there are (thirteen|\d+) or more creatures on the battlefield\.?$/.exec(line);
+      if (altCost) {
+        result.altCostIfCreatures = { cost: altCost[1].toUpperCase(), n: toNumber(altCost[2]) ?? 13 };
+        return false;
+      }
+      const flashFor = /^you may cast ~ as though it had flash if you pay \{(\d+)\} more to cast it\.?$/.exec(line);
+      if (flashFor) {
+        result.flashPay = Number(flashFor[1]);
+        return false;
+      }
+      const affinitySpell = /^affinity for ([a-z]+)$/.exec(line);
+      if (affinitySpell) {
+        result.affinity = affinitySpell[1];
+        return false;
+      }
+      const ifLife = /^~ costs \{(\d+)\} less to cast if you've gained (\d+) or more life this turn\.?$/.exec(line);
+      if (ifLife) {
+        result.costReduction = { n: Number(ifLife[1]), ifLifeGained: Number(ifLife[2]) };
+        return false;
+      }
       const perCard = /^~ costs \{(\d+)\} less to cast for each (instant and sorcery card in your graveyard)\.?$/.exec(line);
       if (perCard) {
         result.costReduction = { n: Number(perCard[1]), per: parseCount(perCard[2].replace("card", "cards"))! };

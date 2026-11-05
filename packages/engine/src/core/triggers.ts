@@ -3,6 +3,7 @@ import { getCard } from "../cards.js";
 import type { LastKnown, StackItem, TargetChoice, TriggeredAbility } from "../effects.js";
 import { parseCard } from "../oracle.js";
 import { OPPONENT } from "../types.js";
+import { isBasicLand } from "../deck.js";
 import type { CardDef, CardInstance, GameState, Permanent, PlayerId } from "../types.js";
 import {
   artifactCount,
@@ -18,9 +19,10 @@ import {
   staticEffectsOn,
   subtypesOf,
   toughnessOf,
+  isWitnessed,
 } from "./permanents.js";
 import { ignoresHexproof, legalTargets } from "./targets.js";
-import { isToken, putCounters } from "./zones.js";
+import { isToken, makeToken, putCounters } from "./zones.js";
 
 // Entering the battlefield and triggered abilities: which triggers fire, and putting them in the queue.
 
@@ -33,7 +35,8 @@ function triggerCondHolds(state: GameState, controller: PlayerId, trigger: Trigg
   if (c?.attackedThisTurn && !p.attackedThisTurn) return false;
   if (c?.controlsOther && !p.battlefield.some((perm) => perm.card.iid !== sourceIid && subtypesOf(state, perm).includes(c.controlsOther!))) return false;
   if (c?.namedAtLeast && (findPermanentOrNull(state, sourceIid ?? "")?.perm.named?.[c.namedAtLeast.name] ?? 0) < c.namedAtLeast.n) return false;
-  if (c?.creaturePowerAtLeast !== undefined && !p.battlefield.some((perm) => isCreature(state, perm) && powerOf(state, perm) >= c.creaturePowerAtLeast!)) return false;
+  if (c?.totalPowerAtLeast !== undefined && p.battlefield.reduce((n, perm) => n + (isCreature(state, perm) ? Math.max(0, powerOf(state, perm)) : 0), 0) < c.totalPowerAtLeast) return false;
+  if (c?.creaturePowerAtLeast !== undefined && !p.battlefield.some((perm) => isCreature(state, perm) && (!c.creaturePowerOther || perm.card.iid !== sourceIid) && powerOf(state, perm) >= c.creaturePowerAtLeast!)) return false;
   if (c?.attackersAtLeast !== undefined && (extra?.attackers ?? []).length < c.attackersAtLeast) return false;
   if (c?.creaturesAtLeast !== undefined && p.battlefield.filter((perm) => isCreature(state, perm)).length < c.creaturesAtLeast) return false;
   if (c?.lifeGainedAtLeast !== undefined && (p.lifeGainedThisTurn ?? 0) < c.lifeGainedAtLeast) return false;
@@ -141,6 +144,7 @@ export function creatureMoved(state: GameState, perm: Permanent, controller: Pla
   if (kind === "enters") {
     for (const owner of Object.values(state.players)) {
       for (const other of owner.battlefield) if (other.card.iid !== perm.card.iid) queueTriggers(state, other.card, owner.id, "anyCreatureEnters");
+      if (owner.id !== controller) for (const other of owner.battlefield) queueTriggers(state, other.card, owner.id, "oppCreatureEnters");
     }
   } else {
     for (const other of state.players[controller].battlefield) if (other.card.iid !== perm.card.iid) queueTriggers(state, other.card, controller, "allyLeaves");
@@ -152,7 +156,7 @@ export function spellCast(state: GameState, player: PlayerId, def: CardDef, targ
   const me = state.players[player];
   // "Whenever you cast a noncreature spell" ("...a noncreature or Dragon spell" counts Dragon creature spells too).
   const spellTypes = ((def.typeLine ?? "").split(" // ")[0].split("—")[1] ?? "").toLowerCase().split(/\s+/);
-  for (const perm of me.battlefield) queueTriggers(state, perm.card, player, "noncreatureSpell", def.type === "creature" ? { subtypes: spellTypes } : undefined);
+  for (const perm of me.battlefield) queueTriggers(state, perm.card, player, "noncreatureSpell", { spellMV: def.cost, ...(def.type === "creature" ? { subtypes: spellTypes } : {}) });
   if (def.type === "instant" || def.type === "sorcery") for (const perm of me.battlefield) queueTriggers(state, perm.card, player, "instantOrSorcery", { count: manaSpent });
   me.spellsCastThisTurn = (me.spellsCastThisTurn ?? 0) + 1;
   const aimedAt = (iid: string) => findPermanentOrNull(state, iid);
@@ -160,6 +164,8 @@ export function spellCast(state: GameState, player: PlayerId, def: CardDef, targ
   for (const perm of me.battlefield) {
     queueTriggers(state, perm.card, player, "youCast", {
       castCount: me.spellsCastThisTurn,
+      spellColorCount: (def.colors ?? []).length,
+      spellMV: def.cost,
       spellColors: def.colors ?? [],
       spellSubtypes: spellTypes,
       spellKicked: kicked,
@@ -170,7 +176,9 @@ export function spellCast(state: GameState, player: PlayerId, def: CardDef, targ
       targetedIids: targets.flatMap((t) => (t.kind === "permanent" ? [t.iid] : [])),
     });
   }
-  for (const perm of state.players[OPPONENT[player]].battlefield) queueTriggers(state, perm.card, OPPONENT[player], "opponentCasts");
+  for (const perm of state.players[OPPONENT[player]].battlefield) queueTriggers(state, perm.card, OPPONENT[player], "opponentCasts", { spellColors: def.colors ?? [], spellInstantSorcery: def.type === "instant" || def.type === "sorcery" });
+  // Kaito's emblem: whenever a player casts a spell, its owner creates a 2/1 Ninja
+  for (const owner of Object.values(state.players)) if (owner.ninjaEmblem) makeToken(state, { name: "Ninja", type: "creature", power: 2, toughness: 1, colors: ["U"], subtypes: "Ninja", keywords: [], text: "" }, owner.id, []);
   // "Whenever a player casts a red spell"
   for (const watcher of Object.values(state.players)) for (const perm of watcher.battlefield) queueTriggers(state, perm.card, watcher.id, "anyCasts", { spellColors: def.colors ?? [] });
 }
@@ -192,7 +200,7 @@ function claimOncePerTurn(perm: Permanent | undefined, n: number): boolean {
  * Queues the card's triggered abilities for `event`. They go on the stack when the game next settles.
  * `subtypes`: the creature types of what the event is about (a creature spell cast, a creature that died or got counters); `self`: it is this card.
  */
-export function queueTriggers(state: GameState, card: CardInstance, controller: PlayerId, event: TriggeredAbility["event"], extra?: { firstTap?: boolean; targetedIids?: string[]; targetsOwnCreature?: boolean; targetsCreature?: boolean; spellColors?: string[]; spellSubtypes?: string[]; spellKicked?: boolean; spellCreature?: boolean; spellKeywords?: string[]; castCount?: number; other?: string; onlyOther?: boolean; byOpponent?: boolean; bySpell?: boolean; attackers?: string[]; subtypes?: string[]; self?: boolean; died?: LastKnown; count?: number; token?: boolean }): void {
+export function queueTriggers(state: GameState, card: CardInstance, controller: PlayerId, event: TriggeredAbility["event"], extra?: { firstTap?: boolean; targetedIids?: string[]; targetsOwnCreature?: boolean; targetsCreature?: boolean; spellColors?: string[]; spellInstantSorcery?: boolean; spellSubtypes?: string[]; spellKicked?: boolean; spellCreature?: boolean; spellKeywords?: string[]; castCount?: number; other?: string; onlyOther?: boolean; byOpponent?: boolean; bySpell?: boolean; attackers?: string[]; subtypes?: string[]; self?: boolean; died?: LastKnown; count?: number; spellColorCount?: number; spellMV?: number; token?: boolean; wasAttacking?: boolean; fromYard?: boolean }): void {
   const def = getCard(state, card.defId);
   const triggers = parseCard(def).triggers;
   for (let n = 0; n < triggers.length; n++) {
@@ -202,12 +210,22 @@ export function queueTriggers(state: GameState, card: CardInstance, controller: 
     if (event === "noncreatureSpell" && extra?.subtypes && !(trigger.orSpellSubtype && extra.subtypes.includes(trigger.orSpellSubtype))) continue;
     // "Whenever you cast a red spell" / "a Lesson spell"
     if (trigger.spellColor && !(extra?.spellColors ?? []).includes(trigger.spellColor)) continue;
+    if (trigger.spellColorsAny && !trigger.spellColorsAny.some((c) => (extra?.spellColors ?? []).includes(c))) continue;
+    if (trigger.spellChosenColor && !((extra?.spellColors ?? []) as string[]).includes(findPermanentOrNull(state, card.iid)?.perm.chosenColor ?? "")) continue;
+    if (trigger.spellInstantSorcery && !extra?.spellInstantSorcery) continue;
+    if (trigger.firstLifeGain && (state.players[controller].lifeGainEventsThisTurn ?? 0) !== 1) continue;
     if (trigger.spellSubtype && !(extra?.spellSubtypes ?? []).includes(trigger.spellSubtype)) continue;
     if (trigger.spellKicked && !extra?.spellKicked) continue; // "whenever you cast a kicked spell"
     if (trigger.spellCreature && !extra?.spellCreature) continue; // "whenever you cast a creature spell (with infect)"
     if (trigger.spellKeyword && !(extra?.spellKeywords ?? []).some((k) => k.toLowerCase() === trigger.spellKeyword)) continue;
     if ((event === "anyDies" || event === "allyDies") && trigger.nontoken && extra?.token) continue; // "another nontoken creature"
     if (trigger.tokenOnly && !extra?.token) continue; // "whenever you sacrifice a token"
+    if (trigger.diedAttacking !== undefined && event === "allyDies" && trigger.diedAttacking !== !!extra?.wasAttacking) continue; // Garna
+    const onBoard = findPermanentOrNull(state, card.iid)?.perm;
+    if (onBoard && isWitnessed(state, onBoard)) continue; // Witness Protection: no abilities
+    if (!!trigger.fromYard !== !!extra?.fromYard) continue; // a trigger of a card in the graveyard fires only from there
+    if (trigger.diedHadNamed && !((extra?.died?.named?.[trigger.diedHadNamed] ?? 0) > 0)) continue;
+    if (trigger.diedNotSubtype && extra?.died?.subtypes?.includes(trigger.diedNotSubtype)) continue;
     if (trigger.ifNoCounters && (extra?.died?.counters ?? 0) > 0) continue; // undying
     if (trigger.ifNoMinusCounters && (extra?.died?.minusCounters ?? 0) > 0) continue; // persist
     if (!levelReached(state, card.iid, trigger.level)) continue;
@@ -268,7 +286,7 @@ export function queueTriggers(state: GameState, card: CardInstance, controller: 
         text: trigger.text,
         ...(extra?.other ? { other: extra.other } : {}),
         ...(died ? { died } : {}),
-        ...(extra?.count !== undefined ? { x: extra.count } : event === "enters" && !trigger.xTargets && findPermanentOrNull(state, card.iid)?.perm.xPaid ? { x: findPermanentOrNull(state, card.iid)!.perm.xPaid } : {}), // ("When this enters, draw X cards": the X that was paid)
+        ...(trigger.xFrom ? { x: (trigger.xFrom === "mv" ? extra?.spellMV : extra?.spellColorCount) ?? 0 } : extra?.count !== undefined ? { x: extra.count } : event === "enters" && !trigger.xTargets && findPermanentOrNull(state, card.iid)?.perm.xPaid ? { x: findPermanentOrNull(state, card.iid)!.perm.xPaid } : {}), // ("When this enters, draw X cards": the X that was paid)
       },
     });
   }
@@ -300,6 +318,8 @@ export function cardsDiscarded(state: GameState, player: PlayerId, iids: string[
   if (iids.length === 0) return;
   // "When a spell or ability an opponent controls causes you to discard ~" (Guerrilla Tactics): the discarded card itself triggers
   if (byOpponent) for (const card of state.players[player].graveyard.filter((c) => iids.includes(c.iid))) queueTriggers(state, card, player, "discardedByOpp");
+  // Tinybones: the opponent's permanents see each card
+  for (const iid of iids) for (const watcher of state.players[OPPONENT[player]].battlefield) queueTriggers(state, watcher.card, OPPONENT[player], "oppDiscards", { other: iid });
   events.push({ type: "cardsDiscarded", player, iids });
   state.players[player].discardedThisTurn = (state.players[player].discardedThisTurn ?? 0) + iids.length;
   for (const perm of state.players[player].battlefield) queueTriggers(state, perm.card, player, "youDiscard", { count: iids.length });
@@ -310,6 +330,11 @@ export function askAsEnters(state: GameState, perm: Permanent, controller: Playe
   const parsed = parseCard(getCard(state, perm.card.defId));
   if (parsed.shock !== undefined && !state.pendingPick) return askShock(state, perm, controller, parsed.shock);
   if (parsed.chooseType && !state.pendingPick) return askCreatureType(state, perm, controller);
+  if (parsed.chooseName && !state.pendingPick) {
+    const names = [...new Set(Object.values(state.cards).filter((d) => d.type !== "land" || !isBasicLand(d)).map((d) => d.name))].sort();
+    state.pendingPick = { player: controller, prompt: `${nameOf(state, perm)}: choose a card name`, kind: "cardName", options: names, optional: false, owner: controller, remaining: 1, ordered: [], colorFor: perm.card.iid, source: { iid: perm.card.iid, name: nameOf(state, perm), defId: perm.card.defId } };
+    return;
+  }
   const choose = parsed.chooseColor;
   if (!choose || state.pendingPick) return;
   const options = (["W", "U", "B", "R", "G"] as const).filter((c) => c !== choose.except);
@@ -353,6 +378,13 @@ function askShock(state: GameState, perm: Permanent, controller: PlayerId, life:
   };
 }
 
+/** Banner of Kinship: a fellowship counter for each creature of the chosen type, once the type is chosen. */
+export function fellowshipCounters(state: GameState, perm: Permanent, controller: PlayerId): void {
+  if (!parseCard(getCard(state, perm.card.defId)).fellowship || !perm.chosenType) return;
+  const n = state.players[controller].battlefield.filter((p) => isCreature(state, p) && subtypesOf(state, p).includes(perm.chosenType!)).length;
+  perm.named = { ...perm.named, fellowship: n };
+}
+
 /**
  * "As this land enters, choose a creature type": the types among the player's own cards, most common first
  * (choosing a type none of their cards have would do nothing).
@@ -369,6 +401,7 @@ function askCreatureType(state: GameState, perm: Permanent, controller: PlayerId
   const options = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t]) => t);
   if (options.length <= 1) {
     perm.chosenType = options[0] ?? "human";
+    fellowshipCounters(state, perm, controller);
     return;
   }
   state.pendingPick = {
@@ -389,6 +422,9 @@ function askCreatureType(state: GameState, perm: Permanent, controller: PlayerId
 export function landEntered(state: GameState, player: PlayerId): void {
   state.players[player].landsEnteredThisTurn = (state.players[player].landsEnteredThisTurn ?? 0) + 1;
   for (const perm of state.players[player].battlefield) queueTriggers(state, perm.card, player, "landfall");
+  // Gate Colossus: a Gate entering lets it jump from the graveyard to the top of the library
+  const entered = state.players[player].battlefield[state.players[player].battlefield.length - 1];
+  if (entered && (getCard(state, entered.card.defId).typeLine ?? "").includes("Gate")) for (const card of state.players[player].graveyard) queueTriggers(state, card, player, "gateEnters", { fromYard: true });
 }
 
 /** Ward: after a spell or ability is put on the stack, each opposing permanent with ward that it targets gets a trigger. */

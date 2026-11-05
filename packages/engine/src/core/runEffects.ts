@@ -1,3 +1,4 @@
+import { getCard } from "../cards.js";
 import type { GameEvent } from "../actions.js";
 import type { Amount, Effect, PendingPick, RunContext } from "../effects.js";
 import type { GameState } from "../types.js";
@@ -43,6 +44,12 @@ export function runEffects(state: GameState, effects: Effect[], ctx: RunContext,
           const p = t?.kind === "permanent" ? chosen(t.iid) : undefined;
           return p && (!c.notSelf || p.card.iid !== ctx.sourceId) && subtypesOf(state, p).includes(c.subtype) ? c.yes : c.no;
         })()
+      : c.kind === "myLife" ? Math.max(0, state.players[ctx.controller].life)
+      : c.kind === "otherNamedSelf" ? (() => {
+          const name = self ? getCard(state, self.card.defId).name : "";
+          return state.players[ctx.controller].battlefield.filter((p) => p !== self && getCard(state, p.card.defId).name === name).length;
+        })()
+      : c.kind === "sacToughness" ? (state.lastSacToughness ?? 0)
       : c.kind === "excessDamage" ? (state.lastExcess ?? 0)
       : c.kind === "targetPower" ? (() => {
           const t = ctx.targets[c.i];

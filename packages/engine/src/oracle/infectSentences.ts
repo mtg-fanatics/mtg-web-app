@@ -19,4 +19,12 @@ const edict: SentenceParser = (s, ctx) => {
   return who && isPlayerRef(who, ctx) ? [{ type: "edict", who, types }] : null;
 };
 
-export const INFECT_SENTENCES: SentenceParser[] = [proliferate, edict];
+/** Blasphemous Edict, Liliana: "Each player sacrifices thirteen creatures of their choice." */
+const edictMany: SentenceParser = (s, ctx) => {
+  const m = /^(each player|each opponent) sacrifices (two|three|thirteen|\d+) (creatures) of their choice$/.exec(s);
+  const who = m ? refFor(m[1], ctx) : null;
+  const count = m ? ({ two: 2, three: 3, thirteen: 13 } as Record<string, number>)[m[2]] ?? Number(m[2]) : 0;
+  return m && who && isPlayerRef(who, ctx) ? [{ type: "edict", who, types: ["creature"], count }] : null;
+};
+
+export const INFECT_SENTENCES: SentenceParser[] = [proliferate, edict, edictMany];

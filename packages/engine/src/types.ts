@@ -125,6 +125,12 @@ export interface Permanent {
   crewedBy?: string[];
   /** "Prevent the next 3 damage that would be dealt to it this turn": what is left of the shield. */
   preventShield?: number;
+  /** "Prevent all combat damage that would be dealt to it this turn." */
+  noCombatDamage?: boolean;
+  /** Fake Your Own Death: until end of turn, when it dies it returns tapped and the player who cast the spell gets a Treasure. */
+  returnOnDeath?: PlayerId;
+  /** Soulstone Sanctuary: it became a creature for good. */
+  animated?: boolean;
   /** Regeneration shields (until end of turn): the next time it would be destroyed it is tapped and healed instead. */
   regenShield?: number;
   /** Hit by something that says it "can't be regenerated" this turn. */
@@ -133,6 +139,8 @@ export interface Permanent {
   chosenColor?: "W" | "U" | "B" | "R" | "G";
   /** "As this land enters, choose a creature type": the type that was chosen (lowercase). */
   chosenType?: string;
+  /** Sorcerous Spyglass: the card name it names. */
+  chosenName?: string;
   /** Control was taken "until end of turn": the player it goes back to. */
   controlReturn?: PlayerId;
   /** Control was taken "for as long as you control" `source`: it goes back to `owner` when that ends. */
@@ -161,6 +169,8 @@ export interface Permanent {
   subtypesOverride?: string[];
   /** Indexes of its "activate only once" abilities that were used. */
   usedOnce?: number[];
+  /** Venom Connoisseur: how many times its ability resolved this turn. */
+  venomCount?: number;
   /** Until end of turn: "When this creature dies, return it to the battlefield tapped under its owner's control with a +1/+1 counter on it." */
   diesReturn?: boolean;
   /** Until end of turn: "whenever that creature deals combat damage to a player this turn, you draw a card": who draws, and the card that said so. */
@@ -212,6 +222,8 @@ export interface FloatingMana {
   phase: Phase;
   /** "This mana lasts until end of combat." */
   combat?: boolean;
+  /** Savage Ventmaw: it isn't lost as steps and phases end this turn. */
+  allTurn?: boolean;
 }
 
 export interface PlayerState {
@@ -230,12 +242,24 @@ export interface PlayerState {
   spellsCastThisTurn?: number;
   /** Life lost this turn ("if an opponent lost life this turn"), and whether the player attacked (raid). */
   lifeLostThisTurn?: number;
+  /** Kaito's emblem. */
+  ninjaEmblem?: boolean;
+  /** Teach by Example: the next instant or sorcery spell cast this turn is copied. */
+  copyNextSpell?: boolean;
+  /** Sphinx of Forgotten Lore: instants and sorceries in the graveyard that have flashback until end of turn. */
+  grantedFlashback?: string[];
+  /** Finale of Revelation: no maximum hand size. */
+  noHandLimit?: boolean;
+  /** Instants and sorceries cast this turn (Thousand-Year Storm). */
+  instSorcCastThisTurn?: number;
+  /** How many separate times the player gained life this turn. */
+  lifeGainEventsThisTurn?: number;
   attackedThisTurn?: boolean;
   /** Cards in exile that may be played: "During any turn you attacked with ~, you may play that card", or a warped card from turn `fromTurn` on. */
   /** `tax`: a spell cast this way costs that much more; `tappedLand`: a land played this way enters tapped (Lightstall Inquisitor). */
   /** `throughTurn`: playable up to and including the end of that turn ("until the end of your next turn"). `always` + `payGeneric`: airbend, playable while it stays exiled, for that much generic mana instead of its cost. */
   /** `sorcery`: cast only as a sorcery (a plotted card, which is free: `payGeneric` 0). */
-  mayPlay?: { iid: string; source: string; fromTurn?: number; untilTurn?: number; throughTurn?: number; always?: boolean; payGeneric?: number; tax?: number; tappedLand?: boolean; sorcery?: boolean }[];
+  mayPlay?: { iid: string; source: string; fromTurn?: number; untilTurn?: number; throughTurn?: number; always?: boolean; payGeneric?: number; tax?: number; tappedLand?: boolean; sorcery?: boolean; /** Tinybones: only on your turn and while this permanent is on the battlefield; any type of mana pays for it. */ via?: string }[];
   /** Creature cards in the graveyard that may be cast from there until end of turn. */
   yardCastable?: string[];
   /** "If a source you control would deal damage to an opponent this turn, it deals double that damage instead." */
@@ -285,6 +309,12 @@ export interface GameState {
   cards: Record<string, CardDef>;
   /** The excess of the last damage dealt to a creature (damage beyond what it took to destroy it): "you gain life equal to the excess damage dealt this way". */
   lastExcess?: number;
+  /** The toughness of the creature that was sacrificed last ("gain life equal to its toughness"). */
+  lastSacToughness?: number;
+  /** Creature cards put into a graveyard from the battlefield this turn (Abyssal Harvester). */
+  yardedThisTurn?: string[];
+  /** Cards exiled until the next end step (Charming Prince, Kykar): they come back then. */
+  delayedReturns?: { iid: string; controller: PlayerId; named?: Record<string, number> }[];
   players: Record<PlayerId, PlayerState>;
   /** The player who takes the first turn (rule 103.1). */
   startingPlayer: PlayerId;
