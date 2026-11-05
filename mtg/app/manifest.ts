@@ -20,5 +20,10 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
       { src: "/inkfall-seal.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
     ],
+    // for the richer install sheet: a duel held upright and held sideways
+    screenshots: [
+      { src: "/screenshots/duel-portrait.webp", sizes: "780x1688", type: "image/webp", form_factor: "narrow", label: "A duel, held upright" },
+      { src: "/screenshots/duel-landscape.webp", sizes: "1688x780", type: "image/webp", form_factor: "wide", label: "A duel, held sideways" },
+    ],
   };
 }

@@ -60,6 +60,8 @@ export const metadata: Metadata = {
   },
   // iPhone: the Home Screen app. The status bar is see-through over the dark top bar (the bar leaves room for it: see the safe-area rules in globals.css).
   appleWebApp: { capable: true, title: "Inkfall", statusBarStyle: "black-translucent" },
+  // (Next writes mobile-web-app-capable; iPhone Safari before iOS 17 only reads the apple- name, so both are there)
+  other: { "apple-mobile-web-app-capable": "yes" },
   formatDetection: { telephone: false },
 };
 
