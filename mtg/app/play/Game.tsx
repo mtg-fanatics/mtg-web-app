@@ -522,7 +522,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
     if (!opts.pointless && action.type === "castSpell" && !state.combat) {
       const card = state.players[as].hand.find((c) => c.iid === action.iid);
       const spell = card ? parseCard(state.cards[card.defId]).spell : undefined;
-      if (card && spell && !spell.modal && spell.effects.length > 0 && spell.effects.every((e) => "what" in e && e.what?.t === "attackingCreatures")) {
+      if (card && spell && !spell.modal && spell.effects.length > 0 && spell.effects.every((e) => "what" in e && !Array.isArray(e.what) && e.what?.t === "attackingCreatures")) {
         setLifeConfirm({
           text: `No creature is attacking right now, so ${state.cards[card.defId].name} would do nothing. Cast it during combat, after attackers are declared.`,
           options: [{ label: "Cast it anyway", go: () => act(action, as, { ...opts, pointless: true }) }],
