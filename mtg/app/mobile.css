@@ -210,3 +210,13 @@ html[data-duel] .update-toast { bottom: auto; top: calc(var(--bar-h) + 0.5rem); 
 @media (max-width: 767px) {
   .text-\[10px\], .text-\[11px\], [class*="text-[10px]"], [class*="text-[11px]"] { font-size: 12px !important; }
 }
+
+/* the second row of the library bar (the switch, the count and the card types) is in the filter sheet on a phone; the editor's Save is in the progress bar */
+@media (max-width: 767px), (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .lib-bar .switch, .lib-bar .count-chip, .lib-bar .icon-seg { display: none !important; }
+  .lib-bar .lib-filter-btn { display: inline-flex; align-items: center; min-height: 48px; }
+  .lib-bar .page-title { font-size: 1.25rem; }
+  .lib-bar { padding-block: 0.4rem; }
+  .lib-bar .tool-field { min-width: 0; flex: 1 1 8rem; }
+}
+@media (max-width: 1023px) { .deck-save-top { display: none !important; } }

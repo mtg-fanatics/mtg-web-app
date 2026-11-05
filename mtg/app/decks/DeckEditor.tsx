@@ -131,7 +131,7 @@ export default function DeckEditor({ deckId }: { deckId?: string }) {
         <button
           onClick={save}
           disabled={saving || !dirty}
-          className="btn-gold"
+          className="btn-gold deck-save-top"
         >
           {saving ? "Saving…" : "Save deck"}
         </button>
