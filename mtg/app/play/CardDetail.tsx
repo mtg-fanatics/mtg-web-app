@@ -144,7 +144,7 @@ export function Lightbox({
   }, [onClose, onPrev, onNext]);
 
   const arrow =
-    "absolute top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-4xl leading-none text-zinc-900 shadow-lg hover:bg-white";
+    `absolute ${actions ? "top-[36%]" : "top-1/2"} flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-4xl leading-none text-zinc-900 shadow-lg hover:bg-white`; // (with buttons under the card the arrows sit over the card, clear of them)
 
   return (
     <div

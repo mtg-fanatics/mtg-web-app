@@ -208,8 +208,7 @@ export default function CardBrowser() {
         <Lightbox
           def={zoomed}
           onClose={() => setZoomedIdx(null)}
-          onPrev={() => step(-1)}
-          onNext={() => step(1)}
+          {...(shown.length > 1 ? { onPrev: () => step(-1), onNext: () => step(1) } : {})}
           caption={`Card ${zoomedIdx! + 1} of ${shown.length} on show`}
           actions={<AddToDeck key={zoomed.id} def={zoomed} />}
         />
