@@ -83,6 +83,7 @@ import type { CastPlan } from "./castInfo";
 import { AttackTargetsPanel, DamagePanel } from "./CombatPanels";
 import CommandBar, { primaryAction } from "./CommandBar";
 import HandRow from "./HandRow";
+import ChatFloat from "./ChatFloat";
 import { ManaText } from "./ManaSymbols";
 import { KeepRandomDecks } from "./SaveDeck";
 import type { PlayedDeck } from "./SaveDeck";
@@ -233,7 +234,6 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   const background = useBattlefieldBackground(); // the picture behind the battlefield
   const look = useAppearance(online ? (net.game?.looks ?? null) : null); // each player's card sleeves and playmat (online: what each chose before the match)
   const [menuOpen, setMenuOpen] = useState(false); // phones: the side panels (chat, log, looks) are a menu over the board
-  const [chatSeen, setChatSeen] = useState(0); // how many chat lines were there when the menu was last open
   // The installed app: the page knows a duel is on (so Back opens the menu instead of leaving, and the top bar can give way), and the screen stays awake until it ends.
   useEffect(() => {
     document.documentElement.dataset.duel = "1";
@@ -274,10 +274,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   const [assign, setAssign] = useState<Record<string, Record<string, number>>>({}); // attacker -> blocker -> damage
   const [localChat, setChat] = useState<ChatMessage[]>([]);
   const chat: ChatMessage[] = online ? net.chat.map((m) => ({ id: m.id, from: m.from, text: m.text })) : localChat;
-  useEffect(() => {
-    if (menuOpen) setChatSeen(chat.length);
-  }, [menuOpen, chat.length]);
-  const unreadChat = menuOpen ? 0 : chat.slice(chatSeen).filter((m) => m.from !== actor).length; // (lines from the other player that the menu has not shown yet)
+  const sendChat = (text: string) => (online ? netSend("chat", { text }) : setChat((c) => [...c, { id: c.length, from: actor, text }]));
   const [zoomed, setZoomed] = useState<CardDef | null>(null); // card shown large in the popup
   const [resigning, setResigning] = useState<PlayerId | null>(null); // player being asked to confirm a resignation
   // A spell or ability being set up: its targets are picked one by one, then `build` makes the action.
@@ -399,6 +396,37 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
     setHandPick([]);
     setAssign({});
   }
+
+  useWakeLock(!!game && !game.winner); // (before the early returns below: a hook must run on every render)
+
+  // A phone: the sheet of questions (blocks, targets, the stack) sits just above the turn strip, never over it, because the strip holds the big button that answers the
+  // question (Confirm the blocks, Pass). Where that is depends on the screen, so it is measured and handed to the stylesheet as --sheet-bottom.
+  const playing = !!game;
+  useEffect(() => {
+    const root = document.querySelector<HTMLElement>(".duel-main");
+    if (!playing || !root) return;
+    const set = () => {
+      const strip = root.querySelector<HTMLElement>(".duel-center .ledger-strip");
+      if (strip) root.style.setProperty("--sheet-bottom", `${Math.max(0, Math.round(window.innerHeight - strip.getBoundingClientRect().top + 6))}px`);
+    };
+    const resize = new ResizeObserver(set);
+    const watch = () => {
+      resize.disconnect();
+      resize.observe(root);
+      root.querySelectorAll(".duel-center, .duel-center > *, .duel-center .hand-tray").forEach((el) => resize.observe(el));
+      set();
+    };
+    const mutate = new MutationObserver(watch);
+    const center = root.querySelector(".duel-center");
+    if (center) mutate.observe(center, { childList: true });
+    window.addEventListener("resize", set);
+    watch();
+    return () => {
+      resize.disconnect();
+      mutate.disconnect();
+      window.removeEventListener("resize", set);
+    };
+  }, [playing]);
 
   if (online && !game) {
     return (
@@ -530,7 +558,6 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   // Space passes priority (go on / resolve the top of the chain), only when the Pass or Resolve button is there for this player to press.
   const canSpacePass = !watching && !state.winner && state.priority?.holder === actor && !state.pendingPick && !state.pendingChoice;
   spacePass.current = canSpacePass ? () => void act({ type: "passPriority" }) : null;
-  useWakeLock(!state.winner);
 
   /**
    * Shows the result of an action: cards that died fly to the graveyard first, then the new state appears and
@@ -952,11 +979,13 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
         )}
         <PlayedThisTurn items={history.filter((h) => h.turn === state.turn)} state={state} onZoom={(defId) => setZoomed(state.cards[defId])} />
         {!watching && (
+          <div className="max-lg:hidden">
           <ChatPanel
             messages={chat}
             as={actor}
-            onSend={(text) => (online ? netSend("chat", { text }) : setChat((c) => [...c, { id: c.length, from: actor, text }]))}
+            onSend={sendChat}
           />
+          </div>
         )}
         <LogPanel lines={log} cards={state.cards} onPreview={(d, el) => (showPreview(d, el), inspect(d))} onUnpreview={() => setPreview(null)} onZoom={setZoomed} />
         <div className="lg:hidden">
@@ -976,10 +1005,9 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
               <KeepRandomDecks className="mt-2" decks={{ [actor]: playedDecks[actor] }} saved={savedDecks} onSaved={keepDeck} label={() => "Save my random deck"} />
             </div>
           </div>
-          <button onClick={() => setMenuOpen(true)} aria-label={unreadChat > 0 ? `Open the menu: chat (${unreadChat} new), log and settings` : "Open the menu: chat, log and settings"} className="flex w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-white/30 bg-slate-950/60 text-white lg:hidden">
-            <span className="relative text-xl leading-none" aria-hidden="true">
+          <button onClick={() => setMenuOpen(true)} aria-label="Open the menu: log and settings" className="flex w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-white/30 bg-slate-950/60 text-white lg:hidden">
+            <span className="text-xl leading-none" aria-hidden="true">
               ☰
-              {unreadChat > 0 && <span className="duel-badge">{unreadChat > 9 ? "9+" : unreadChat}</span>}
             </span>
             <span className="text-[11px] font-bold uppercase tracking-wide">Menu</span>
           </button>
@@ -1358,6 +1386,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
               : undefined
           }
         />}
+      {!watching && <ChatFloat messages={chat} as={actor} onSend={sendChat} />}
     </main>
   );
 }

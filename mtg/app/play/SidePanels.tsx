@@ -298,11 +298,13 @@ function PlayerDetail({ state, id, actor, unseen, note, onResign, onClose }: { s
         <ManaMeter state={state} id={id} note={note} mark={false} />
         <div className="mt-3 grid grid-cols-2 gap-2 text-base">
           {rows.map(([icon, label, n]) => (
-            <div key={label} className="pl-row flex items-center justify-between px-3 py-2">
-              <span className="inline-flex items-center gap-1.5">
-                {icon} {label}
+            <div key={label} className="pl-row flex min-w-0 items-center justify-between gap-2 px-3 py-2">
+              {/* (the zone pictures differ in size: each is held to the same small square, so no label is pushed against its number) */}
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center [&_svg]:h-5 [&_svg]:w-5">{icon}</span>
+                <span className="truncate">{label}</span>
               </span>
-              <b className="tabular-nums">{n}</b>
+              <b className="shrink-0 tabular-nums">{n}</b>
             </div>
           ))}
         </div>
