@@ -25,7 +25,13 @@ const isInstantSpeed = (def: CardDef) => def.type === "instant" || hasKeyword(de
 export function canCastNow(state: GameState, player: PlayerId, def: CardDef): boolean {
   // "Your opponents can't cast spells during your turn."
   if (state.active !== player && state.players[state.active].battlefield.some((p) => parseCard(getCard(state, p.card.defId)).noOppSpellsOnYourTurn)) return false;
-  if (isInstantSpeed(def)) return holdsPriority(state, player);
+  if (isInstantSpeed(def) || state.players[player].battlefield.some((p) => parseCard(getCard(state, p.card.defId)).flashAll)) return holdsPriority(state, player);
+  if (parseCard(def).flashPay !== undefined && holdsPriority(state, player)) return true; // Harbinger of the Tides: flash for {2} more
+  return inSorceryWindow(state, player);
+}
+
+/** Your main phase with an empty stack: when sorcery-speed things can be cast. */
+export function inSorceryWindow(state: GameState, player: PlayerId): boolean {
   return (
     !state.priority &&
     !state.pendingChoice &&

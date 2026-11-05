@@ -104,6 +104,12 @@ export function readActivatedAbility(line: string, out: ParsedCard): boolean {
     // "{4}{U}, {T}, Sacrifice this land: ..." : the sacrifice is part of the cost
     let sacrifice = false;
     cost = cost.replace(/(?:^|,\s*)sacrifice ~$/i, () => ((sacrifice = true), ""));
+    let costCounters = 0;
+    cost = cost.replace(/(?:^|,\s*)remove (two|three|four|five|six|\d+) \+1\/\+1 counters from ~$/i, (_, n: string) => ((costCounters = { two: 2, three: 3, four: 4, five: 5, six: 6 }[n.toLowerCase() as "two"] ?? Number(n)), ""));
+    let returnSelfCost = false;
+    cost = cost.replace(/(?:^|,\s*)return ~ to its owner's hand$/i, () => ((returnSelfCost = true), ""));
+    let exileCost = false;
+    cost = cost.replace(/(?:^|,\s*)exile ~$/i, () => ((sacrifice = true), (exileCost = true), ""));
     // Costs that make the ability work from another zone, or cost life
     let zone: "hand" | "graveyard" | undefined;
     let discardSelf = false;
@@ -121,11 +127,16 @@ export function readActivatedAbility(line: string, out: ParsedCard): boolean {
       costCard = { kind: "sacrifice", filter, ...(who === "another" ? { other: true } : {}), label: `a ${what} to sacrifice` };
       return "";
     });
+    let costNamed: ActivatedAbility["costNamed"];
+    cost = cost.replace(/(?:^|,\s*)remove (a|an|one|two|three|four) ([a-z]+) counters? from ~$/i, (all, n: string, name: string) => ((costNamed = { name, n: { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4 }[n.toLowerCase()] ?? 1 }), ""));
+    cost = cost.replace(/(?:^|,\s*)put (a|an|one) ([a-z]+) counter on ~$/i, (all, n: string, name: string) => ((costNamed = { name, n: 1, put: true }), ""));
     let tapTwoSharing = false;
     cost = cost.replace(/(?:^|,\s*)tap two untapped creatures you control that share a creature type$/i, () => ((tapTwoSharing = true), ""));
+    let tapSubtype: ActivatedAbility["tapSubtype"];
+    cost = cost.replace(/(?:^|,\s*)tap (two|three|four|five|six|seven|eight|nine|ten|\d+) untapped ([a-z]+)s you control$/i, (_, n: string, t: string) => ((tapSubtype = { n: { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 }[n.toLowerCase()] ?? Number(n), subtype: t.toLowerCase() === "elve" ? "elf" : t.toLowerCase() }), ""));
     let exileFromYard = 0;
     cost = cost.replace(/(?:^|,\s*)exile (two|three|\d+) cards from your graveyard$/i, (_, n: string) => ((exileFromYard = toNumber(n.toLowerCase()) ?? 0), ""));
-    const otherCost = sacrifice || zone !== undefined || payLife > 0 || costCard !== undefined || exileFromYard > 0 || tapTwoSharing;
+    const otherCost = sacrifice || returnSelfCost || costCounters > 0 || zone !== undefined || payLife > 0 || costCard !== undefined || exileFromYard > 0 || tapTwoSharing || tapSubtype !== undefined || costNamed !== undefined;
     const symbols: string[] | null = cost.match(/\{[^}]+\}/g) ?? (otherCost ? [] : null);
     if (symbols && (otherCost && cost === "" ? true : /^(\{[^}]+\}|, )+$/.test(cost))) {
       const tap = symbols.includes("{T}");
@@ -151,6 +162,8 @@ export function readActivatedAbility(line: string, out: ParsedCard): boolean {
       body = body.replace(/\.?\s*activate only if you have at least (\d+) life more than your starting life total(?: and only as a sorcery)?\.?$/, (all, n: string) => ((minLife = 20 + Number(n)), all.includes("sorcery") ? ((sorceryOnly = true), "") : ""));
       let needYardCreatures = 0;
       body = body.replace(/\.?\s*activate only if there are (two|three|\d+) or more creature cards in your graveyard\.?$/, (_, n: string) => ((needYardCreatures = toNumber(n) ?? 2), ""));
+      let needLands = 0;
+      body = body.replace(/\.?\s*activate only if you control (five|four|six|\d+) or more lands\.?$/, (_, n: string) => ((needLands = toNumber(n) ?? 5), ""));
       let needToughness = 0;
       body = body.replace(/\.?\s*activate only if you control a creature with toughness (\d+) or greater\.?$/, (_, n: string) => ((needToughness = Number(n)), ""));
       let needColored: { color: string; n: number } | undefined;
@@ -166,7 +179,7 @@ export function readActivatedAbility(line: string, out: ParsedCard): boolean {
       // "{1}{B}: Return this card from your graveyard to the battlefield tapped.": the ability works from the graveyard.
       if (!zone && effects?.some((e) => e.type === "returnSelfToBattlefield" || e.type === "returnFromYard")) zone = "graveyard";
       if (effects && effects.length > 0) {
-        const ability: ActivatedAbility = { tap, mana, effects, targets: ctx.targets, text: line, ...(sorceryOnly ? { sorceryOnly } : {}), ...(needColored ? { needColored } : {}), ...(oncePerTurn ? { oncePerTurn } : {}), ...(onceOnly ? { onceOnly } : {}), ...(yourTurnOnly ? { yourTurnOnly } : {}), ...(beforeAttackers ? { beforeAttackers } : {}), ...(needYardCreatures ? { needYardCreatures } : {}), ...(needToughness ? { needToughness } : {}), ...(minLife !== undefined ? { minLife } : {}), ...(sacrifice ? { sacrifice } : {}), ...(zone ? { zone } : {}), ...(discardSelf ? { discardSelf } : {}), ...(exileSelf ? { exileSelf } : {}), ...(payLife ? { payLife } : {}), ...(costCard ? { costCard } : {}), ...(exileFromYard ? { exileFromYard } : {}), ...(tapTwoSharing ? { tapTwoSharing } : {}), ...(lessPerLegendary ? { lessPerLegendary } : {}) };
+        const ability: ActivatedAbility = { tap, mana, effects, targets: ctx.targets, text: line, ...(sorceryOnly ? { sorceryOnly } : {}), ...(needColored ? { needColored } : {}), ...(oncePerTurn ? { oncePerTurn } : {}), ...(onceOnly ? { onceOnly } : {}), ...(yourTurnOnly ? { yourTurnOnly } : {}), ...(beforeAttackers ? { beforeAttackers } : {}), ...(needYardCreatures ? { needYardCreatures } : {}), ...(needToughness ? { needToughness } : {}), ...(minLife !== undefined ? { minLife } : {}), ...(sacrifice ? { sacrifice } : {}), ...(exileCost ? { exileCost } : {}), ...(returnSelfCost ? { returnSelfCost } : {}), ...(costCounters ? { costCounters } : {}), ...(zone ? { zone } : {}), ...(discardSelf ? { discardSelf } : {}), ...(exileSelf ? { exileSelf } : {}), ...(payLife ? { payLife } : {}), ...(costCard ? { costCard } : {}), ...(exileFromYard ? { exileFromYard } : {}), ...(tapTwoSharing ? { tapTwoSharing } : {}), ...(tapSubtype ? { tapSubtype } : {}), ...(lessPerLegendary ? { lessPerLegendary } : {}), ...(costNamed ? { costNamed } : {}), ...(needLands ? { needLands } : {}) };
         out.activated.push(ability);
         return true;
       }

@@ -11,6 +11,7 @@ import { readDiscardedByOpponent, readGoblinKing, readHostControl, readHostDamag
 import { readSacrificeTrigger, readFirebending, readCreatureLandWithTrigger, readTappedIfMoreLands } from "./lines/sacrifice.js";
 import { readKeywordLord, readCreatureSpellCast } from "./lines/infect.js";
 import { readUndying, readCostLessByPower } from "./lines/green.js";
+import { readFoundations } from "./lines/foundations.js";
 import { readEntersStunned, readYouTapOpp, readPersist } from "./lines/stun.js";
 import { readOppCreatureDies } from "./lines/wipe.js";
 import { MARVEL_ABILITY_WORD, readAttacksAlone, readExalted, readChapter, readEquippedAttacks, readAbilityTargets, readAlienInvasion, readAllyDamaged, readGrimReaper, readHostUpkeep, readNoOneDies, readAnyDrawSecond, readDamagePrevention, readEnrage, readIronManCombat, readAllyTapped, readAttackConditions, readHasteForAbilities, readTokensEnter, readBecomesTapped, readControlsArtifactCreatureOrPlan, readScarletWitchDiscount, readTokenAndCounterLords, readUnblockableIfSmall, readVillainOrArtifactEnters, readCountersPlusOne, readCounteredThisTurn, readEntersGreater, readHandSize, readPlanThreshold, readSpellTargetsTrigger, readTeamworkTrigger, readYardCondition, readYouPutCounters } from "./lines/marvel.js";
@@ -20,6 +21,7 @@ import { MARVEL_ABILITY_WORD, readAttacksAlone, readExalted, readChapter, readEq
 
 /** The readers in the order they are tried. The first one that reads the line wins, so a more specific sentence must come before a general one. */
 const READERS: ((line: string, out: ParsedCard) => boolean)[] = [
+  readFoundations,
   readLoyaltyAbility,
   readReduceDamage,
   readEcho,

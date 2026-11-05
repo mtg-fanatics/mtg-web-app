@@ -1,3 +1,4 @@
+import { parseCard } from "./oracle.js";
 import type { CardDef, GameState, Permanent, PlayerId } from "./types.js";
 import { getCard } from "./cards.js";
 import { hasKeyword } from "./keywords.js";
@@ -182,6 +183,7 @@ function manaAbility(def: CardDef): { colors: ManaColor[]; amount: number; chose
     .replace(/\([^)]*\)/g, "")
     .replace(/\.? ?spend this mana only to cast an instant or sorcery spell\.?/gi, "")
     .replace(/^\{t\}: add [^\n]*?\. (?:spend this mana only to|this mana can't be spent to) [^\n]*$/gim, "") // restricted lines: see restrictedMana
+    .replace(/\. when that mana is spent to cast a red instant or sorcery spell, copy that spell and you may choose new targets for the copy/gi, "") // Pyromancer's Goggles
     .replace(/\.? ?if that mana is spent on an? [a-z]+ creature spell, it gains haste until end of turn\.?/gi, "")
     .toLowerCase();
   const found = new Set<ManaColor>();
@@ -360,7 +362,7 @@ const COMBAT_PHASES = ["attackers", "blockers", "damage"];
 
 /** Floating mana the player can spend right now (with its place in the pool): made this phase, or this combat for firebending. */
 export function floatingMana(state: GameState, player: PlayerId): { at: number; color: ManaColor }[] {
-  return (state.players[player].pool ?? []).flatMap((m, at) => (m.turn === state.turn && (m.combat ? COMBAT_PHASES.includes(state.phase) : m.phase === state.phase) ? [{ at, color: m.color }] : []));
+  return (state.players[player].pool ?? []).flatMap((m, at) => (m.turn === state.turn && (m.allTurn || (m.combat ? COMBAT_PHASES.includes(state.phase) : m.phase === state.phase)) ? [{ at, color: m.color }] : []));
 }
 
 function payFrom(state: GameState, player: PlayerId, cost: ManaCost, forSpell: CardDef | undefined, forAbility: CardDef | undefined, useFilters: boolean): PayResult {
@@ -385,7 +387,9 @@ function payFrom(state: GameState, player: PlayerId, cost: ManaCost, forSpell: C
       for (let i = 0; i < filter; i++) sources.push({ iid: perm.card.iid, colors: ALL_FIVE, filter });
       continue;
     }
-    const colors = manaColorsOf(state, perm, forSpell, forAbility);
+    const stashed = forSpell !== undefined && (state.players[player].mayPlay ?? []).some((e) => e.via && state.players[player].exile.some((c) => c.iid === e.iid && c.defId === forSpell.id)); // Tinybones: mana of any type
+    const anyType = stashed || (forSpell?.type === "creature" && state.players[player].battlefield.some((p) => parseCard(getCard(state, p.card.defId)).castCreaturesFromTop)); // Vizier: mana of any type pays for creature spells
+    const colors = manaColorsOf(state, perm, forSpell, forAbility).length > 0 && anyType ? ALL_FIVE : manaColorsOf(state, perm, forSpell, forAbility);
     // A source that makes two mana counts twice; tapping it once pays for both.
     const amount = colors.length > 0 ? manaAmountOf(state, player, perm) : 0;
     if (amount > 0 && makesOneColorMana(state, perm)) oneColor.push(perm.card.iid);

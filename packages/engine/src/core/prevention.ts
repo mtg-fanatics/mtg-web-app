@@ -7,6 +7,18 @@ import { changeLife } from "./zones.js";
 
 // Damage prevention that is not "prevent all": shields ("prevent the next 3 damage that would be dealt to it this turn"), and "prevent 1 of that damage" (Urza's Armor).
 
+/** "If a source you control would deal damage to an opponent or a permanent an opponent controls, it deals double that damage instead": how many times it is doubled. */
+export function damageDoublings(state: GameState, controller: PlayerId, sourceIsCreature: boolean, victimController: PlayerId | undefined): number {
+  let n = 0;
+  for (const perm of state.players[controller].battlefield) {
+    const d = parseCard(getCard(state, perm.card.defId)).damageDoubler;
+    if (!d || (d.creaturesOnly && !sourceIsCreature)) continue;
+    if (d.opponentSideOnly && (victimController === undefined || victimController === controller)) continue;
+    n++;
+  }
+  return n;
+}
+
 /**
  * How much of `amount` damage still gets through to a player or a creature. Uses up the shields on it as it goes. (Nothing is prevented
  * while damage can't be prevented.)

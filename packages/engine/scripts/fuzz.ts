@@ -359,7 +359,7 @@ function transition(before: GameState, after: GameState, events: GameEvent[], ac
 
   // 8. No two permanents are attached to something that is not there; a land is never damaged; the planeswalker loyalty is whole.
   for (const perm of all(after)) {
-    if (after.cards[perm.card.defId].type === "land" && perm.damage > 0 && !perm.crewed) problems.push(`a land (${perm.card.iid}) has damage marked on it`);
+    if (after.cards[perm.card.defId].type === "land" && perm.damage > 0 && !perm.crewed && !perm.animated) problems.push(`a land (${perm.card.iid}) has damage marked on it`);
   }
   return problems;
 }

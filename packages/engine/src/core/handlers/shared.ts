@@ -4,10 +4,10 @@ import type { Amount, Effect, PendingPick, RunContext } from "../../effects.js";
 import { parseCard } from "../../oracle.js";
 import { nextRandom } from "../../state.js";
 import type { CardInstance, GameState, Permanent, PlayerId } from "../../types.js";
-import { canPrevent, findPermanentOrNull, isPlaneswalker, nameOf, playerLabel, toughnessOf } from "../permanents.js";
+import { canPrevent, findPermanentOrNull, isCreature, isPlaneswalker, nameOf, playerLabel, toughnessOf } from "../permanents.js";
 import { addPoison, changeLife } from "../zones.js";
 import { creatureDamaged, excessDamageDealt, queueTriggers } from "../triggers.js";
-import { absorbDamage, hostDamageLife } from "../prevention.js";
+import { absorbDamage, damageDoublings, hostDamageLife } from "../prevention.js";
 
 /** A spell, ability or creature dealing damage, with what changes how its damage works. */
 export interface DamageSource {
@@ -71,7 +71,13 @@ export function dealDamage(
     events.push({ type: "effect", text: `The damage to ${target.k === "player" ? playerLabel(target.id) : nameOf(state, target.perm)} is prevented.` });
     return;
   }
+  // Crystal Barricade: "Prevent all noncombat damage that would be dealt to other creatures you control."
+  if (preventable && target.k === "perm" && victim && state.players[victim].battlefield.some((p) => p !== target.perm && parseCard(getCard(state, p.card.defId)).preventNoncombatOthers)) {
+    events.push({ type: "effect", text: `The damage to ${nameOf(state, target.perm)} is prevented.` });
+    return;
+  }
   if (target.k === "player" && state.players[source.controller].doubleDamage && target.id !== source.controller) amount *= 2; // "it deals double that damage instead"
+  amount *= 2 ** damageDoublings(state, source.controller, source.perm !== undefined && isCreature(state, source.perm), victim); // Twinflame Tyrant, Gratuitous Violence
   // "Prevent the next 3 damage that would be dealt to it this turn", "prevent 1 of that damage" (a planeswalker has no shield)
   if (target.k === "player" || !isPlaneswalker(state, target.perm)) {
     const before = amount;
@@ -84,6 +90,7 @@ export function dealDamage(
     state.players[target.id].damagedThisTurn = true;
     if (source.infect) addPoison(state, target.id, amount, events);
     else changeLife(state, target.id, -amount, events);
+    if (!source.infect && target.id !== source.controller) for (const watcher of state.players[source.controller].battlefield) queueTriggers(state, watcher.card, source.controller, "oppNoncombatDamage", { count: amount });
   } else if (isPlaneswalker(state, target.perm)) {
     target.perm.loyalty = (target.perm.loyalty ?? 0) - amount; // damage to a planeswalker removes that much loyalty
   } else {

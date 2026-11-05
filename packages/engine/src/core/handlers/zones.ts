@@ -1,4 +1,5 @@
 import { getCard } from "../../cards.js";
+import { parseCard } from "../../oracle.js";
 import type { CardInstance, Permanent, PlayerId } from "../../types.js";
 import { colorsOfPerm, findPermanentOrNull, isArtifactDef, isCreature, kw, nameOf, playerLabel } from "../permanents.js";
 import { isToken, makeToken, putCounters, putIntoGraveyard, regenerateInstead, removeFromBattlefield, sacrificePermanent, spellLeavesStack } from "../zones.js";
@@ -153,16 +154,18 @@ export const ZONE_EFFECTS = {
     const perm: Permanent = { card, tapped: effect.tapped === true, summoningSick: true, damage: 0, ...(effect.finality ? { finality: true } : {}), ...(effect.minusCounters ? { minusCounters: effect.minusCounters } : {}) };
     owner.battlefield.push(perm);
     events.push({ type: "permanentEntered", player: owner.id, iid: card.iid });
+    if (effect.addSubtype) perm.addedSubtypes = [effect.addSubtype];
     if (effect.counters) putCounters(state, perm, owner.id, effect.counters);
     queueTriggers(state, card, owner.id, "enters");
     creatureEntered(state, card, owner.id);
     say(`${getCard(state, card.defId).name} returns to the battlefield${effect.tapped ? " tapped" : effect.finality ? " with a finality counter" : effect.minusCounters ? " with a -1/-1 counter" : ""}.`);
   },
   createToken({ state, ctx, events, say, value }, effect) {
-    const n = value(effect.amount);
+    let n = value(effect.amount);
     // "Its controller creates a 1/1 token": the player is not always the one who cast the spell.
     const who = effect.who ? (subjectsOf(state, effect.who, ctx).find((s) => s.k === "player") as { k: "player"; id: PlayerId } | undefined)?.id : ctx.controller;
     if (!who) return;
+    n *= 2 ** state.players[who].battlefield.filter((p) => parseCard(getCard(state, p.card.defId)).doubleTokens).length; // Doubling Season
     for (let i = 0; i < n; i++) ctx.created = [...(ctx.created ?? []), makeToken(state, effect.token, who, events)];
     if (n > 0) say(`${playerLabel(who)} creates ${plural(n, `${effect.token.name} token`)}.`);
   },

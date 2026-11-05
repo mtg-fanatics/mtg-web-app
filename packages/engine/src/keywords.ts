@@ -57,14 +57,16 @@ export const KEYWORD_RULES: Record<Keyword, string> = {
 };
 
 export const hasKeyword = (def: CardDef, keyword: Keyword): boolean =>
-  (def.keywords ?? []).some((k) => k.toLowerCase() === keyword);
+  (def.keywords ?? []).some((k) => k.toLowerCase() === keyword) &&
+  // "Hexproof from white" is listed as both "Hexproof from" and "Hexproof": only a printed plain "hexproof" is hexproof
+  !(keyword === "hexproof" && (def.keywords ?? []).some((k) => k.toLowerCase() === "hexproof from") && !/(^|\n|, )hexproof(?! from)/i.test(def.text ?? ""));
 
 /** Keywords that are just labels for a line the text reader handles itself ("Enchant creature"). */
 const LABELS = new Set([
   "enchant", "cycling", "regenerate", "scry", "mill", "surveil", "devoid", "partner", "changeling", "landwalk",
   "treasure", "battalion", "pack tactics", "double", "food", "investigate", "equip", "landcycling", "typecycling", "basic landcycling", "airbend", "connive", "power-up", "plainscycling", "islandcycling", "swampcycling", "mountaincycling", "forestcycling", "kicker", "flashback", "protection", "landfall", "ward", "crew",
   "heal", "fight", "swampwalk", "islandwalk", "forestwalk", "mountainwalk", "plainswalk",
-  "eerie", "prepared", "raid",
+  "eerie", "prepared", "raid", "hexproof from", "alliance", "formidable",
   "explore", "solved", "infusion", "warp", "blight", "offspring", "toxic", "exalted", "delve", "ferocious", "delirium", "plot", "flurry", "replicate",
   "opus", "harmonize", "echo", "cumulative upkeep", "threshold", "hellbent", "metalcraft", "morbid", "heroic", "bushido", "renown", "extort", "bloodthirst", "affinity", "buyback", "amass", "storm", "cascade", "convoke",
   // Jund Sacrifice and its sideboard

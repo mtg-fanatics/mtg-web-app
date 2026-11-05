@@ -1,5 +1,5 @@
 import { getCard } from "../cards.js";
-import { absorbDamage, hostDamageLife } from "../core/prevention.js";
+import { damageDoublings, absorbDamage, hostDamageLife } from "../core/prevention.js";
 import { parseCard } from "../oracle.js";
 import {
   addPoison,
@@ -21,6 +21,7 @@ import {
   queueTriggers,
   toughnessOf,
 } from "../core.js";
+import { lifeLostTriggers } from "../core/zones.js";
 import { OPPONENT } from "../types.js";
 import type { GameState, Permanent, PlayerId, PlayerState } from "../types.js";
 import type { GameEvent } from "../actions.js";
@@ -172,6 +173,11 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
       if (amount <= 0) continue; // rule 510.1a: 0 or less damage isn't dealt
       const toPlayer = "battlefield" in target;
       if (toPlayer && state.players[source.card.owner].doubleDamage && target.id !== source.card.owner) amount *= 2;
+      amount *= 2 ** damageDoublings(state, source.card.owner, true, toPlayer ? target.id : Object.values(state.players).find((pl) => pl.battlefield.includes(target))?.id);
+      // "Prevent all combat damage that would be dealt to and dealt by ~"
+      if (preventable && (parseCard(getCard(state, source.card.defId)).fogSelf || (!toPlayer && parseCard(getCard(state, target.card.defId)).fogSelf))) amount = 0;
+      if (preventable && !toPlayer && target.noCombatDamage) amount = 0; // Fleeting Flight
+      if (amount <= 0) continue;
       // "Prevent the next 3 damage that would be dealt to it this turn", "prevent 1 of that damage" (a planeswalker has no shield)
       if (toPlayer || getCard(state, target.card.defId).type !== "planeswalker") {
         const through = absorbDamage(state, toPlayer ? { k: "player", id: target.id } : { k: "perm", perm: target }, amount);
@@ -185,6 +191,7 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
       if (toPlayer && !infect) {
         target.life -= amount;
         target.lifeLostThisTurn = (target.lifeLostThisTurn ?? 0) + amount;
+        lifeLostTriggers(state, target.id, amount);
       } else if (toPlayer) {
         poison.push({ player: target.id, amount });
       } else if (getCard(state, target.card.defId).type === "planeswalker") {
@@ -196,9 +203,11 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
         } else target.damage += amount;
         creatureDamaged(state, target, target.card.owner, amount); // "Whenever ~ is dealt damage"
         (target.damagedBy ??= []).push(source.card.iid);
+        for (const watcher of state.players[source.card.owner].battlefield) queueTriggers(state, watcher.card, source.card.owner, "allyDamagesPlayer");
         if (kw(state, source, "deathtouch")) target.deathtouched = true;
       }
       if (kw(state, source, "lifelink")) gains.set(source, (gains.get(source) ?? 0) + amount);
+      for (const watcher of state.players[source.card.owner].battlefield) queueTriggers(state, watcher.card, source.card.owner, "allyDealsDamage", { count: amount, other: source.card.iid }); // Quilled Greatwurm
       events.push({ type: "combatDamage", source: source.card.iid, target: toPlayer ? target.id : target.card.iid, amount, ...(infect ? { infect: true as const } : {}) });
       // Toxic: a player dealt combat damage by it also gets that many poison counters.
       const toxic = toPlayer ? (parseCard(getCard(state, source.card.defId)).toxic ?? 0) : 0;
@@ -206,9 +215,10 @@ export function resolveCombat(state: GameState, events: GameEvent[], assigned: R
       if (source.sacOnDamage) sacrifice.add(source);
       hostDamageLife(state, source, amount, events); // Spirit Link
       if (toPlayer && onBoard(source.card.iid)) {
-        queueTriggers(state, source.card, source.card.owner, "combatDamagePlayer");
+        queueTriggers(state, source.card, source.card.owner, "combatDamagePlayer", { count: amount });
         queueTriggers(state, source.card, source.card.owner, "damageOpp"); // "whenever ~ deals damage to an opponent" (combat damage is damage too)
         queueDamageDraws(state, source);
+        if (kw(state, source, "deathtouch")) for (const watcher of state.players[source.card.owner].battlefield) queueTriggers(state, watcher.card, source.card.owner, "allyDeathtouchHits");
         // Auras on the creature: "Whenever enchanted creature deals damage to an opponent, ..."
         for (const owner of Object.values(state.players)) {
           for (const aura of owner.battlefield) if (aura.attachedTo === source.card.iid) queueTriggers(state, aura.card, owner.id, "hostDamagesPlayer");

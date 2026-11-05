@@ -40,11 +40,15 @@ export const AURA_TARGETS: Record<string, TargetSpec> = {
 
 /** "Enchanted creature gets +2/+2 and has flying", "Creatures you control get +1/+1", "...can't attack or block". */
 export function parseStatic(line: string): StaticEffect | null {
-  const m = /^(enchanted creature|enchanted permanent|equipped creature|other creatures you control|creatures you control|creatures your opponents control|creatures you don't control|all creatures) (.+)$/.exec(line);
-  if (!m) return null;
+  const m0 = /^(enchanted creature|enchanted permanent|equipped creature|other creatures you control|creatures you control|creatures your opponents control|creatures you don't control|all creatures)( with \+1\/\+1 counters on them| of the chosen (?:color|type))? (.+)$/.exec(line);
+  if (!m0) return null;
+  const m = [m0[0], m0[1], m0[3]];
   const scope = m[1] === "enchanted creature" || m[1] === "enchanted permanent" || m[1] === "equipped creature" ? "enchanted" : m[1].includes("you control") ? "yours" : m[1] === "all creatures" ? "all" : "opponents";
   const st: StaticEffect = { scope, power: 0, toughness: 0, keywords: [] };
   if (m[1].startsWith("other")) st.other = true;
+  if (m0[2]?.includes("counters")) st.withCounters = true;
+  if (m0[2]?.includes("chosen color")) st.chosen = "color";
+  if (m0[2]?.includes("chosen type")) st.chosen = "type";
   let rest = m[2].trim();
   // "... and is an Angel in addition to its other types"
   const typed = /(?:^|,? and )is an? ([a-z]+) in addition to its other types$/.exec(rest);
@@ -60,7 +64,7 @@ export function parseStatic(line: string): StaticEffect | null {
     if (pt[3] !== undefined) {
       // "gets +1/+1 for each enchantment you control": counted for the controller of the Aura or anthem
       const per = forEachCount(pt[3]);
-      if (!per || !["permanents", "hand", "graveyard"].includes(per.kind)) return null;
+      if (!per || !["permanents", "hand", "graveyard", "selfNamed"].includes(per.kind)) return null;
       st.per = per;
     }
     rest = rest.slice(pt[0].length);

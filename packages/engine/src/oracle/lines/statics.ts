@@ -82,6 +82,18 @@ export function readIfDrawnCards(line: string, out: ParsedCard): boolean {
 
 // Permanents that make your spells cheaper
 export function readTypedSpellsCostLess(line: string, out: ParsedCard): boolean {
+  // "Instant and sorcery spells you cast cost {1} less to cast." (Mocking Sprite, Archmage of Runes)
+  const spells = /^instant and sorcery spells you cast cost \{(\d+)\} less to cast$/.exec(line);
+  if (spells) {
+    (out.costMods ??= []).push({ n: Number(spells[1]), instantSorceryOnly: true });
+    return true;
+  }
+  // "Kithkin spells and Soldier spells you cast cost {1} less to cast." (Ballyrush Banneret)
+  const two = /^([a-z]+) spells and ([a-z]+) spells you cast cost \{(\d+)\} less to cast$/.exec(line);
+  if (two) {
+    (out.costMods ??= []).push({ n: Number(two[3]), subtypes: [singularType(two[1]), singularType(two[2])] });
+    return true;
+  }
   const typedSpells = /^([a-z]+) spells you cast cost \{(\d+)\} less to cast$/.exec(line);
   if (typedSpells) {
     (out.costMods ??= []).push({ n: Number(typedSpells[2]), subtype: singularType(typedSpells[1]) });

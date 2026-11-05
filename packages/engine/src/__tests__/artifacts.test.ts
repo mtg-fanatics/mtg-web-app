@@ -11,7 +11,7 @@ const DEFS: Record<string, CardDef> = {
   signet: artifact("signet", "{2}", "{T}: Add one mana of any color."),
   rock: artifact("rock", "{2}", "{T}: Add {R}."),
   slowrock: artifact("slowrock", "{2}", "This artifact enters tapped.\n{T}: Add {G}."),
-  sword: artifact("sword", "{3}", "Whenever equipped creature deals combat damage to a player, draw a card."),
+  sword: artifact("sword", "{3}", "Whenever equipped creature blocks a creature with flying, draw a card."),
   shatter: { id: "shatter", name: "Shatter", type: "instant", cost: 2, manaCost: "{R}", text: "Destroy target artifact." },
   golem: { ...artifact("golem", "{2}", "", { power: 2, toughness: 2 }), type: "creature", typeLine: "Artifact Creature — Golem" },
   expensive: { id: "expensive", name: "Expensive", type: "creature", cost: 3, manaCost: "{2}{R}", power: 3, toughness: 3 },

@@ -19,6 +19,7 @@ import {
   newId,
   playerLabel,
   powerOf,
+  removeFromBattlefield,
   sacrificePermanent,
   spellCast,
   queueTriggers,
@@ -34,7 +35,7 @@ import { parseCard } from "../oracle.js";
 import { OPPONENT } from "../types.js";
 import type { CardDef, CardInstance, GameState, Permanent, PlayerId } from "../types.js";
 import type { ManaCost } from "../mana.js";
-import { abilityHaste, abilityManaCost, abilityNeed, applyPayment, canCastNow, checkTargets, holdsPriority, levelLock, openRound, sorceryTiming, timingError } from "./shared.js";
+import { abilityHaste, abilityManaCost, abilityNeed, applyPayment, canCastNow, checkTargets, holdsPriority, inSorceryWindow, levelLock, openRound, sorceryTiming, timingError } from "./shared.js";
 
 // Casting spells and activating abilities: each puts something on the stack and opens a round of priority.
 
@@ -44,9 +45,14 @@ import { abilityHaste, abilityManaCost, abilityNeed, applyPayment, canCastNow, c
  * `targets`: the ones chosen, for "costs {3} less to cast if it targets a tapped permanent" (no discount while they aren't known).
  */
 export function castCostOf(state: GameState, player: PlayerId, def: CardDef, targets?: TargetChoice[]): ReturnType<typeof manaCostOf> {
-  const base = manaCostOf(def);
+  let base = manaCostOf(def);
   if (!base) return base;
+  const alt = parseCard(def).altCostIfCreatures;
+  if (alt && Object.values(state.players).reduce((n, pl) => n + pl.battlefield.filter((p) => isCreature(state, p)).length, 0) >= alt.n) base = parseManaCost(alt.cost) ?? base; // Blasphemous Edict
   const me = state.players[player];
+  if (me.battlefield.some((p) => parseCard(getCard(state, p.card.defId)).castFree)) return { generic: 0, colored: {} }; // Omniscience
+  const flashPay = parseCard(def).flashPay;
+  if (flashPay !== undefined && !inSorceryWindow(state, player)) base = { ...base, generic: base.generic + flashPay }; // Harbinger of the Tides cast at instant speed
   const spellTypes = ((def.typeLine ?? "").split("—")[1] ?? "").toLowerCase().split(/\s+/);
   // "The next red or green creature spell you cast this turn can be cast without paying its mana cost."
   if (me.freeNext && def.type === "creature" && (def.colors ?? []).some((c) => me.freeNext!.colors.includes(c))) return { generic: 0, colored: {} };
@@ -59,6 +65,7 @@ export function castCostOf(state: GameState, player: PlayerId, def: CardDef, tar
     if (own.ifFlyer && me.battlefield.some((p) => isCreature(state, p) && kw(state, p, "flying"))) less += own.n;
     if (own.perOpponentSpell) less += own.n * (state.players[OPPONENT[player]].spellsCastThisTurn ?? 0);
     if (own.per) less += own.n * countFor(state, player, own.per);
+    if (own.ifLifeGained !== undefined && (me.lifeGainedThisTurn ?? 0) >= own.ifLifeGained) less += own.n;
     if (own.ifYardCreatures !== undefined && me.graveyard.filter((c) => getCard(state, c.defId).type === "creature").length >= own.ifYardCreatures) less += own.n;
     if (own.ifTargetsAttacking && targets?.some((t) => t.kind === "permanent" && state.combat?.attackers.some((a) => a.attacker === t.iid))) less += own.n;
     if (own.ifTargetsTapped && targets?.some((t) => t.kind === "permanent" && findPermanentOrNull(state, t.iid)?.perm.tapped)) less += own.n;
@@ -67,6 +74,7 @@ export function castCostOf(state: GameState, player: PlayerId, def: CardDef, tar
   for (const perm of me.battlefield) {
     for (const mod of parseCard(getCard(state, perm.card.defId)).costMods ?? []) {
       if (mod.subtype && !(def.type === "creature" && spellTypes.includes(mod.subtype))) continue;
+      if (mod.subtypes && !(def.type === "creature" && mod.subtypes.some((t) => spellTypes.includes(t)))) continue;
       if (mod.minMV !== undefined && def.cost < mod.minMV) continue;
       if (mod.otherTurn && state.active === player) continue;
       if (mod.instantSorceryOnly && def.type !== "instant" && def.type !== "sorcery") continue;
@@ -132,12 +140,13 @@ export const convokePool = (state: GameState, player: PlayerId): Permanent[] => 
 /** Untapped creatures that could be tapped to pay teamwork (summoning-sick ones too: it is not a {T} cost). */
 export const teamworkers = (state: GameState, player: PlayerId) => state.players[player].battlefield.filter((p) => !p.tapped && isCreature(state, p));
 
-export function castSpell(state: GameState, player: PlayerId, iid: string, targets: TargetChoice[], events: GameEvent[], x = 0, kicked = false, from: "hand" | "graveyard" | "exile" | "prepared" = "hand", modes?: number[], sacrifice?: string, warp = false, teamwork?: string[], phyrexianLife = 0, delve?: string[], replicate = 0, adventure = false, harmonizeTap?: string, convoke?: string[]): string | null {
+export function castSpell(state: GameState, player: PlayerId, iid: string, targets: TargetChoice[], events: GameEvent[], x = 0, kicked = false, from: "hand" | "graveyard" | "exile" | "prepared" | "library" = "hand", modes?: number[], sacrifice?: string, warp = false, teamwork?: string[], phyrexianLife = 0, delve?: string[], replicate = 0, adventure = false, harmonizeTap?: string, convoke?: string[]): string | null {
   const me = state.players[player];
   // A prepared creature: a copy of its spell is cast (`iid` is the creature).
   const prepared = from === "prepared" ? me.battlefield.find((p) => p.card.iid === iid && p.prepared) : undefined;
-  const zone = from === "graveyard" ? me.graveyard : from === "exile" ? me.exile : from === "prepared" ? (prepared ? [{ iid, defId: prepared.prepared!, owner: player }] : []) : me.hand;
+  const zone = from === "graveyard" ? me.graveyard : from === "exile" ? me.exile : from === "prepared" ? (prepared ? [{ iid, defId: prepared.prepared!, owner: player }] : []) : from === "library" ? me.library.slice(0, 1) : me.hand;
   const idx = zone.findIndex((c) => c.iid === iid);
+  if (from === "library" && !(idx === 0 && getCard(state, zone[0].defId).type === "creature" && me.battlefield.some((p) => parseCard(getCard(state, p.card.defId)).castCreaturesFromTop))) return "You can only cast the top creature card of your library with Vizier of the Menagerie.";
   if (idx < 0) return from === "graveyard" ? "That card is not in your graveyard." : from === "exile" ? "That card is not in exile." : from === "prepared" ? "That creature isn't prepared." : "That card is not in your hand.";
   if (from === "exile" && !exilePlayable(state, player).some((c) => c.iid === iid)) return "You can't play that exiled card right now: attack with the creature that exiled it first.";
   // An Adventure card: its Adventure spell is cast instead of the creature (from the hand only).
@@ -150,10 +159,12 @@ export function castSpell(state: GameState, player: PlayerId, iid: string, targe
   const parsed = parseCard(def);
   let cost = castCostOf(state, player, def, targets);
   // A creature card that may be cast from the graveyard this turn (Case of the Uneaten Feast) costs what it always does.
-  const fromYard = from === "graveyard" && def.type === "creature" && (me.yardCastable ?? []).includes(iid);
+  const wurmCounters = parsed.graveyardCastCounters ?? 0;
+  const wurm = from === "graveyard" && def.type === "creature" && wurmCounters > 0 && creatureCounters(state, player).reduce((n, p) => n + (p.counters ?? 0), 0) >= wurmCounters;
+  const fromYard = from === "graveyard" && def.type === "creature" && ((me.yardCastable ?? []).includes(iid) || wurm);
   if (from === "graveyard" && !fromYard) {
     // Flashback (or harmonize): only instants and sorceries, for that cost instead of the mana cost.
-    const alternative = parsed.flashback ?? parsed.harmonize;
+    const alternative = parsed.flashback ?? parsed.harmonize ?? ((me.grantedFlashback ?? []).includes(iid) ? def.manaCost : undefined);
     if (!alternative || (def.type !== "instant" && def.type !== "sorcery")) return `${def.name} doesn't have flashback.`;
     cost = parseManaCost(alternative);
   }
@@ -300,9 +311,20 @@ export function castSpell(state: GameState, player: PlayerId, iid: string, targe
     events.push({ type: "effect", text: `${def.name}: ${getCard(state, blighted.perm.card.defId).name} gets ${parsed.blight === 1 ? "a -1/-1 counter" : `${parsed.blight} -1/-1 counters`} (blight).` });
     checkStateBasedActions(state, events);
   }
-  if (fromYard) me.yardCastable = me.yardCastable!.filter((id) => id !== iid);
+  if (fromYard && wurm && !(me.yardCastable ?? []).includes(iid)) {
+    // remove the counters, the most loaded creatures first
+    let toRemove = wurmCounters;
+    for (const p of creatureCounters(state, player)) {
+      const take = Math.min(toRemove, p.counters ?? 0);
+      p.counters = (p.counters ?? 0) - take;
+      toRemove -= take;
+      if (toRemove === 0) break;
+    }
+  }
+  if (fromYard) me.yardCastable = (me.yardCastable ?? []).filter((id) => id !== iid);
   if (me.freeNext && def.type === "creature" && (def.colors ?? []).some((c) => me.freeNext!.colors.includes(c))) me.freeNext = undefined; // used up
   const [taken] = zone.splice(idx, 1);
+  if (from === "library") me.library.shift();
   if (delved.length > 0) {
     me.exile.push(...me.graveyard.filter((c) => delved.includes(c.iid)));
     me.graveyard = me.graveyard.filter((c) => !delved.includes(c.iid));
@@ -334,6 +356,18 @@ export function castSpell(state: GameState, player: PlayerId, iid: string, targe
   // Storm (Ral's emblem): a copy for each spell cast before it this turn, by either player.
   const castBefore = (state.players.p1.spellsCastThisTurn ?? 0) + (state.players.p2.spellsCastThisTurn ?? 0);
   if ((me.stormEmblem || parsed.storm) && (def.type === "instant" || def.type === "sorcery")) pushCopies(state, player, card, effects, specs, own, events, "storm", spellX, castBefore);
+  if (def.type === "instant" || def.type === "sorcery") {
+    // Thousand-Year Storm: a copy for each other instant and sorcery spell you cast before it this turn
+    if (me.battlefield.some((p) => parseCard(getCard(state, p.card.defId)).copyPerSpell)) pushCopies(state, player, card, effects, specs, own, events, "storm", spellX, me.instSorcCastThisTurn ?? 0);
+    // Teach by Example: the next one is copied
+    if (me.copyNextSpell) {
+      me.copyNextSpell = undefined;
+      pushCopies(state, player, card, effects, specs, own, events, "storm", spellX, 1);
+    }
+    // Pyromancer's Goggles: mana from it paid for a red instant or sorcery
+    if ((def.colors ?? []).includes("R") && paid.tap.some((src) => me.battlefield.some((p) => p.card.iid === src && parseCard(getCard(state, p.card.defId)).copyRedSpellMana))) pushCopies(state, player, card, effects, specs, own, events, "storm", spellX, 1);
+    me.instSorcCastThisTurn = (me.instSorcCastThisTurn ?? 0) + 1;
+  }
   // Cascade: when it is cast, a trigger above it exiles cards until a cheaper spell turns up.
   for (let n = 0; n < (parsed.cascade ?? 0); n++) {
     state.triggerQueue.push({ specs: [], item: { kind: "ability", id: newId(state), controller: player, source: card.iid, sourceName: def.name, effects: [{ type: "cascade", mv: def.cost }], targets: [], specs: [], text: `Cascade: exile cards from the top of your library until you exile a nonland card that costs less than ${def.cost}. You may cast it without paying its mana cost.` } });
@@ -341,6 +375,14 @@ export function castSpell(state: GameState, player: PlayerId, iid: string, targe
   spellCast(state, player, def, targets, manaSpent, wasKicked);
   openRound(state, OPPONENT[player]);
   return null;
+}
+
+/** Quilled Greatwurm: +1/+1 counters spread over the creatures you control (the most loaded first). */
+export const creatureCounters = (state: GameState, player: PlayerId): Permanent[] => state.players[player].battlefield.filter((p) => isCreature(state, p) && (p.counters ?? 0) > 0).sort((a, b) => (b.counters ?? 0) - (a.counters ?? 0));
+
+/** Untapped creatures you control of a creature type, other than one permanent ("Tap ten untapped Elves you control"). */
+export function untappedOf(state: GameState, player: PlayerId, subtype: string, except: string): Permanent[] {
+  return state.players[player].battlefield.filter((p) => p.card.iid !== except && !p.tapped && isCreature(state, p) && subtypesOf(state, p).includes(subtype));
 }
 
 /** Two untapped creatures you control that share a creature type (to pay "Tap two untapped creatures that share a creature type"). */
@@ -495,11 +537,32 @@ export function activateAbility(state: GameState, player: PlayerId, iid: string,
     if (!pair) return `${def.name}: you need two untapped creatures that share a creature type.`;
     pair.forEach((p) => (p.tapped = true));
   }
+  if (ability.tapHost) {
+    const host = state.players[player].battlefield.find((p) => p.card.iid === found.perm.attachedTo);
+    if (!host || host.tapped || !isCreature(state, host)) return `${def.name}: the equipped creature has to be untapped.`;
+    tapPerm(state, host, player);
+  }
+  if (ability.costCounters) {
+    if ((found.perm.counters ?? 0) < ability.costCounters) return `${def.name}: it needs ${ability.costCounters} +1/+1 counters.`;
+    found.perm.counters = (found.perm.counters ?? 0) - ability.costCounters;
+  }
+  if (ability.tapSubtype) {
+    const pool = untappedOf(state, player, ability.tapSubtype.subtype, iid);
+    if (pool.length < ability.tapSubtype.n) return `${def.name}: you need ${ability.tapSubtype.n} other untapped ${ability.tapSubtype.subtype}s.`;
+    pool.slice(0, ability.tapSubtype.n).forEach((p) => (p.tapped = true));
+  }
   if (ability.exileFromYard) {
     // "Exile two cards from your graveyard": the oldest ones go.
     const yard = state.players[player].graveyard;
     if (yard.length < ability.exileFromYard) return `${def.name}: you need ${ability.exileFromYard} cards in your graveyard.`;
     state.players[player].exile.push(...yard.splice(0, ability.exileFromYard));
+  }
+  if (ability.costNamed) {
+    const have = found.perm.named?.[ability.costNamed.name] ?? 0;
+    if (!ability.costNamed.put && have < ability.costNamed.n) return `${def.name} has no ${ability.costNamed.name} counter to remove.`;
+    found.perm.named = { ...found.perm.named, [ability.costNamed.name]: ability.costNamed.put ? have + ability.costNamed.n : have - ability.costNamed.n };
+    if (found.perm.named[ability.costNamed.name] === 0) delete found.perm.named[ability.costNamed.name];
+    if (ability.costNamed.put) queueTriggers(state, found.perm.card, player, "namedLimit");
   }
   if (ability.payLife) {
     if (state.players[player].life < ability.payLife) return `Not enough life to pay ${ability.payLife}.`;
@@ -526,7 +589,17 @@ export function activateAbility(state: GameState, player: PlayerId, iid: string,
   const sacrificedPower = ability.sacrifice && onBoard ? Math.max(0, powerOf(state, found.perm)) : undefined;
   if (ability.sacrifice) {
     sacrificePermanent(state, found.perm, player, events);
+    if (ability.exileCost) {
+      const yard = state.players[found.owner.id].graveyard;
+      const at = yard.findIndex((c) => c.iid === iid);
+      if (at >= 0) state.players[found.owner.id].exile.push(...yard.splice(at, 1));
+    }
     checkStateBasedActions(state, events);
+  }
+
+  if (ability.returnSelfCost && onBoard) {
+    const back = removeFromBattlefield(state, found.perm, found.owner.id);
+    if (back) state.players[back.owner].hand.push(back);
   }
 
   state.stack.push({

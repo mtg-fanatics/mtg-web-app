@@ -50,6 +50,7 @@ export const metadata: Metadata = {
   title: "Inkfall",
   description: "A game of two hands and a table. Write a deck, take a seat, and duel.",
   applicationName: "Inkfall",
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       { url: "/inkfall-seal.svg", type: "image/svg+xml" },

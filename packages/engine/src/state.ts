@@ -1,6 +1,6 @@
 import { CARDS } from "./cards.js";
 import { doubleFaces } from "./oracle/doubleFaced.js";
-import { isSupportedCard } from "./oracle.js";
+import { isSupportedCard, parseCard } from "./oracle.js";
 import type { CardDef, CardInstance, GameState, PlayerId, PlayerState } from "./types.js";
 
 export const STARTING_LIFE = 20;
@@ -85,7 +85,7 @@ export function createGame(
     cards[id] = faces.front;
     cards[faces.back.id] = faces.back;
   }
-  return {
+  const game: GameState = {
     cards,
     players: { p1, p2 },
     startingPlayer: options.startingPlayer ?? "p1",
@@ -105,4 +105,17 @@ export function createGame(
     triggerQueue: [],
     nextId: 1,
   };
+  if (!options.mulligan) beginWithOpeningHandCards(game);
+  return game;
+}
+
+/** Leyline Axe: "If this card is in your opening hand, you may begin the game with it on the battlefield." (always taken) */
+export function beginWithOpeningHandCards(state: GameState): void {
+  for (const player of Object.values(state.players)) {
+    for (const card of [...player.hand]) {
+      if (!parseCard(state.cards[card.defId]).beginsOnBattlefield) continue;
+      player.hand.splice(player.hand.indexOf(card), 1);
+      player.battlefield.push({ card, tapped: false, summoningSick: false, damage: 0 });
+    }
+  }
 }

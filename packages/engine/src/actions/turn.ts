@@ -22,6 +22,8 @@ export function advancePhase(state: GameState, events: GameEvent[]): void {
       state.phase = "attackers";
       // "At the beginning of combat on your turn"
       for (const perm of state.players[state.active].battlefield) queueTriggers(state, perm.card, state.active, "beginCombat");
+      for (const card of state.players[state.active].graveyard) queueTriggers(state, card, state.active, "beginCombat", { fromYard: true });
+      for (const owner of Object.values(state.players)) for (const perm of owner.battlefield) queueTriggers(state, perm.card, owner.id, "beginCombatEach");
       break;
     case "attackers":
       state.phase = "main2"; // reached only when nobody attacks
@@ -36,6 +38,7 @@ export function advancePhase(state: GameState, events: GameEvent[]): void {
       for (const perm of state.players[state.active].battlefield) queueTriggers(state, perm.card, state.active, "endStepEach");
       queueWarpExiles(state);
       queueEndStepSacrifices(state);
+      queueDelayedReturns(state);
       break;
     case "end":
       // Cleanup step (rule 514.1): discard down to the maximum hand size.
@@ -59,6 +62,7 @@ function extraCombatAfterMain(state: GameState, resume: "attackers" | "end"): bo
   const beginCombat = () => {
     state.phase = "attackers";
     for (const perm of state.players[state.active].battlefield) queueTriggers(state, perm.card, state.active, "beginCombat");
+    for (const owner of Object.values(state.players)) for (const perm of owner.battlefield) queueTriggers(state, perm.card, owner.id, "beginCombatEach");
   };
   if (state.extraStep === "main") {
     // the additional main phase is over
@@ -96,6 +100,14 @@ function queueWarpExiles(state: GameState): void {
       state.triggerQueue.push({ specs: [], item: { kind: "ability", id: newId(state), controller: owner.id, source: perm.card.iid, sourceName: name, effects: [{ type: "warpExile" }], targets: [], specs: [], text } });
     }
   }
+}
+
+/** Cards that were exiled "until the next end step" come back as the end step begins. */
+function queueDelayedReturns(state: GameState): void {
+  for (const d of state.delayedReturns ?? []) {
+    state.triggerQueue.push({ specs: [], item: { kind: "ability", id: newId(state), controller: d.controller, source: d.iid, sourceName: "Delayed return", effects: [{ type: "returnDelayed", iid: d.iid, controller: d.controller, ...(d.named ? { named: d.named } : {}) }], targets: [], specs: [], text: "Return the exiled card to the battlefield." } });
+  }
+  state.delayedReturns = undefined;
 }
 
 /** Reflection of Kiki-Jiki's copies: "Sacrifice it at the beginning of the next end step." */
@@ -143,6 +155,7 @@ export function startNextTurn(state: GameState, events: GameEvent[]): void {
   state.extraResume = undefined;
   // Rule 514.2: damage wears off for everyone at end of turn.
   state.creatureDied = undefined;
+  state.yardedThisTurn = undefined;
   for (const p of Object.values(state.players)) {
     p.drawnThisTurn = 0;
     p.costLessThisTurn = undefined;
@@ -152,6 +165,10 @@ export function startNextTurn(state: GameState, events: GameEvent[]): void {
     p.preventShield = undefined;
     p.lifeGainedThisTurn = 0;
     p.lifeLostThisTurn = 0;
+    p.copyNextSpell = undefined;
+    p.grantedFlashback = undefined;
+    p.instSorcCastThisTurn = 0;
+    p.lifeGainEventsThisTurn = 0;
     p.landsEnteredThisTurn = undefined;
     p.damagedThisTurn = undefined;
     p.attackedThisTurn = undefined;
@@ -175,6 +192,9 @@ export function startNextTurn(state: GameState, events: GameEvent[]): void {
       perm.tempKeywords = [];
       perm.regenShield = 0; // "until end of turn"
       perm.preventShield = undefined;
+      perm.noCombatDamage = undefined;
+      perm.returnOnDeath = undefined;
+      perm.venomCount = undefined;
       perm.usedAbilities = [];
       perm.crewed = false; // a Vehicle stops being a creature at end of turn
       perm.crewedBy = undefined;
@@ -241,7 +261,8 @@ export function startNextTurn(state: GameState, events: GameEvent[]): void {
     events.push({ type: "gameWon", player: state.winner });
     return;
   }
-  drawCards(state, state.active, 1, events, true); // (the draw step's card counts as the first card drawn this turn)
+  drawCards(state, state.active, 1, events, true);
+  for (const owner of Object.values(state.players)) for (const perm of owner.battlefield) if (parseCard(getCard(state, perm.card.defId)).extraDraw) drawCards(state, state.active, 1, events); // Dictate of Kruphix // (the draw step's card counts as the first card drawn this turn)
   // Sagas: a lore counter after the draw step, then that chapter's ability.
   for (const perm of p.battlefield) {
     if (!parseCard(getCard(state, perm.card.defId)).saga) continue;
@@ -259,7 +280,10 @@ function untap(state: GameState, p: PlayerState): void {
   p.spareMana = undefined;
   for (const perm of p.battlefield) {
     if (perm.stun && perm.tapped) perm.stun -= 1; // a stun counter: instead of untapping, remove one
-    else if (!forbidden(state, perm, "noUntap")) perm.tapped = false; // "doesn't untap during its controller's untap step"
+    else if (!forbidden(state, perm, "noUntap")) {
+      if (perm.tapped) for (const host of p.battlefield) if (host.attachedTo === perm.card.iid) queueTriggers(state, host.card, p.id, "hostUntapped", { other: perm.card.iid }); // Fishing Pole
+      perm.tapped = false; // "doesn't untap during its controller's untap step"
+    }
     perm.summoningSick = false;
   }
 }

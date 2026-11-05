@@ -57,7 +57,7 @@ const returnTransformed: SentenceParser = (s, ctx) =>
 
 /** Reflection of Kiki-Jiki: "Create a token that's a copy of another target nonlegendary creature you control, except it has haste." */
 const copyToken: SentenceParser = (s, ctx) => {
-  const m = /^create a token that's a copy of ((?:another )?target (?:nonlegendary )?creature you control)(, except it has haste)?$/.exec(s);
+  const m = /^create a token that's a copy of ((?:another )?target (?:nonlegendary )?(?:creature|nonland permanent) you control)(, except it has haste)?$/.exec(s);
   const what = m ? refFor(m[1], ctx) : null;
   return what ? [{ type: "copyTokenOf", what, ...(m![2] ? { haste: true } : {}) }] : null;
 };

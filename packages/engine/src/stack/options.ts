@@ -6,7 +6,7 @@ import type { ManaCost } from "../mana.js";
 import { parseCard } from "../oracle.js";
 import type { CardDef, GameState, Permanent, PlayerId } from "../types.js";
 import { abilityHaste, abilityManaCost, abilityNeed, canCastNow, holdsPriority, levelLock, sorceryTiming } from "./shared.js";
-import { castCostOf, convokePool, costChoices, crewers, delveChoice, extraSacrificeFits, waterbendTaps, harmonizers, liftedSpecs, tapPair, teamworkers } from "./cast.js";
+import { castCostOf, convokePool, costChoices, crewers, delveChoice, extraSacrificeFits, waterbendTaps, harmonizers, liftedSpecs, tapPair, teamworkers, untappedOf } from "./cast.js";
 
 // What a player could do right now (for the screen and for auto-passing).
 
@@ -16,7 +16,7 @@ export interface Castable {
   /** The spell has X in its cost: the most the player can pay for X right now (0 or more). Missing when it has no X. */
   maxX?: number;
   /** Set when the card is in the graveyard and can be cast from there with flashback, in exile, or is a prepared creature's spell (`iid` is the creature). */
-  zone?: "graveyard" | "exile" | "prepared";
+  zone?: "graveyard" | "exile" | "prepared" | "library";
   /** "Sacrifice a creature" is an additional cost: the creatures that could be sacrificed. */
   sacrifice?: string[];
   /** "...sacrifice a creature or pay {3}{B}": the mana that may be paid instead (answered as `sacrifice: "pay"`), when it can be paid. */
@@ -153,8 +153,15 @@ export function getCastable(state: GameState, player: PlayerId): Castable[] {
   }
   // Creature cards that may be cast from the graveyard this turn.
   for (const card of state.players[player].graveyard) {
-    if (!(state.players[player].yardCastable ?? []).includes(card.iid)) continue;
+    const wurmCard = (parseCard(getCard(state, card.defId)).graveyardCastCounters ?? 0) > 0 && state.players[player].battlefield.reduce((n, p) => n + (isCreature(state, p) ? (p.counters ?? 0) : 0), 0) >= parseCard(getCard(state, card.defId)).graveyardCastCounters!;
+    if (!(state.players[player].yardCastable ?? []).includes(card.iid) && !wurmCard) continue;
     const castable = castableAs(state, player, card.iid, getCard(state, card.defId), "graveyard");
+    if (castable) out.push(castable);
+  }
+  // Vizier of the Menagerie: the creature card on top of the library
+  const top = state.players[player].library[0];
+  if (top && getCard(state, top.defId).type === "creature" && state.players[player].battlefield.some((p) => parseCard(getCard(state, p.card.defId)).castCreaturesFromTop)) {
+    const castable = castableAs(state, player, top.iid, getCard(state, top.defId), "library");
     if (castable) out.push(castable);
   }
   // Flashback (and harmonize): instants and sorceries in the graveyard, for that cost.
@@ -162,7 +169,7 @@ export function getCastable(state: GameState, player: PlayerId): Castable[] {
     const def = getCard(state, card.defId);
     if (def.type !== "instant" && def.type !== "sorcery") continue;
     const parsed = parseCard(def);
-    const alternative = parsed.flashback ?? parsed.harmonize;
+    const alternative = parsed.flashback ?? parsed.harmonize ?? ((state.players[player].grantedFlashback ?? []).includes(card.iid) ? def.manaCost : undefined); // Sphinx of Forgotten Lore
     const cost = alternative ? parseManaCost(alternative) : null;
     if (!parsed.ok || !cost || !canCastNow(state, player, def)) continue;
     const free = payMana(state, player, cost, def).ok;
@@ -305,8 +312,13 @@ export function getActivatable(state: GameState, player: PlayerId): Activatable[
       if (ability.minLife !== undefined && state.players[player].life < ability.minLife) return;
       if (ability.exileFromYard && state.players[player].graveyard.length < ability.exileFromYard) return;
       if (ability.tapTwoSharing && !tapPair(state, player)) return;
+      if (ability.tapHost && !hostCanTap(state, player, perm, abilityHaste(state, player))) return;
+      if (ability.costCounters && (perm.counters ?? 0) < ability.costCounters) return;
+      if (ability.tapSubtype && untappedOf(state, player, ability.tapSubtype.subtype, perm.card.iid).length < ability.tapSubtype.n) return;
       if (forbidden(state, perm, "noActivated")) return;
       if (ability.costCard && costChoices(state, player, ability, perm.card.iid).length === 0) return;
+      if (ability.costNamed && !ability.costNamed.put && (perm.named?.[ability.costNamed.name] ?? 0) < ability.costNamed.n) return;
+      if (ability.needLands !== undefined && state.players[player].battlefield.filter((p) => getCard(state, p.card.defId).type === "land").length < ability.needLands) return;
       const xCost = ability.mana ? abilityManaCost(state, perm, ability) : null;
       let maxX: number | undefined;
       if (xCost?.x) {
@@ -324,6 +336,12 @@ export function getActivatable(state: GameState, player: PlayerId): Activatable[
  * It follows the same checks as getActivatable, in the same order, so the list of usable abilities and the reasons for
  * the locked ones never disagree.
  */
+/** Fishing Pole: the creature it equips can be tapped as a cost. */
+export function hostCanTap(state: GameState, player: PlayerId, pole: Permanent, haste: boolean): boolean {
+  const host = state.players[player].battlefield.find((p) => p.card.iid === pole.attachedTo);
+  return !!host && !host.tapped && isCreature(state, host) && (!host.summoningSick || kw(state, host, "haste") || haste);
+}
+
 export function abilityLockReason(state: GameState, player: PlayerId, perm: Permanent, index: number): string | null {
   const def = getCard(state, perm.card.defId);
   const ability = parseCard(def).activated[index];
@@ -349,8 +367,13 @@ export function abilityLockReason(state: GameState, player: PlayerId, perm: Perm
   const yard = state.players[player].graveyard.length;
   if (ability.exileFromYard && yard < ability.exileFromYard) return `it needs ${ability.exileFromYard} cards in your graveyard (you have ${yard})`;
   if (ability.tapTwoSharing && !tapPair(state, player)) return "it needs two untapped creatures that share a creature type";
+  if (ability.tapHost && !hostCanTap(state, player, perm, abilityHaste(state, player))) return "the equipped creature has to be untapped (and not summoning sick)";
+  if (ability.costCounters && (perm.counters ?? 0) < ability.costCounters) return `it needs ${ability.costCounters} +1/+1 counters`;
+  if (ability.tapSubtype && untappedOf(state, player, ability.tapSubtype.subtype, perm.card.iid).length < ability.tapSubtype.n) return `it needs ${ability.tapSubtype.n} other untapped ${ability.tapSubtype.subtype}s`;
   if (forbidden(state, perm, "noActivated")) return "something stops its abilities from being used";
   if (ability.costCard && costChoices(state, player, ability, perm.card.iid).length === 0) return `you have nothing to pay it with (${ability.costCard.label})`;
+  if (ability.costNamed && !ability.costNamed.put && (perm.named?.[ability.costNamed.name] ?? 0) < ability.costNamed.n) return `it has no ${ability.costNamed.name} counter to remove`;
+  if (ability.needLands !== undefined && state.players[player].battlefield.filter((p) => getCard(state, p.card.defId).type === "land").length < ability.needLands) return `it needs ${ability.needLands} lands`;
   return null;
 }
 

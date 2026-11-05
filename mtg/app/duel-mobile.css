@@ -27,6 +27,9 @@
   /* every player card is a tap target for the details */
   .duel-opp .pl-card, .duel-me .pl-card { min-height: 44px; }
 
+  /* the sheet of questions ends just above the turn strip (measured by the game), so the strip and its big button are never under it */
+  .action-box { bottom: var(--sheet-bottom, 6.4rem); }
+
   .duel-menu-backdrop { position: fixed; inset: 0; z-index: 39; background: rgba(0, 0, 0, 0.5); }
   .duel-badge { position: absolute; top: -7px; right: -12px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #a8322a; color: #fff; font-size: 11px; font-weight: 800; line-height: 17px; text-align: center; font-family: var(--font-alegreya), sans-serif; }
 }
@@ -65,12 +68,13 @@
   .duel-center .hand-tray { --card-h: clamp(52px, 17dvh, 86px); padding: 2px 4px; padding-right: 11rem; border-width: 1px; box-shadow: none; }
 
   /* the big buttons: lower right, under the thumb, always what pressing them does */
-  .cmd-actions { position: fixed; z-index: 34; right: max(8px, env(safe-area-inset-right, 0px)); bottom: max(6px, env(safe-area-inset-bottom, 0px)); flex-wrap: nowrap; margin: 0; }
+  .cmd-actions { position: fixed; z-index: 37; right: max(8px, env(safe-area-inset-right, 0px)); bottom: max(6px, env(safe-area-inset-bottom, 0px)); flex-wrap: nowrap; margin: 0; }
   .cmd-actions .btn-gold { min-height: 52px; min-width: 6.5rem; font-size: 1rem !important; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55); }
   .cmd-actions .btn-ghost { min-height: 48px; background: rgba(11, 17, 32, 0.9); }
 
   /* a question (targets, costs, blocks) is a sheet from the right, the board stays in sight on the left */
-  .action-box { inset-inline: auto; right: max(4px, env(safe-area-inset-right, 0px)); top: 40px; bottom: max(4px, env(safe-area-inset-bottom, 0px)); width: min(24rem, 46vw); max-height: none; }
+  /* (sideways the big buttons are at the lower right: the sheet stops above them) */
+  .action-box { inset-inline: auto; right: max(4px, env(safe-area-inset-right, 0px)); top: 40px; bottom: calc(max(6px, env(safe-area-inset-bottom, 0px)) + 66px); width: min(24rem, 46vw); max-height: none; }
   main[data-peek="1"] .action-box { transform: translateX(calc(100% + 2rem)); }
   .peek-btn { position: fixed; z-index: 36; right: max(4px, env(safe-area-inset-right, 0px)); top: 4px; width: auto; padding: 5px 12px !important; font-size: 12.5px !important; min-height: 32px; }
 
@@ -81,3 +85,26 @@
   /* the menu: a drawer from the right */
   .duel-menu { inset-inline: auto !important; top: 0 !important; right: 0; width: min(28rem, 60vw); padding-top: max(0.75rem, env(safe-area-inset-top, 0px)); padding-right: max(0.75rem, env(safe-area-inset-right, 0px)); padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)); border-left: 2px solid rgba(255, 255, 255, 0.25); }
 }
+
+/* ───────── the chat on a phone: a round button floating over the battle, and the messages over the board when it is tapped ───────── */
+.chat-float { display: contents; }
+.chat-bubble {
+  position: fixed; z-index: 44; left: max(8px, env(safe-area-inset-left, 0px)); top: 46%;
+  width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; touch-action: none;
+  background: rgba(11, 17, 32, 0.88); color: #e8dcc0; border: 2px solid rgba(232, 220, 192, 0.55); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+.chat-bubble:active { transform: scale(0.96); }
+.chat-bubble-badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: #a8322a; color: #fff; font-size: 12px; font-weight: 800; line-height: 20px; text-align: center; }
+.chat-float-backdrop { position: fixed; inset: 0; z-index: 45; background: rgba(0, 0, 0, 0.28); }
+.chat-float-panel {
+  position: fixed; z-index: 46; left: 0; right: 0; margin-inline: auto; width: min(24rem, calc(100vw - 16px)); max-height: calc(100dvh - 16px);
+  /* the panel sits on the side of the screen the bubble is not on, so the bubble stays in sight */
+}
+.chat-float-panel[data-above="yes"] { top: calc(var(--bar-h) + 8px); }
+.chat-float-panel[data-above="no"] { bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+.chat-float-panel > section { height: min(16rem, 52dvh) !important; box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6); }
+.chat-float-close { position: absolute; z-index: 2; top: 2px; right: 2px; min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.6rem; color: #2a1d12; }
+.chat-float-panel input { font-size: 16px !important; min-height: 44px; }
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) { .chat-bubble { top: 42%; } }
+@media (min-width: 1024px) { .chat-float { display: none; } }
+body:has(.duel-menu, .victory-backdrop, .game-modal) .chat-float { display: none; }

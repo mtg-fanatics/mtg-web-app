@@ -108,7 +108,7 @@ export const SACRIFICE_EFFECTS = {
   addMana({ state, ctx, say, startPick }, effect) {
     const me = state.players[ctx.controller];
     const live = new Set(floatingMana(state, ctx.controller).map((m) => m.at));
-    me.pool = [...(me.pool ?? []).filter((_, at) => live.has(at)), ...effect.mana.map((color) => ({ color, turn: state.turn, phase: state.phase, ...(effect.combat ? { combat: true } : {}) }))];
+    me.pool = [...(me.pool ?? []).filter((_, at) => live.has(at)), ...effect.mana.map((color) => ({ color, turn: state.turn, phase: state.phase, ...(effect.combat ? { combat: true } : {}), ...(effect.allTurn ? { allTurn: true } : {}) }))];
     if (effect.mana.length > 0) say(`${playerLabel(ctx.controller)} adds ${effect.mana.map((c) => `{${c}}`).join("")}${effect.combat ? "; it lasts until end of combat" : ""}.`);
     if (!effect.anyColor || state.pendingPick) return;
     startPick({ player: ctx.controller, prompt: "Add one mana of any color: choose the color", kind: "color", options: ["W", "U", "B", "R", "G"], optional: false, owner: ctx.controller, remaining: effect.anyColor, ordered: [], poolColor: true });

@@ -69,7 +69,7 @@ function RoomRow({ room, canJoin }: { room: LobbyRoomInfo; canJoin: boolean }) {
 
   return (
     <li className="deck-row !flex-col !items-stretch !gap-2 !py-2.5" style={{ "--accent": room.status === "playing" ? "#d9694f" : room.status === "waiting" ? "#6b9a7f" : "#8c7455" } as React.CSSProperties}>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-2">
         <div className="min-w-0 flex-1 basis-[9rem]">
           <div className="truncate text-[15px] font-semibold">
             {room.locked && <Padlock width={14} height={14} className="ink-icon mr-1 inline-block align-[-2px] text-[#d8c8a2]" aria-label="Needs a word at the door" />}

@@ -188,6 +188,26 @@ export function parseCard(def: CardDef): ParsedCard {
         result.costReduction = { n: Number(reduction[1]), ifControl: reduction[2] };
         return false;
       }
+      const altCost = /^you may pay ((?:\{[^}]+\})+) rather than pay (?:this spell's|~'s) mana cost if there are (thirteen|\d+) or more creatures on the battlefield\.?$/.exec(line);
+      if (altCost) {
+        result.altCostIfCreatures = { cost: altCost[1].toUpperCase(), n: toNumber(altCost[2]) ?? 13 };
+        return false;
+      }
+      const flashFor = /^you may cast ~ as though it had flash if you pay \{(\d+)\} more to cast it\.?$/.exec(line);
+      if (flashFor) {
+        result.flashPay = Number(flashFor[1]);
+        return false;
+      }
+      const affinitySpell = /^affinity for ([a-z]+)$/.exec(line);
+      if (affinitySpell) {
+        result.affinity = affinitySpell[1];
+        return false;
+      }
+      const ifLife = /^~ costs \{(\d+)\} less to cast if you've gained (\d+) or more life this turn\.?$/.exec(line);
+      if (ifLife) {
+        result.costReduction = { n: Number(ifLife[1]), ifLifeGained: Number(ifLife[2]) };
+        return false;
+      }
       const perCard = /^~ costs \{(\d+)\} less to cast for each (instant and sorcery card in your graveyard)\.?$/.exec(line);
       if (perCard) {
         result.costReduction = { n: Number(perCard[1]), per: parseCount(perCard[2].replace("card", "cards"))! };
@@ -336,6 +356,20 @@ export function parseCard(def: CardDef): ParsedCard {
         else result.unsupported.push(creatureLines[i]);
         continue;
       }
+      // Any other trigger that makes its controller choose: "At the beginning of your upkeep, choose one that hasn't been chosen —", "Whenever you cast a noncreature spell, choose one —".
+      // The header is read as an ordinary trigger (to learn its event and conditions), and the bullets that follow become its modes.
+      const modalAny = /^(?:[a-z]+ — )?((?:at the beginning of|whenever|when) .+?), choose one( that hasn't been chosen)? —$/.exec(creatureLines[i]);
+      if (modalAny) {
+        const bullets: string[] = [];
+        while (i + 1 < creatureLines.length && creatureLines[i + 1].startsWith("• ")) bullets.push(creatureLines[++i].slice(2));
+        const modes = bullets.length >= 2 ? parseModes(bullets.map(stripModeName), true) : null;
+        const probe: ParsedCard = { ok: true, triggers: [], activated: [], unsupported: [] };
+        parseCreatureLine(`${modalAny[1]}, you gain 1 life`, probe);
+        if (modes && probe.unsupported.length === 0 && probe.triggers.length === 1) {
+          result.triggers.push({ ...probe.triggers[0], effects: [], targets: [], modes, text: `${modalAny[1].charAt(0).toUpperCase()}${modalAny[1].slice(1)}, choose one${modalAny[2] ?? ""}`.replace(/~/g, def.name), ...(modalAny[2] ? { unchosenOnly: true } : {}) });
+        } else result.unsupported.push(creatureLines[i]);
+        continue;
+      }
       parseCreatureLine(creatureLines[i], result);
     }
   } else if (text) {
@@ -349,7 +383,7 @@ export function parseCard(def: CardDef): ParsedCard {
   if (result.aura) result.spell = { effects: [], targets: [result.aura] };
   else if (def.type === "enchantment" && (def.typeLine ?? "").includes("Aura")) result.unsupported.push("(an Aura without an \"Enchant\" line)");
   // Protection looks at what is targeting: remember this card's colors on every target it can choose.
-  const source = { colors: def.colors ?? [], artifact: def.type === "artifact" || (def.typeLine ?? "").split("—")[0].includes("Artifact") };
+  const source = { type: def.type, colors: def.colors ?? [], artifact: def.type === "artifact" || (def.typeLine ?? "").split("—")[0].includes("Artifact") };
   const stamp = (specs: TargetSpec[]) => specs.map((spec) => ({ ...spec, source }));
   if (result.spell) result.spell = { ...result.spell, targets: stamp(result.spell.targets) };
   result.triggers = result.triggers.map((t) => ({ ...t, targets: stamp(t.targets) }));

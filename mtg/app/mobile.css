@@ -7,7 +7,7 @@
 :root { --bar-h: calc(2.6rem + env(safe-area-inset-top, 0px)); }
 
 /* The installed app has no address bar, no reload and no back button: pulling the page down must not reload it, and the page must not bounce. */
-@media (display-mode: standalone) {
+@media (display-mode: standalone), (display-mode: fullscreen) {
   html, body { overscroll-behavior-y: contain; }
 }
 /* During a duel nothing scrolls the page at all (the boards and the hand scroll inside themselves). */
@@ -289,3 +289,11 @@ html[data-hidden] *, html[data-hidden] *::before, html[data-hidden] *::after { a
 }
 /* the link under the sign-in form is a button for a thumb */
 .login-switch { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding-inline: 0.5rem; }
+
+/* the deck list on a phone: the whole page scrolls (the title, the tabs and the filters are not held at the top, where they took half the screen) */
+@media (max-width: 1023px) {
+  main:has(.deck-scroll) { height: auto; min-height: calc(100dvh - var(--bar-h)); overflow: visible; }
+  main:has(.deck-scroll) > .panel-glass { max-height: none; }
+  .deck-scroll { overflow: visible; padding-right: 0; }
+  .deck-scroll .deck-filters { position: static; }
+}

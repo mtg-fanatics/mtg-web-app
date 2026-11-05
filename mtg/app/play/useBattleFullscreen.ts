@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
-const supported = () => typeof document !== "undefined" && document.fullscreenEnabled === true;
+// The installed app already has the whole screen (or its own window with no browser bars), so the page's own full screen is only for a browser tab.
+const installed = () => typeof window !== "undefined" && (matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches);
+const supported = () => typeof document !== "undefined" && document.fullscreenEnabled === true && !installed();
 const enter = () =>
   document.documentElement.requestFullscreen({ navigationUI: "hide" }).then(() => {
     // A phone in full screen can also be held to portrait (the battle is laid out for it); browsers that cannot just carry on.
