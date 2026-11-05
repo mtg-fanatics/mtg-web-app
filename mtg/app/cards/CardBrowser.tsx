@@ -14,6 +14,7 @@ import { Skeleton } from "../Skeleton";
 import TypeButton from "./TypeButton";
 import { ALBUM_PAGE_CARDS, useAlbumPages } from "./useAlbumPages";
 import { Back, Lens } from "../Icons";
+import AddToDeck from "./AddToDeck";
 
 type Filter = "all" | CardType;
 const TYPES: Filter[] = ["all", "creature", "land", "instant", "sorcery", "enchantment", "artifact", "planeswalker"];
@@ -210,6 +211,7 @@ export default function CardBrowser() {
           onPrev={() => step(-1)}
           onNext={() => step(1)}
           caption={`Card ${zoomedIdx! + 1} of ${shown.length} on show`}
+          actions={<AddToDeck key={zoomed.id} def={zoomed} />}
         />
       )}
     </main>

@@ -235,3 +235,16 @@ html[data-hidden] *, html[data-hidden] *::before, html[data-hidden] *::after { a
 @media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
   .alb-caption { display: none; }
 }
+
+/* "Add to deck" under a card shown large in the library */
+.add-to-deck { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem; width: min(30rem, 92vw); }
+.add-to-deck-pick { flex: 1 1 11rem; min-width: 0; }
+.add-to-deck-pick select { width: 100%; min-height: 48px; padding: 0 0.75rem; border-radius: 8px; border: 2px solid rgba(232, 220, 192, 0.5); background: #1d1610; color: #f1e8d0; font-size: 16px; }
+.add-to-deck-go { min-height: 48px; padding-inline: 1.25rem; }
+.add-to-deck-note { flex: 1 1 100%; margin: 0; text-align: center; font-size: 0.95rem; color: #d7e8dc; }
+.add-to-deck-bad { color: #fda4af; }
+
+/* a long list of results on a phone: the browser leaves out what is scrolled far off screen (nothing of it is drawn or laid out until it comes near) */
+@media (max-width: 1023px) {
+  .pool-grid > * { content-visibility: auto; contain-intrinsic-size: auto 150px auto 215px; }
+}
