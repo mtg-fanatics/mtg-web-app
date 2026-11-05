@@ -248,3 +248,31 @@ html[data-hidden] *, html[data-hidden] *::before, html[data-hidden] *::after { a
 @media (max-width: 1023px) {
   .pool-grid > * { content-visibility: auto; contain-intrinsic-size: auto 150px auto 215px; }
 }
+
+/* the library held sideways: a wide page of two rows of five, so the cards are about twice as tall as in a narrow page of three rows (the page is only as tall as the screen) */
+@media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .alb[data-mode="single"] { --aspect: 2.3; }
+  .alb[data-mode="single"] .alb-grid { inset: 2cqw 3cqw 4.2cqw; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(2, 1fr); --card-h: 15.5cqw; }
+  .alb[data-mode="single"] .alb-slot { padding: 0.6cqw; }
+  .alb[data-mode="single"] .alb-folio { bottom: 0.8cqw; font-size: max(11px, 1.9cqw); }
+}
+
+/* ───────── the replay on a phone: the controls stay at the foot, the list of moves is a short scrolling box under the table ───────── */
+@media (max-width: 1023px) {
+  main:has([aria-label="What happened"]) { padding-bottom: 0; }
+  main:has([aria-label="What happened"]) > footer {
+    position: sticky; bottom: 0; z-index: 20; margin-inline: -0.25rem; border-radius: 12px 12px 0 0 !important;
+    padding: 0.5rem max(0.75rem, env(safe-area-inset-right, 0px)) max(0.6rem, env(safe-area-inset-bottom, 0px)) max(0.75rem, env(safe-area-inset-left, 0px));
+    background: rgba(20, 16, 12, 0.97) !important;
+  }
+  [aria-label="What happened"] { max-height: 38dvh; }
+  [aria-label="The table"] > div { min-height: 11rem; }
+  [aria-label="Speed"] button { min-width: 44px; min-height: 44px; font-size: 0.85rem; }
+  [aria-label="What happened"] li > button { min-height: 44px; }
+  main:has([aria-label="What happened"]) input[type="range"] { min-height: 44px; min-width: 8rem; }
+}
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) {
+  /* sideways there is room for the table and the moves side by side */
+  main:has([aria-label="What happened"]) > div.grid { grid-template-columns: minmax(0, 1fr) 15rem; }
+  [aria-label="What happened"] { max-height: none; }
+}
