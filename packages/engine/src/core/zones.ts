@@ -113,7 +113,7 @@ export function putIntoGraveyard(state: GameState, perm: Permanent, controller: 
   events.push({ type: "creatureDied", player: controller, iid: perm.card.iid, name: getCard(state, perm.card.defId).name, ...(creature ? {} : { noncreature: true as const }), ...(sacrificed ? { sacrificed: true as const } : {}) });
   queueTriggers(state, perm.card, controller, "dies", { died: lki }); // as it was on the battlefield ("if it was a creature")
   // "Whenever a Vampire you control dies" / "whenever this creature or another creature you control dies": the dying creature looks back too.
-  if (creature) for (const other of [perm, ...battlefield]) queueTriggers(state, other.card, controller, "allyDies", { subtypes: types, self: other === perm });
+  if (creature) for (const other of [perm, ...battlefield]) queueTriggers(state, other.card, controller, "allyDies", { subtypes: types, self: other === perm, token: isToken(perm.card) });
   // "Whenever this creature or another nontoken creature dies" (any player's): the dying creature looks back too.
   if (creature) {
     for (const owner of Object.values(state.players)) {

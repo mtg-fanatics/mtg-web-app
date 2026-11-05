@@ -101,6 +101,12 @@ function targetSpecBase(phrase: string): TargetSpec | null {
   // Celestial Purge: "target black or red permanent"
   const permColors = /^target (white|blue|black|red|green) or (white|blue|black|red|green) permanent$/.exec(phrase);
   if (permColors) return { kind: "permanent", colorsAny: [COLOR_OF[permColors[1]], COLOR_OF[permColors[2]]], label: phrase };
+  // Deathmark: "target green or white creature"
+  const creatureColors = /^target (white|blue|black|red|green) or (white|blue|black|red|green) creature$/.exec(phrase);
+  if (creatureColors) return { kind: "creature", colorsAny: [COLOR_OF[creatureColors[1]], COLOR_OF[creatureColors[2]]], label: phrase };
+  // Devout Decree: "target creature or planeswalker that's black or red"
+  const walkerColors = /^target creature or planeswalker that's (white|blue|black|red|green) or (white|blue|black|red|green)$/.exec(phrase);
+  if (walkerColors) return { kind: "permanent", types: ["creature", "planeswalker"], colorsAny: [COLOR_OF[walkerColors[1]], COLOR_OF[walkerColors[2]]], label: phrase };
   if (phrase === "target card from a graveyard") return { kind: "graveyardCard", label: phrase };
   if (phrase === "target land") return { kind: "land", label: phrase };
   if (phrase === "target artifact or land") return { kind: "artifactOrLand", label: phrase };

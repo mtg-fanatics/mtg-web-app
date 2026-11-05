@@ -67,6 +67,7 @@ export function castCostOf(state: GameState, player: PlayerId, def: CardDef, tar
   for (const perm of me.battlefield) {
     for (const mod of parseCard(getCard(state, perm.card.defId)).costMods ?? []) {
       if (mod.subtype && !(def.type === "creature" && spellTypes.includes(mod.subtype))) continue;
+      if (mod.subtypes && !(def.type === "creature" && mod.subtypes.some((t) => spellTypes.includes(t)))) continue;
       if (mod.minMV !== undefined && def.cost < mod.minMV) continue;
       if (mod.otherTurn && state.active === player) continue;
       if (mod.instantSorceryOnly && def.type !== "instant" && def.type !== "sorcery") continue;

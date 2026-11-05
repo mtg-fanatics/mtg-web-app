@@ -549,6 +549,13 @@ export function pickCard(state: GameState, player: PlayerId, iid: string | undef
       break;
     case "searchAny": {
       const found = take(owner.library, iid);
+      if (pick.yardTo === "graveyard") {
+        owner.graveyard.push(found);
+        events.push({ type: "effect", text: `${playerLabelOf(pick.owner)} searches their library and puts ${getCard(state, found.defId).name} into their graveyard.` });
+        [owner.library, state.rng] = shuffle(owner.library, state.rng);
+        events.push({ type: "libraryShuffled", player: pick.owner });
+        break;
+      }
       owner.hand.push(found);
       events.push({ type: "effect", text: pick.reveal ? `${playerLabelOf(pick.owner)} searches their library, reveals ${getCard(state, found.defId).name} and puts it into their hand.` : `${playerLabelOf(pick.owner)} searches their library and puts a card into their hand.` });
       [owner.library, state.rng] = shuffle(owner.library, state.rng);

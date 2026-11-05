@@ -50,7 +50,7 @@ export type Effect =
   // "Look at the top five cards. You may reveal a creature card from among them and put it into your hand. Put the rest on the bottom."
   | { type: "revealToHand"; n: number; filter: CardFilter; random: boolean; required?: boolean; restTo?: "bottom" | "graveyard"; reveal?: boolean; take?: number } // `take`: "put two of them into your hand"
   // Search your library for a card (a basic land card, or any card): onto the battlefield (tapped) or into your hand, then shuffle.
-  | { type: "search"; tapped?: boolean; for?: "basicLand" | "any"; to?: "hand" | "battlefield"; who?: Ref; reveal?: boolean; filters?: CardFilter[]; label?: string } // `filters`: a card that fits any of them, `label` names it
+  | { type: "search"; tapped?: boolean; for?: "basicLand" | "any"; to?: "hand" | "battlefield" | "graveyard"; who?: Ref; reveal?: boolean; filters?: CardFilter[]; label?: string } // `filters`: a card that fits any of them, `label` names it
   | { type: "scry"; n: number } // look at the top n cards; any of them may go to the bottom (see PendingPick)
   | { type: "mill"; amount: Amount; who: Ref } // the top cards of the library go to the graveyard
   | { type: "regenerate"; what: Ref } // a regeneration shield until end of turn
@@ -193,6 +193,8 @@ export interface CardFilter {
   maxMV?: number;
   /** "a creature card with power 2 or less". */
   maxPower?: number;
+  /** "a card with flash": the card has this keyword. */
+  keyword?: string;
 }
 
 /** A token the game makes up while playing: a Treasure, or "a 1/1 white Soldier creature token". */
@@ -766,7 +768,7 @@ export interface ParsedCard {
   /** Permanents that make your spells cost less: "Goblin spells you cast cost {1} less", "during turns other than yours...". */
   /** "White spells you cast cost {W} more to cast" (the Leech cycle): one more mana of that color for each spell of that color the controller casts. */
   spellTax?: { color: string; extra: string }[];
-  costMods?: { n: number; subtype?: string; minMV?: number; otherTurn?: boolean; /** "...cost {X} less to cast, where X is ~'s power" */ nFromPower?: boolean; instantSorceryOnly?: boolean }[];
+  costMods?: { n: number; subtype?: string; /** "Kithkin spells and Soldier spells": a creature spell of any of these types. */ subtypes?: string[]; minMV?: number; otherTurn?: boolean; /** "...cost {X} less to cast, where X is ~'s power" */ nFromPower?: boolean; instantSorceryOnly?: boolean }[];
   /** "Spells you cast with mana value 5 or greater can't be countered." */
   uncounterableMinMV?: number;
   /** "As an additional cost to cast this spell, sacrifice a Goblin." */
@@ -957,7 +959,7 @@ export interface PendingPick {
   modeUnchosen?: boolean;
   modeItem?: Extract<StackItem, { kind: "ability" }>;
   /** From the graveyard: where the chosen card goes, and whether it gets a finality counter. */
-  yardTo?: "hand" | "battlefield";
+  yardTo?: "hand" | "battlefield" | "graveyard";
   finality?: boolean;
   /** Rummage: how many cards are drawn for the discarded one. */
   drawN?: number;

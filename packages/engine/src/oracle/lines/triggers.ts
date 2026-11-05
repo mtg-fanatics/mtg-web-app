@@ -247,7 +247,8 @@ export function readAnySpellCast(line: string, out: ParsedCard): boolean {
 
 // "Whenever a Vampire you control dies, ..." / "Whenever this creature or another creature you control dies, ..."
 export function readAllyDies(line: string, out: ParsedCard): boolean {
-  const allyDies = /^whenever (~ or another|another|an?) (creature|[a-z]+) you control dies,? (.+)$/.exec(line);
+  // "whenever a nontoken creature you control dies" (Midnight Reaper), "another nontoken creature" (Spinner of Souls)
+  const allyDies = /^whenever (~ or another|another|an?) (nontoken creature|creature|[a-z]+) you control dies,? (.+)$/.exec(line);
   if (allyDies) {
     const ctx = newCtx(true);
     const effects = parseEffectText(allyDies[3], ctx);
@@ -255,7 +256,7 @@ export function readAllyDies(line: string, out: ParsedCard): boolean {
       out.triggers.push({
         event: "allyDies",
         ...(allyDies[1] === "another" ? { other: true } : {}),
-        ...(allyDies[2] === "creature" ? {} : { subtypes: [allyDies[2]] }),
+        ...(allyDies[2] === "nontoken creature" ? { nontoken: true } : allyDies[2] === "creature" ? {} : { subtypes: [allyDies[2]] }),
         effects,
         targets: ctx.targets,
         text: line,

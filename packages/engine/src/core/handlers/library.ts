@@ -325,11 +325,12 @@ export const LIBRARY_EFFECTS = {
       events.push({ type: "libraryShuffled", player: searcher });
       return;
     }
-    const toHand = effect.to === "hand";
+    const toHand = effect.to === "hand" || effect.to === "graveyard";
     startPick({
       player: searcher,
-      prompt: toHand ? `Search your library: choose a ${effect.label ?? (any ? "card" : "basic land")} to put into your hand` : `Search your library: choose a ${effect.label ?? "basic land"} to put onto the battlefield${effect.tapped === false ? "" : " tapped"}`,
+      prompt: toHand ? `Search your library: choose a ${effect.label ?? (any ? "card" : "basic land")} to put into your ${effect.to === "graveyard" ? "graveyard" : "hand"}` : `Search your library: choose a ${effect.label ?? "basic land"} to put onto the battlefield${effect.tapped === false ? "" : " tapped"}`,
       kind: toHand ? "searchAny" : "searchLand",
+      ...(effect.to === "graveyard" ? { yardTo: "graveyard" as const } : {}),
       entersTapped: effect.tapped !== false,
       reveal: effect.reveal,
       options,

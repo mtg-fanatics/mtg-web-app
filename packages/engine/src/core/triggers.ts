@@ -203,7 +203,7 @@ export function queueTriggers(state: GameState, card: CardInstance, controller: 
     if (trigger.spellKicked && !extra?.spellKicked) continue; // "whenever you cast a kicked spell"
     if (trigger.spellCreature && !extra?.spellCreature) continue; // "whenever you cast a creature spell (with infect)"
     if (trigger.spellKeyword && !(extra?.spellKeywords ?? []).some((k) => k.toLowerCase() === trigger.spellKeyword)) continue;
-    if (event === "anyDies" && trigger.nontoken && extra?.token) continue; // "another nontoken creature"
+    if ((event === "anyDies" || event === "allyDies") && trigger.nontoken && extra?.token) continue; // "another nontoken creature"
     if (trigger.tokenOnly && !extra?.token) continue; // "whenever you sacrifice a token"
     if (trigger.ifNoCounters && (extra?.died?.counters ?? 0) > 0) continue; // undying
     if (trigger.ifNoMinusCounters && (extra?.died?.minusCounters ?? 0) > 0) continue; // persist

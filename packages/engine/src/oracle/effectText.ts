@@ -79,6 +79,10 @@ export function parseClause(s: string, ctx: Ctx): Effect[] | null {
 function searchFilters(phrase: string): CardFilter[] | null {
   const out: CardFilter[] = [];
   for (const part of phrase.split(/ or (?=an? )/)) {
+    if (part === "a card with flash") {
+      out.push({ keyword: "flash" });
+      continue;
+    }
     const m = /^an? (basic )?(.+?) card(?: with mana value (\d+) or less)?$/.exec(part);
     const filter = m ? parseCardFilter(m[2]) : null;
     if (!filter) return null;
@@ -159,7 +163,9 @@ function parseChoiceText(text: string, ctx: Ctx): Effect[] | null {
   }
   m = /^search your library for a basic land card, (reveal (?:it|that card), )?put (?:that card|it) into your hand, then shuffle$/.exec(t);
   if (m) return [{ type: "search", for: "basicLand", to: "hand", reveal: m[1] !== undefined }];
-  if (t === "search your library for a card, put that card into your hand, then shuffle") return [{ type: "search", for: "any", to: "hand" }];
+  if (/^search your library for a card, put (?:that card|it) into your hand, then shuffle$/.test(t)) return [{ type: "search", for: "any", to: "hand" }];
+  // Vile Entomber: the card goes to the graveyard, not the hand
+  if (/^search your library for a card, put (?:that card|it) into your graveyard, then shuffle$/.test(t)) return [{ type: "search", for: "any", to: "graveyard" }];
   m = /^search your library for (an? .+? card(?: with mana value \d+ or less)?(?: or an? .+? card(?: with mana value \d+ or less)?)?), (reveal (?:it|that card), )?put (?:that card|it) into your hand, then shuffle$/.exec(t);
   const filters = m ? searchFilters(m[1]) : null;
   if (m && filters) return [{ type: "search", for: "any", to: "hand", filters, label: m[1].replace(/^an? /, ""), reveal: m[2] !== undefined }];
@@ -239,6 +245,7 @@ export function parseEffectText(rawText: string, ctx: Ctx): Effect[] | null {
     // The older wording of a search: "..., reveal it, and put it into your hand. Then shuffle your library." says what "..., reveal it, put it into your hand, then shuffle" says.
     .replace(/(reveal (?:it|that card)), and put /g, "$1, put ")
     .replace(/[.,] then shuffle your library/g, ", then shuffle")
+    .replace(/^for each (land|creature|artifact|enchantment) you control, (create (?:a|an|one) [^,]+? tokens?)$/g, "$2 for each $1 you control") // Brass's Bounty
     .replace(/you may draw a card for each artifact you control\. if you do, each opponent draws a card/g, "@@armorwars@@")
     .replace(/(you may put an? [a-z]+ creature card with mana value \d+ or less from your hand onto the battlefield)\. if you don't, draw a card/g, "$1, else draw a card")
     .replace(/remove a -1\/-1 counter from target creature\. if you do, you gain (\d+) life/g, "@@removeminus $1@@")
