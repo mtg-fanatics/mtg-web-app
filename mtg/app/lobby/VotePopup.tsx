@@ -206,7 +206,7 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
       <button
         onClick={() => void confirm()}
         disabled={ready || busy || options === null}
-        className="btn-gold !px-8 !py-3.5 !text-xl sm:!py-4 sm:!text-2xl"
+        className="sheet-action btn-gold !px-8 !py-3.5 !text-xl sm:!py-4 sm:!text-2xl"
       >
         {ready ? "Ready, and waiting" : busy ? "Shuffling…" : "I am ready"}
       </button>
