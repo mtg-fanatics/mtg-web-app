@@ -249,12 +249,12 @@ html[data-hidden] *, html[data-hidden] *::before, html[data-hidden] *::after { a
   .pool-grid > * { content-visibility: auto; contain-intrinsic-size: auto 150px auto 215px; }
 }
 
-/* the library held sideways: a wide page of two rows of five, so the cards are about twice as tall as in a narrow page of three rows (the page is only as tall as the screen) */
+/* the library held sideways: a wide page of two rows of five, so the cards are about twice as tall as in a narrow page of three rows (the page is only as tall as the screen; the selectors are one level more specific than the album's own, which is loaded after this file) */
 @media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
-  .alb[data-mode="single"] { --aspect: 2.3; }
-  .alb[data-mode="single"] .alb-grid { inset: 2cqw 3cqw 4.2cqw; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(2, 1fr); --card-h: 15.5cqw; }
-  .alb[data-mode="single"] .alb-slot { padding: 0.6cqw; }
-  .alb[data-mode="single"] .alb-folio { bottom: 0.8cqw; font-size: max(11px, 1.9cqw); }
+  .alb-fit .alb[data-mode="single"] { --aspect: 2.3; }
+  .alb-fit .alb[data-mode="single"] .alb-grid { inset: 2cqw 3cqw 4.2cqw; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(2, 1fr); --card-h: 15.5cqw; }
+  .alb-fit .alb[data-mode="single"] .alb-slot { padding: 0.6cqw; }
+  .alb-fit .alb[data-mode="single"] .alb-folio { bottom: 0.8cqw; font-size: max(11px, 1.9cqw); }
 }
 
 /* ───────── the replay on a phone: the controls stay at the foot, the list of moves is a short scrolling box under the table ───────── */
