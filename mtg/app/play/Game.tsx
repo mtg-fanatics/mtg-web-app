@@ -21,6 +21,7 @@ import {
 } from "@mtg/engine";
 import type { Action, Activatable, CardDef, GameEvent, GameState, Permanent, PlayerId, TargetChoice, TargetSpec } from "@mtg/engine";
 import { useBattlefieldBackground } from "@/lib/background";
+import { useWakeLock } from "@/lib/useWakeLock";
 import { dismissNotice, leaveRoom, send as netSend, useOnline } from "@/lib/online/session";
 import { Lightbox } from "./CardDetail";
 import { HoverDetail, HoverPreview } from "./HoverPanels";
@@ -231,6 +232,16 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   const background = useBattlefieldBackground(); // the picture behind the battlefield
   const look = useAppearance(online ? (net.game?.looks ?? null) : null); // each player's card sleeves and playmat (online: what each chose before the match)
   const [menuOpen, setMenuOpen] = useState(false); // phones: the side panels (chat, log, looks) are a menu over the board
+  // The installed app: the page knows a duel is on (so Back opens the menu instead of leaving, and the top bar can give way), and the screen stays awake until it ends.
+  useEffect(() => {
+    document.documentElement.dataset.duel = "1";
+    const onBack = () => setMenuOpen(true);
+    window.addEventListener("ink:duel-back", onBack);
+    return () => {
+      delete document.documentElement.dataset.duel;
+      window.removeEventListener("ink:duel-back", onBack);
+    };
+  }, []);
   const [peek, setPeek] = useState(false); // phones: the choice sheet is tucked away to see the board under it
   // a new panel in the sheet (a different question) always opens it
   const watchSheet = useCallback((el: HTMLDivElement | null) => {
@@ -513,6 +524,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   // Space passes priority (go on / resolve the top of the chain), only when the Pass or Resolve button is there for this player to press.
   const canSpacePass = !watching && !state.winner && state.priority?.holder === actor && !state.pendingPick && !state.pendingChoice;
   spacePass.current = canSpacePass ? () => void act({ type: "passPriority" }) : null;
+  useWakeLock(!state.winner);
 
   /**
    * Shows the result of an action: cards that died fly to the graveyard first, then the new state appears and
