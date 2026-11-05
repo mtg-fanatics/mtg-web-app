@@ -70,3 +70,20 @@ html[data-duel] .update-toast { bottom: auto; top: calc(var(--bar-h) + 0.5rem); 
   font-size: 1rem; font-weight: 700; pointer-events: none; max-width: calc(100vw - 1rem); text-align: center;
 }
 .hand-drop[data-ready="yes"] { background: #2f6b4a; color: #fff; border-style: solid; border-color: #bfe0cb; }
+
+/* Victory and Defeat on a phone: a full-height sheet. The text scrolls inside it if the screen is short, and the buttons stay at the foot, always in reach. */
+@media (max-width: 1023px) {
+  .victory-backdrop { align-items: stretch; padding: max(0.5rem, env(safe-area-inset-top, 0px)) max(0.5rem, env(safe-area-inset-right, 0px)) max(0.5rem, env(safe-area-inset-bottom, 0px)) max(0.5rem, env(safe-area-inset-left, 0px)); overflow-y: auto; }
+  .victory-backdrop > .result-page { display: flex; flex-direction: column; max-height: calc(100dvh - 1rem); margin-block: auto; min-height: 0; }
+  .victory-backdrop .result-sheet { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .victory-backdrop .result-inner { display: flex; flex-direction: column; align-items: center; padding: 1.4rem 1rem 0; }
+  .victory-backdrop .victory-actions { position: sticky; bottom: 0; width: 100%; margin-top: 0.8rem; padding: 0.9rem 0 1rem; background: linear-gradient(to top, rgba(239, 227, 194, 0.97) 72%, rgba(239, 227, 194, 0)); }
+  .victory-backdrop .victory-actions > button { min-height: 48px; }
+}
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) {
+  .victory-backdrop .victory-medal, .victory-backdrop .victory-rule { display: none; }
+  .victory-backdrop .result-inner { padding-top: 0.9rem; }
+  .victory-backdrop .victory-title { font-size: clamp(1.8rem, 11dvh, 2.6rem); line-height: 1.05; margin: 0; }
+  .victory-backdrop .victory-sub, .victory-backdrop .victory-reason { margin-block: 0.25rem; font-size: 1rem; }
+  .victory-backdrop .result-stamp { transform: rotate(9deg) scale(0.7); top: -0.9rem; }
+}
