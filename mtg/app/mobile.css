@@ -272,7 +272,10 @@ html[data-hidden] *, html[data-hidden] *::before, html[data-hidden] *::after { a
   main:has([aria-label="What happened"]) input[type="range"] { min-height: 44px; min-width: 8rem; }
 }
 @media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) {
-  /* sideways there is room for the table and the moves side by side */
-  main:has([aria-label="What happened"]) > div.grid { grid-template-columns: minmax(0, 1fr) 15rem; }
-  [aria-label="What happened"] { max-height: none; }
+  /* sideways there is room for the table and the moves side by side, and each scrolls inside its own box (the page itself does not scroll) */
+  main:has([aria-label="What happened"]) { height: calc(100dvh - var(--bar-h)); overflow: hidden; padding-bottom: 0.25rem; }
+  main:has([aria-label="What happened"]) > div.grid { grid-template-columns: minmax(0, 1fr) 15rem; min-height: 0; flex: 1 1 0; }
+  main:has([aria-label="What happened"]) > footer { position: static; margin: 0; border-radius: 12px !important; padding: 0.35rem 0.75rem; }
+  [aria-label="What happened"] { max-height: none; min-height: 0; }
+  [aria-label="The table"] { overflow-y: auto; }
 }
