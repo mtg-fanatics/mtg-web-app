@@ -195,3 +195,18 @@ html[data-duel] .update-toast { bottom: auto; top: calc(var(--bar-h) + 0.5rem); 
   .deck-row-li { min-height: 52px; }
   [role="tab"] { min-height: 44px; }
 }
+
+/* ───────── tap targets: at least 44 px on a touch screen ───────── */
+@media (hover: none) and (pointer: coarse) {
+  .btn-ghost, .btn-gold, .btn-danger, .btn-resign, .hero-btn, .pager-btn, .seg button, .icon-seg button, .switch, .count-chip, .tool-field, summary,
+  a.deck-row, .deck-row button, .deck-row a { min-height: 44px; }
+  .icon-seg button { min-width: 44px; }
+  .btn-ghost, .btn-gold, .btn-danger { display: inline-flex; align-items: center; justify-content: center; }
+  .deck-row { min-height: 56px; }
+  /* long lists of buttons keep a little air between them, so a thumb does not hit two */
+  .icon-seg { gap: 0.25rem; }
+}
+/* the smallest print on a phone: nothing under 12 px except card art */
+@media (max-width: 767px) {
+  .text-\[10px\], .text-\[11px\], [class*="text-[10px]"], [class*="text-[11px]"] { font-size: 12px !important; }
+}
