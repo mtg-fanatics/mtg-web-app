@@ -22,3 +22,27 @@ html[data-duel] body { overscroll-behavior: none; }
   /* iOS zooms the page when a field under 16px gets focus */
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em); }
 }
+
+/* "A new edition is ready": a small notice at the foot of the screen, clear of the home indicator, that never covers the controls of a duel for long. */
+.update-toast {
+  position: fixed;
+  z-index: 95;
+  left: 50%;
+  bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: calc(100vw - 1.5rem);
+  padding: 0.35rem 0.4rem 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: #efe3c2;
+  color: #2a1c10;
+  border: 2px solid #4a120c;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.update-toast-go { min-height: 44px; padding: 0 1rem; border-radius: 999px; background: #a8322a; color: #fff; border: 0; font-weight: 800; }
+.update-toast-x { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.4rem; color: #46331f; }
+html[data-duel] .update-toast { bottom: auto; top: calc(var(--bar-h) + 0.5rem); }
