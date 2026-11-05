@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Alegreya_Sans, IM_Fell_English, IM_Fell_English_SC, Geist_Mono } from "next/font/google";
 import "mana-font/css/mana.css";
 import "./globals.css";
@@ -45,7 +45,28 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Inkfall",
   description: "A game of two hands and a table. Write a deck, take a seat, and duel.",
-  icons: { icon: [{ url: "/inkfall-seal.svg", type: "image/svg+xml" }], shortcut: "/inkfall-seal.svg", apple: "/inkfall-seal.svg" },
+  applicationName: "Inkfall",
+  icons: {
+    icon: [
+      { url: "/inkfall-seal.svg", type: "image/svg+xml" },
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/favicon-48.png", sizes: "48x48", type: "image/png" },
+    ],
+    shortcut: "/icons/favicon-48.png",
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  // iPhone: the Home Screen app. The status bar is see-through over the dark top bar (the bar leaves room for it: see the safe-area rules in globals.css).
+  appleWebApp: { capable: true, title: "Inkfall", statusBarStyle: "black-translucent" },
+  formatDetection: { telephone: false },
+};
+
+// viewport-fit=cover lets the page run under the notch and the home indicator; the top bar, the hand and the buttons keep clear of them with env(safe-area-inset-*).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#070b19",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
