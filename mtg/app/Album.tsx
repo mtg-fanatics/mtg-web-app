@@ -83,18 +83,22 @@ export default function Album({ pages, index, onIndex, prepare, renderPage, page
   const running = useRef(false);
   const pending = useRef<number | null>(null);
   const live = useRef({ idx, animated, spread, step, snap, prepare, onIndex, onTurnStart });
-  live.current = { idx, animated, spread, step, snap, prepare, onIndex, onTurnStart };
+  // (kept up to date after each render, not during it: every handler below reads it when something happens, after the render has been committed)
+  useEffect(() => {
+    live.current = { idx, animated, spread, step, snap, prepare, onIndex, onTurnStart };
+  });
   const committing = useRef(false);
   const heading = useRef(idx); // where the book is going: the page it is on, or the end of the turn or jump under way, or the one waiting after it
+  const runRef = useRef<(from: number, to: number, quick: boolean) => Promise<void>>(async () => {}); // (settle and run call each other: this breaks the circle)
 
   const settle = useCallback((at: number) => {
     running.current = false;
     committing.current = false;
     const next = pending.current;
     pending.current = null;
-    if (next !== null && next !== at) void run(at, next, true); // eslint-disable-line @typescript-eslint/no-use-before-define
+    if (next !== null && next !== at) void runRef.current(at, next, true);
     else heading.current = at;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const run = useCallback(
     async (from: number, to: number, quick: boolean) => {
@@ -123,6 +127,9 @@ export default function Album({ pages, index, onIndex, prepare, renderPage, page
     },
     [settle],
   );
+  useEffect(() => {
+    runRef.current = run;
+  }, [run]);
 
   /** Goes to a page (the spread it is on). Several requests in a row keep only the last one. */
   const go = useCallback(
