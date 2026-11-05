@@ -230,3 +230,8 @@ html[data-hidden] *, html[data-hidden] *::before, html[data-hidden] *::after { a
 
 /* the big lettering is filtered (rough ink edges): on a phone it is plain, which is where the first paint of every page was slowest */
 .perf-lite .paper-surface .hero-title, .perf-lite .hero-title { filter: none !important; }
+
+/* the library held sideways: the page is only as tall as the screen, so the captions under the cards (which overlap at that size) give way to the cards */
+@media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .alb-caption { display: none; }
+}
