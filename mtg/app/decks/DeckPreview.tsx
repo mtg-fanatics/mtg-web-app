@@ -94,7 +94,7 @@ export default function DeckPreview({
       aria-modal="true"
       aria-label={deck.name}
       onClick={onClose}
-      className={`fixed inset-0 ${layer} flex items-center justify-center bg-black/70 p-4`}
+      className={`sheet fixed inset-0 ${layer} flex items-center justify-center bg-black/70 p-4`}
     >
       <div
         onClick={(e) => e.stopPropagation()}

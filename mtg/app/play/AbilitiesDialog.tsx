@@ -43,7 +43,7 @@ export default function AbilitiesDialog({ state, actor, list, onClose, onAct, on
   const focused = focusedDef && cardParts(focusedDef).some((p) => p.kind !== "activated" && p.kind !== "spell" && p.kind !== "cost") ? focusedDef : undefined;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Abilities" className="fixed inset-0 z-30 flex items-start justify-center bg-black/40 p-4 pt-24" onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label="Abilities" className="sheet fixed inset-0 z-30 flex items-start justify-center bg-black/40 p-4 pt-24" onClick={onClose}>
       <div className="flex max-h-[80dvh] w-full max-w-3xl flex-col gap-3 overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <div>

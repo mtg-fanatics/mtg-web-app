@@ -231,7 +231,7 @@ function ProfilePopup({
         aria-modal="true"
         aria-label="Your profile"
         onClick={onClose}
-        className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4"
+        className="sheet fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4"
       >
         <div
           onClick={(e) => e.stopPropagation()}

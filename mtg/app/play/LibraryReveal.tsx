@@ -30,7 +30,7 @@ export default function LibraryReveal({ reveal, onContinue }: { reveal: RevealPa
   const ids = reveal.library;
   const next = ids[0] ? reveal.cards[ids[0]] : undefined;
   return (
-    <div role="dialog" aria-modal="true" aria-label="Your library" className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-3">
+    <div role="dialog" aria-modal="true" aria-label="Your library" className="sheet fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-3">
       <div className="flex max-h-[92dvh] w-full max-w-4xl flex-col gap-3 overflow-hidden rounded-2xl border border-white/25 p-4 text-white shadow-2xl" style={{ background: "#0b1020" }}>
         <header className="flex flex-wrap items-center gap-3">
           <h2 className="font-display text-xl font-extrabold tracking-wide">Your library</h2>

@@ -38,7 +38,7 @@ export default function AppearanceDialog({ look, cursor, onClose, first = "p1" }
   const ring = (on: boolean) => (on ? "border-[#d9694f] ring-2 ring-[#d9694f]" : "border-white/30 hover:border-white/70");
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Sleeves and playmat" onClick={onClose} className="game-modal fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
+    <div role="dialog" aria-modal="true" aria-label="Sleeves and playmat" onClick={onClose} className="sheet game-modal fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
       <div
         onClick={(e) => e.stopPropagation()}
         className="flex max-h-[92vh] w-full max-w-3xl flex-col gap-4 overflow-y-auto rounded-2xl border border-white/25 bg-slate-950/80 p-5 text-white shadow-2xl ring-1 ring-inset ring-white/10 backdrop-blur-xl"

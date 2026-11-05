@@ -137,3 +137,25 @@ html[data-duel] .update-toast { bottom: auto; top: calc(var(--bar-h) + 0.5rem); 
   .book-page .hero-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; }
   .book-page .hero-actions > * { width: auto; flex: 1 1 12rem; min-height: 52px; }
 }
+
+/* ───────── pop-ups on a phone: full-screen sheets ─────────
+ * A window made for a wide screen (a table to open, the decks to pick, a profile, the looks of the cards, a graveyard) fills the whole screen on a phone, with the title bar
+ * kept at the top while the rest scrolls, and what it asks for kept at the foot. Mark a window with the class `sheet` on its backdrop. */
+@media (max-width: 767px), (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .sheet { padding: 0 !important; align-items: stretch !important; justify-content: stretch !important; background: #0b1120 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; overflow: hidden; }
+  .sheet > * {
+    width: 100% !important; max-width: none !important; min-height: 0; height: 100% !important; max-height: 100dvh !important; margin: 0 !important; border-radius: 0 !important;
+    overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+    padding: 0 max(0.9rem, env(safe-area-inset-right, 0px)) max(5.5rem, calc(env(safe-area-inset-bottom, 0px) + 4.5rem)) max(0.9rem, env(safe-area-inset-left, 0px)) !important;
+  }
+  /* the title bar stays at the top */
+  .sheet > * > header:first-child, .sheet > * > :first-child:is(h1, h2) {
+    position: sticky; top: 0; z-index: 5; margin: 0 calc(-1 * max(0.9rem, env(safe-area-inset-right, 0px))) 0.6rem calc(-1 * max(0.9rem, env(safe-area-inset-left, 0px))) !important;
+    padding: max(0.6rem, env(safe-area-inset-top, 0px)) max(0.9rem, env(safe-area-inset-right, 0px)) 0.6rem max(0.9rem, env(safe-area-inset-left, 0px)); background: #14100c; border-bottom: 1px solid rgba(232, 220, 192, 0.25);
+  }
+  /* what the window asks for (Open the table, Ready, Play) stays in reach at the foot */
+  .sheet > * button[type="submit"]:last-of-type, .sheet > * .sheet-action {
+    position: sticky; bottom: 0.6rem; z-index: 4; min-height: 52px; width: 100%; box-shadow: 0 -14px 18px 6px #0b1120;
+  }
+  .sheet button, .sheet [role="button"], .sheet input:not([type="checkbox"]):not([type="radio"]), .sheet select { min-height: 44px; }
+}

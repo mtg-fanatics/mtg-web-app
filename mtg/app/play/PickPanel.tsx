@@ -66,7 +66,7 @@ function PickDialog({ title, children }: { title: string; children: React.ReactN
       </button>
     );
   return (
-    <div role="dialog" aria-modal="true" aria-label={title} className="game-modal fixed inset-0 z-30 flex items-center justify-center bg-black/70 p-4">
+    <div role="dialog" aria-modal="true" aria-label={title} className="sheet game-modal fixed inset-0 z-30 flex items-center justify-center bg-black/70 p-4">
       <div className="flex max-h-[85vh] w-full max-w-3xl flex-col gap-2 overflow-y-auto">
         <button onClick={() => setTucked(true)} className="self-end rounded-full border border-white/30 bg-white/10 px-3 py-1 text-sm text-white hover:bg-white/20">
           👁 See the board
