@@ -220,3 +220,10 @@ html[data-duel] .update-toast { bottom: auto; top: calc(var(--bar-h) + 0.5rem); 
   .lib-bar .tool-field { min-width: 0; flex: 1 1 8rem; }
 }
 @media (max-width: 1023px) { .deck-save-top { display: none !important; } }
+
+/* an app in the background draws nothing that moves */
+html[data-hidden] *, html[data-hidden] *::before, html[data-hidden] *::after { animation-play-state: paused !important; }
+/* a phone: flatter paper. The grain layers are the costly part of the front room on a small graphics chip, and the page keeps its colour without them */
+@media (hover: none) and (pointer: coarse) {
+  .perf-lite .paper-surface, .perf-lite .paper-slip, .perf-lite .paper-card { background-image: none !important; }
+}

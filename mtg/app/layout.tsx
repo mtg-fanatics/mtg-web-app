@@ -11,6 +11,7 @@ import AutoFullscreen from "./AutoFullscreen";
 import Music from "./Music";
 import FontWarm from "./FontWarm";
 import BackGuard from "./BackGuard";
+import PhoneTier from "./PhoneTier";
 import { InkFilters } from "./Icons";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
@@ -96,6 +97,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <UserBar />
         <FontWarm />
         <BackGuard />
+        <PhoneTier />
         {children}
       </body>
     </html>
