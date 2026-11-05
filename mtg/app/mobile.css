@@ -87,3 +87,53 @@ html[data-duel] .update-toast { bottom: auto; top: calc(var(--bar-h) + 0.5rem); 
   .victory-backdrop .victory-sub, .victory-backdrop .victory-reason { margin-block: 0.25rem; font-size: 1rem; }
   .victory-backdrop .result-stamp { transform: rotate(9deg) scale(0.7); top: -0.9rem; }
 }
+
+/* ───────── the top bar on a phone: the sound button and one menu ───────── */
+.bar-menu-btn { display: none; }
+@media (max-width: 767px), (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .topbar .bar-full { display: none !important; }
+  .topbar .bar-menu-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+  .topbar .bar-btn { min-height: 44px; }
+  .topbar { height: var(--bar-h); }
+}
+.bar-sheet-backdrop { position: fixed; inset: 0; z-index: 58; background: rgba(0, 0, 0, 0.5); }
+.bar-sheet {
+  position: fixed; z-index: 59; top: 0; right: 0; bottom: 0; width: min(22rem, 100vw);
+  display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto;
+  padding: max(0.75rem, env(safe-area-inset-top, 0px)) max(0.9rem, env(safe-area-inset-right, 0px)) max(0.9rem, env(safe-area-inset-bottom, 0px)) 0.9rem;
+  background: #0b1120; color: #e2e8f0; border-left: 2px solid rgba(255, 255, 255, 0.22); box-shadow: -12px 0 40px rgba(0, 0, 0, 0.6);
+}
+.bar-sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.bar-sheet-x { min-width: 44px; min-height: 44px; border: 0; background: none; color: #e8dcc0; font-size: 1.7rem; }
+.bar-sheet-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 52px; padding: 0.4rem 1rem;
+  border-radius: 8px; border: 2px solid rgba(232, 220, 192, 0.35); background: rgba(255, 255, 255, 0.06); color: #f1e8d0; font-size: 1.05rem; text-align: left;
+}
+.bar-sheet-row b { font-weight: 700; color: #8fc4a5; }
+.bar-sheet-row:disabled { opacity: 0.45; }
+.bar-sheet-danger { margin-top: auto; border-color: rgba(251, 113, 133, 0.6); }
+.bar-sheet-danger b { color: #fda4af; }
+
+/* the install notes on the front room */
+.install-hint {
+  display: flex; align-items: center; gap: 0.6rem; margin: 0.5rem 0.75rem; padding: 0.35rem 0.4rem 0.35rem 0.9rem;
+  border-radius: 10px; background: #efe3c2; color: #2a1c10; border: 2px solid #4a120c; font-size: 1rem; font-weight: 600;
+}
+.install-hint-x { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.5rem; color: #46331f; }
+.install-hint-go { min-height: 44px; padding: 0 1rem; border-radius: 8px; background: #a8322a; color: #fff; border: 0; font-weight: 800; }
+
+/* ───────── the front room on a phone: one page, the profile and the tables above, the three buttons stacked at the foot (the big one last, under the thumb) ───────── */
+@media (max-width: 767px) {
+  .book-page { justify-content: flex-start; }
+  .book-page .install-hint { align-self: stretch; margin-inline: 0; }
+  .book-page .hero-page { order: 99; margin-top: auto; width: 100%; padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)); }
+  .book-page .hero-actions { flex-direction: column-reverse; align-items: stretch; width: 100%; gap: 0.7rem; margin-top: 0.5rem; }
+  .book-page .hero-actions > * { width: 100%; justify-content: center; min-height: 52px; }
+  .book-page .hero-actions > :first-child { min-height: 60px; font-size: 1.15rem; }
+}
+/* sideways: the three buttons in a row again */
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) {
+  .book-page .hero-page { order: 99; margin-top: 0.5rem; width: 100%; }
+  .book-page .hero-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+  .book-page .hero-actions > * { width: auto; flex: 1 1 12rem; min-height: 52px; }
+}

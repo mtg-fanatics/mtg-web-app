@@ -6,12 +6,14 @@ import Lobby from "./lobby/Lobby";
 import FriendsPanel from "./friends/FriendsPanel";
 import ProfileButton from "./profile/ProfileButton";
 import CreateRoomButton from "./lobby/CreateRoomButton";
+import InstallHint from "./InstallHint";
 import { Fan, Scribble, Tome } from "./Icons";
 
 export default function Home() {
   return (
     <main className="book-page relative flex flex-1 flex-col items-center justify-center gap-7 overflow-x-clip p-5 text-white max-md:justify-start max-md:gap-5 max-md:pt-3 sm:p-8">
       <BookBackdrop />
+      <InstallHint />
       <ProfileButton />
       <FriendsPanel />
       <Lobby />
@@ -31,7 +33,7 @@ export default function Home() {
             Write a deck. Take a seat. The ink is still wet.
           </p>
         </div>
-        <div className="hero-rise mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-3" style={{ animationDelay: "0.24s" }}>
+        <div className="hero-actions hero-rise mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-3" style={{ animationDelay: "0.24s" }}>
           <CreateRoomButton />
           <Link href="/decks" className="hero-btn">
             <Tome />
