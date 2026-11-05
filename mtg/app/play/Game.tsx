@@ -898,7 +898,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
 
   return (
     <main
-      className="duel-main battlefield-bg flex h-[calc(100dvh-var(--bar-h))] flex-col gap-1.5 overflow-hidden p-1.5 text-zinc-900 [--card-h:clamp(60px,9.5dvh,110px)] lg:gap-2 lg:p-2 lg:[--card-h:clamp(74px,11.8dvh,150px)] lg:h-[calc(100dvh-2.5rem)] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_17rem]"
+      className="duel-main battlefield-bg flex h-[calc(100dvh-var(--bar-h))] flex-col gap-1.5 overflow-hidden p-1.5 text-zinc-900 [--card-h:clamp(60px,9.5dvh,110px)] lg:gap-2 lg:p-2 lg:[--card-h:clamp(74px,11.8dvh,150px)] lg:h-[calc(100dvh-var(--bar-h))] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)_17rem]"
       data-peek={peek ? "1" : undefined}
       style={{ "--bf-image": background.css, "--bf-dim": background.dim } as React.CSSProperties}
     >
