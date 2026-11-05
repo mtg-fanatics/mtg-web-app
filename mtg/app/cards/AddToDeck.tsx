@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import type { CardDef } from "@mtg/engine";
 import { MAX_COPIES, isBasicLand } from "@mtg/engine";
 import { getDeck, listMyDecks, saveDeck } from "@/lib/decks";
@@ -44,14 +43,39 @@ export default function AddToDeck({ def }: { def: CardDef }) {
   if (def.playable === false) return <p className="add-to-deck-note">The game cannot play this card yet, so it cannot go in a deck.</p>;
   if (decks === null) return <p className="add-to-deck-note">Looking for your decks…</p>;
   if (decks.length === 0) {
+    // no deck yet: one press writes the first one, with this card in it
+    const start = async () => {
+      if (busy) return;
+      setBusy(true);
+      setNote(null);
+      try {
+        const id = await saveDeck({ name: "My first deck", entries: { [def.id]: 1 } });
+        try {
+          localStorage.setItem(KEY, id);
+        } catch {
+          /* (it just will not be remembered) */
+        }
+        setDecks(await listMyDecks());
+        setChosen(id);
+        setNote({ text: `Started "My first deck" with ${def.name}. Add more from here, or open it under Your decks.` });
+      } catch (e) {
+        setNote({ text: e instanceof Error ? e.message : "Could not start the deck.", bad: true });
+      } finally {
+        setBusy(false);
+      }
+    };
     return (
-      <p className="add-to-deck-note">
-        You have no deck yet.{" "}
-        <Link href="/decks/new" className="underline">
-          Write one
-        </Link>
-        .
-      </p>
+      <div className="add-to-deck">
+        <p className="add-to-deck-note">You have no deck yet.</p>
+        <button type="button" onClick={() => void start()} disabled={busy} className="btn-gold add-to-deck-go">
+          {busy ? "Starting…" : "Start a deck with this card"}
+        </button>
+        {note && (
+          <p role="status" className={`add-to-deck-note ${note.bad ? "add-to-deck-bad" : ""}`}>
+            {note.text}
+          </p>
+        )}
+      </div>
     );
   }
 

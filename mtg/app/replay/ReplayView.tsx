@@ -142,6 +142,10 @@ function Viewer({ replay }: { replay: Replay }) {
           <button onClick={() => (setPlaying(false), setAt(last))} aria-label="To the end" className="btn-ghost !px-2.5 !py-1.5">
             ⏭
           </button>
+          {/* a phone: the four speeds are one button that goes round them (the row would not fit otherwise) */}
+          <button type="button" onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])} aria-label={`Speed ${speed} times: press for the next speed`} className="btn-ghost speed-cycle !px-2.5 !py-1.5 lg:hidden">
+            {speed}×
+          </button>
         </div>
         <input type="range" min={0} max={last} value={Math.min(at, last)} onChange={(e) => (setPlaying(false), setAt(Number(e.target.value)))} aria-label="Move" className="min-w-40 flex-1 accent-amber-400" />
         <span className="text-sm tabular-nums text-slate-300">
