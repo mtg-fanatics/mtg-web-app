@@ -38,7 +38,7 @@ export default function VotePopup({ room }: { room: RoomSnapshot }) {
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Choosing decks" className="sheet fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4">
-      <div className={`flex max-h-[calc(100dvh-1rem)] w-full min-w-0 flex-col gap-4 overflow-x-hidden overflow-y-auto sm:max-h-[calc(100dvh-2rem)] sm:gap-5 leather ${room.stage === "decks" ? "max-w-[88rem] p-3 sm:p-7 lg:overflow-y-hidden" :"max-w-lg p-3 sm:p-6"} text-white`}>
+      <div className={`flex max-h-[calc(100dvh-1rem)] w-full min-w-0 flex-col gap-4 overflow-x-hidden overflow-y-auto sm:max-h-[calc(100dvh-2rem)] sm:gap-5 leather ${room.stage === "decks" ? "max-w-[88rem] p-3 sm:p-7 lg:h-[calc(100dvh-2rem)] lg:overflow-y-hidden" :"max-w-lg p-3 sm:p-6"} text-white`}>
         <header className="flex items-center gap-3">
           <ol className="flex flex-1 items-center gap-2" aria-label="Steps">
             {STEPS.map((s, i) => (
@@ -94,8 +94,8 @@ function DeckStep({ room, ready }: { room: RoomSnapshot; ready: boolean }) {
   const [botLook] = useState(() => randomLook()); // against the computer, the host also dresses its table
   const vsBotRoom = room.players.some((p) => p.bot);
   useEffect(() => {
-    send("look", { sleeve, mat, ...(vsBotRoom ? { bot: botLook } : {}) });
-  }, [sleeve, mat, vsBotRoom, botLook]);
+    send("look", { sleeve, mat, finisher, ...(vsBotRoom ? { bot: botLook } : {}) });
+  }, [sleeve, mat, finisher, vsBotRoom, botLook]);
   const cachedChoices = useCached<DeckChoice[]>("playable-decks"); // last time's decks, shown at once while the fresh list loads
   const [fetchedOptions, setOptions] = useState<DeckChoice[] | null>(null);
   const options = fetchedOptions ?? (cachedChoices ? [...cachedChoices, STARTER] : null);

@@ -59,7 +59,7 @@ export function TargetPanel({
         </p>
       )}
       {detail && (
-        <div className="rounded bg-white px-3 py-2 text-[15px] leading-relaxed text-zinc-800">
+        <div className="max-h-[7.5rem] overflow-y-auto rounded bg-white px-3 py-2 text-[15px] leading-relaxed text-zinc-800">
           <div className="mb-0.5 text-xs font-bold uppercase font-display tracking-wider text-sky-700">What it does</div>
           <p className="whitespace-pre-line">{detail}</p>
           <Help text={detail} max={3} large />

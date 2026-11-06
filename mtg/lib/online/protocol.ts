@@ -13,6 +13,8 @@ export const MATCH_GONE = 410;
 export interface Look {
   sleeve: string;
   mat: string;
+  /** The finishing move this player plays when they win. */
+  finisher?: string;
 }
 
 /** What a room looks like to the lobby list. */

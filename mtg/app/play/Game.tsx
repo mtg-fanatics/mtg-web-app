@@ -48,7 +48,8 @@ import { GraveyardDialog, Pile } from "./Piles";
 import ShuffleStage from "./ShuffleStage";
 import { shufflePending } from "./shuffleStep";
 import { primeAudio } from "@/lib/sound";
-import { playChosenFinisher, warmFinishers } from "./finishers";
+import { getFinisher, playChosenFinisher, warmFinishers } from "./finishers";
+import type { FinisherId } from "./finishers";
 import { handDraws, hideDrawn, holdLibraryCounts, holdPiles, isPileBusy, playDeal, playDraws, playOpponentDiscards, playOpponentDraws, playToGraveyard, untilBattlefieldShown } from "./pileFx";
 import type { Draw } from "./pileFx";
 import { announcementsFrom, describeEvents, endReason, mergeAnnouncements, playerName, worthTelling } from "./log";
@@ -113,7 +114,7 @@ const REMIND_DONE_MS = 6000;
  * so without the key a new match would open on the last match's board and end popup.
  */
 export function OnlineGame() {
-  const { matchId, game, snapshot } = useOnline();
+  const { matchId, game, snapshot, started } = useOnline();
   const router = useRouter();
   // Leaving a match (Back to the lobby, or the room closing) must not bring the loading screen back for a moment: the board just goes.
   const [hadGame, setHadGame] = useState(false);
@@ -158,7 +159,7 @@ export function OnlineGame() {
     <>
       <Game key={`game-${visit}-${rounds}-${gameNo}`} online />
       {/* the loading screen: up until the match has arrived from the server, then it fades */}
-      <EnterBattlefield key={`enter-${visit}-${rounds}-${gameNo}`} ready={game !== null} names={game?.names} />
+      <EnterBattlefield key={`enter-${visit}-${rounds}-${gameNo}-${started}`} ready={game !== null} names={game?.names} />
     </>
   );
 }
@@ -302,12 +303,20 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   const finisherWinner = game?.winner === "p1" || game?.winner === "p2" ? game.winner : null;
   const finisherOn = !!finisherWinner && liveSeen && !(endNote ?? "").includes("resigned");
   const resultReady = endShown && (!finisherOn || finisherDone);
+  // Each player's own pick plays when THEY win (online both screens play the winner's, not this player's); a bot or an old client has none: random.
+  const winnerFinisher = ((online ? net.game?.looks?.[finisherWinner ?? "p1"]?.finisher : undefined) ?? (finisherWinner && finisherWinner === seat ? getFinisher() : online ? "random" : getFinisher())) as FinisherId;
   const finisherPlayed = useRef(false);
   useEffect(() => warmFinishers(), []);
   useEffect(() => {
     if (!endShown || !finisherOn || !finisherWinner || finisherDone || finisherPlayed.current) return;
     finisherPlayed.current = true;
-    void playChosenFinisher(finisherWinner, OPPONENT[finisherWinner]).finally(() => setTimeout(() => setFinisherDone(true), 300));
+    // A finishing move that hangs (a hidden tab, a graphics hiccup) must not leave a black screen: after 15 s the result comes up and any leftover overlay goes.
+    let ended = false;
+    const stuck = new Promise<void>((r) => setTimeout(r, 15000)).then(() => {
+      if (ended) return;
+      for (const n of Array.from(document.body.children)) if (n instanceof HTMLElement && (n.style.zIndex === "9990" || n.style.zIndex === "9991")) n.remove();
+    });
+    void Promise.race([playChosenFinisher(finisherWinner, OPPONENT[finisherWinner], winnerFinisher).catch(() => {}).then(() => void (ended = true)), stuck]).finally(() => setTimeout(() => setFinisherDone(true), 300));
   }, [endShown, finisherOn, finisherWinner, finisherDone]);
   useEffect(() => {
     if (!won) finisherPlayed.current = false;
@@ -472,6 +481,15 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
    * (which could attack or block instead).
    */
   async function act(action: Action, as: PlayerId = actor, opts: { life?: boolean; mana?: boolean; pointless?: boolean; spare?: string[]; paid?: boolean } = {}) {
+    // Resigning is always allowed, even while something is being animated or asked: it must never be swallowed.
+    if (action.type === "concede" && !watching) {
+      if (online) netSend("action", { action });
+      else {
+        const r = applyAction(state, as, action);
+        if (r.ok) await commit(r);
+      }
+      return;
+    }
     if (watching || isCombatPlaying() || isPileBusy() || isRevealing()) return; // a watcher can't act; and ignore clicks while something is being animated
     const spare = opts.spare ?? [];
     const pay = paymentOf(state, action, as, spare);

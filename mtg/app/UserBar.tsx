@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { animationSpeed, animationsEnabled, setAnimationSpeed, setAnimationsEnabled, SPEEDS } from "@/lib/motion";
-import { connectSocial, disconnectSocial } from "@/lib/online/session";
+import { connectSocial, disconnectLobby, disconnectSocial, leaveRoom } from "@/lib/online/session";
 import { clearCached } from "@/lib/dashCache";
 import AudioMenu from "./AudioMenu";
 import { Hourglass, InkDrop } from "./Icons";
@@ -29,6 +29,8 @@ export default function UserBar() {
       if (session) void connectSocial();
       else {
         disconnectSocial();
+        leaveRoom(); // the table and the lobby connection go too: a signed-out browser must not stay seated
+        disconnectLobby();
         clearCached(); // the next person on this computer must not see this player's name
       }
     });
@@ -39,7 +41,10 @@ export default function UserBar() {
 
   async function signOut() {
     clearCached();
-    await createClient().auth.signOut();
+    leaveRoom();
+    disconnectLobby();
+    disconnectSocial();
+    await createClient().auth.signOut({ scope: "local" });
     router.replace("/login");
     router.refresh();
   }

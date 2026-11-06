@@ -34,6 +34,8 @@ export const MATCH_GONE = 410;
 export interface Look {
   sleeve: string;
   mat: string;
+  /** The finishing move this player plays when they win; the other player's screen plays it too. */
+  finisher?: string;
 }
 
 interface Member {
@@ -282,11 +284,11 @@ export class MatchRoom extends Room<{ metadata: RoomMeta }> {
     },
 
     /** The player's card sleeve and playmat, chosen before the game. Only a preset's name is accepted (never a picture), so it is small and safe to show the other player. */
-    look: (client: Client, message: { sleeve?: unknown; mat?: unknown; bot?: { sleeve?: unknown; mat?: unknown } }) => {
+    look: (client: Client, message: { sleeve?: unknown; mat?: unknown; finisher?: unknown; bot?: { sleeve?: unknown; mat?: unknown } }) => {
       const m = this.member(client);
       if (!m || this.stage === "playing" || this.stage === "over") return;
       const clean = (v: unknown) => (typeof v === "string" && /^(preset:[a-z0-9-]{1,40})?$/.test(v) ? v : "");
-      m.look = { sleeve: clean(message?.sleeve), mat: clean(message?.mat) };
+      m.look = { sleeve: clean(message?.sleeve), mat: clean(message?.mat), ...(typeof message?.finisher === "string" && /^(reaper|judgment|void|meteor|zero|random)$/.test(message.finisher) ? { finisher: message.finisher } : {}) };
       const bot = this.bot; // the host also dresses the computer's table
       if (bot && m.seat === "p1" && message?.bot) bot.look = { sleeve: clean(message.bot.sleeve), mat: clean(message.bot.mat) };
       this.publish();

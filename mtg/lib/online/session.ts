@@ -22,6 +22,8 @@ export interface OnlineState {
   reveal: RevealPayload | null;
   /** The last match room joined. Kept after leaving it, so the play screen is rebuilt only when a new match begins. */
   matchId: string | null;
+  /** Counts the games that have begun, so each one gets its own loading screen. */
+  started: number;
   chat: ChatLine[];
   error: string | null;
   /** A room is being opened: the button was pressed and the server has not answered yet. */
@@ -45,7 +47,7 @@ export interface Notice {
   text: string;
 }
 
-const empty: OnlineState = { lobby: "off", rooms: [], snapshot: null, game: null, reveal: null, matchId: null, chat: [], error: null, creating: false, reconnecting: false, social: "off", friends: {}, notices: [], invites: [], cameOnline: {} };
+const empty: OnlineState = { lobby: "off", rooms: [], snapshot: null, game: null, reveal: null, matchId: null, started: 0, chat: [], error: null, creating: false, reconnecting: false, social: "off", friends: {}, notices: [], invites: [], cameOnline: {} };
 let state: OnlineState = empty;
 const listeners = new Set<() => void>();
 const set = (patch: Partial<OnlineState>) => {
@@ -173,7 +175,7 @@ function attach(room: Room, spectating = false) {
   room.onMessage("reveal", (r: RevealPayload) => set({ reveal: r }));
   room.onMessage("start", (g: StartPayload) => {
     setPlayerNames(g.names); // the account names are used from the very first frame
-    set({ game: g, reveal: null });
+    set({ game: g, reveal: null, started: state.started + 1 });
   });
   room.onMessage("update", (u: UpdatePayload) => {
     if (updateListeners.size === 0) queued.push(u);

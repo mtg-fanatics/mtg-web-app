@@ -55,7 +55,7 @@ export default function DeckPicker({
   ];
 
   return (
-    <div className={`flex flex-col text-left ${wide ? "gap-4" : "gap-3"}`} aria-busy={loading}>
+    <div className={`flex flex-col text-left ${wide ? "gap-4 lg:min-h-0 lg:flex-1" : "gap-3"}`} aria-busy={loading}>
       {/* the chosen deck */}
       <div className={`relative flex items-end overflow-hidden rounded-xl border-2 border-[#120c07] bg-slate-900/70 shadow-lg shadow-black/40 ${wide ? "min-h-[7rem]" : "min-h-[4.75rem]"}`}>
         <div className="absolute inset-0 bg-cover opacity-55" style={art(picked)} aria-hidden="true" />
@@ -108,7 +108,7 @@ export default function DeckPicker({
       </div>
 
       {/* the decks */}
-      <ul role="listbox" aria-label="Decks" className={`grid overflow-y-auto pr-1 ${wide ? "max-h-[24rem] gap-3" : "max-h-[17rem] gap-2"} ${compact ? "grid-cols-1" : "grid-cols-1 min-[440px]:grid-cols-2"}`}>
+      <ul role="listbox" aria-label="Decks" className={`grid content-start overflow-y-auto pr-1 ${wide ? "max-h-[max(24rem,calc(100dvh-26rem))] gap-3 lg:min-h-0 lg:max-h-none lg:flex-1" : "max-h-[17rem] gap-2"} ${compact ? "grid-cols-1" : "grid-cols-1 min-[440px]:grid-cols-2"}`}>
         <li role="presentation">
           <Tile selected={value === randomId} disabled={disabled} onPick={() => onChange(randomId)} emoji="🎲" wide={wide}>
             <span className="min-w-0 flex-1">
