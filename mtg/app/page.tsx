@@ -7,6 +7,7 @@ import FriendsPanel from "./friends/FriendsPanel";
 import ProfileButton from "./profile/ProfileButton";
 import CreateRoomButton from "./lobby/CreateRoomButton";
 import InstallHint from "./InstallHint";
+import DownloadButton from "./DownloadButton";
 import { Fan, Scribble, Tome } from "./Icons";
 
 export default function Home() {
@@ -43,6 +44,7 @@ export default function Home() {
             <Fan />
             The card library
           </Link>
+          <DownloadButton />
         </div>
       </section>
     </main>

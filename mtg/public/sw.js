@@ -4,7 +4,7 @@
 //   - the card catalogue and the official decks from the database: fresh for 30 minutes (which cards the game can play changes as the rules engine learns more cards)
 // Pages themselves, your own decks, matches and logins are never touched here.
 
-const VERSION = "v4"; // changing this makes every browser drop what an older version kept
+const VERSION = "v5"; // changing this makes every browser drop what an older version kept
 const IMAGES = `mtg-images-${VERSION}`;
 const STATIC = `mtg-static-${VERSION}`;
 const DATA = `mtg-data-${VERSION}`;
@@ -116,14 +116,31 @@ async function freshData(req) {
 function offlinePage() {
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#070b19"><title>Inkfall</title>
 <style>
-html,body{margin:0;height:100%;background:#0b1120;color:#e8dcc0;font-family:Georgia,'Times New Roman',serif}
-body{display:grid;place-items:center;padding:max(1.5rem,env(safe-area-inset-top)) max(1.5rem,env(safe-area-inset-right)) max(1.5rem,env(safe-area-inset-bottom)) max(1.5rem,env(safe-area-inset-left))}
-main{max-width:26rem;text-align:center;padding:2rem 1.5rem;border-radius:.6rem;background:#efe3c2;color:#2a1c10;box-shadow:0 18px 50px rgba(0,0,0,.6)}
-svg{width:4.5rem;height:4.5rem}
-h1{font-size:1.7rem;margin:.6rem 0 .4rem;letter-spacing:.04em}
-p{font-size:1.1rem;line-height:1.45;margin:.4rem 0 1.2rem}
-button{min-height:48px;padding:.6rem 1.4rem;font:inherit;font-weight:700;color:#fff;background:#a8322a;border:2px solid #4a120c;border-radius:.4rem}
+html,body{margin:0;height:100%;color:#e8dcc0;font-family:Georgia,'Times New Roman',serif;background:#120c07}
+body{box-sizing:border-box;display:grid;place-items:center;padding:max(1.5rem,env(safe-area-inset-top)) max(1.5rem,env(safe-area-inset-right)) max(1.5rem,env(safe-area-inset-bottom)) max(1.5rem,env(safe-area-inset-left));background:radial-gradient(60rem 36rem at 50% 40%,#2a1c10 0%,#170f09 55%,#0d0805 100%)}
+main{position:relative;box-sizing:border-box;width:min(26rem,100%);text-align:center;padding:2.2rem 1.6rem 1.8rem;background:#efe3c2;color:#2a1c10;border-radius:.5rem;box-shadow:0 22px 60px rgba(0,0,0,.65),inset 0 0 0 1px rgba(74,18,12,.25),inset 0 0 60px rgba(120,80,30,.25)}
+main::before{content:"";position:absolute;inset:.5rem;border:1px dashed rgba(74,52,31,.45);border-radius:.3rem;pointer-events:none}
+svg{width:4.6rem;height:4.6rem;animation:beat 2.6s ease-in-out infinite}
+@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.eyebrow{margin:.9rem 0 0;font-size:.78rem;letter-spacing:.32em;text-transform:uppercase;color:#7a5b36}
+h1{font-size:1.8rem;margin:.3rem 0 .5rem;letter-spacing:.03em;font-weight:700}
+p{font-size:1.08rem;line-height:1.45;margin:.3rem 0 1rem;color:#46331f}
+.drops{display:flex;justify-content:center;gap:.55rem;margin:.2rem 0 .9rem}
+.drops i{width:.6rem;height:.8rem;background:#a8322a;border-radius:50% 50% 50% 50%/62% 62% 38% 38%;opacity:.25;animation:drip 1.4s ease-in-out infinite}
+.drops i:nth-child(2){animation-delay:.2s}.drops i:nth-child(3){animation-delay:.4s}
+@keyframes drip{0%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(4px)}}
+#st{font-size:.95rem;font-style:italic;color:#6b5236;margin:0 0 1.1rem}
+button{min-height:48px;padding:.6rem 1.6rem;font:inherit;font-weight:700;letter-spacing:.03em;color:#fff;background:#a8322a;border:2px solid #4a120c;border-radius:.4rem;box-shadow:0 3px 0 #4a120c;cursor:pointer}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #4a120c}
+@media (prefers-reduced-motion:reduce){svg,.drops i{animation:none}}
 </style></head><body><main><svg viewBox="0 0 64 64" aria-hidden="true"><path fill="#b3392b" stroke="#4a120c" stroke-width="2" d="M32 3.5c6 0 8.5 3.2 13.5 4.4 5.2 1.2 8.4 4.2 10 9.6 1.2 4.1 4.8 6.9 3.8 12.2-1 5.2-3.3 8.5-4.1 12.6-1 5-4.500 9.2-9.700 11.300-4.400 1.800-7.400 5.500-13.500 5.400-6 0-8.900-3.400-13.200-5.300C14.600 52.200 11.600 48 10.600 43c-.9-4.500-4.800-7.400-3.800-12.400 1-5 4.600-7.700 5.700-12 1.300-5 4.500-8.300 9.600-9.600C26.600 7.900 26 3.500 32 3.500z"/><path fill="#e8dcc0" d="M32 15.500c4.600 6 8.400 10 8.400 14.800a8.400 8.400 0 0 1-16.800 0c0-4.800 3.800-8.800 8.400-14.800z"/></svg>
-<h1>The ink has run dry</h1><p>Reconnect to keep playing.</p><button onclick="location.reload()">Try again</button></main></body></html>`;
+<p class="eyebrow">No connection</p><h1>The ink has run dry</h1><p>We lost the thread to the table. Hold on, reconnecting.</p><div class="drops" aria-hidden="true"><i></i><i></i><i></i></div><p id="st" role="status">Trying again in <span id="n">5</span>s</p><button id="go" onclick="location.reload()">Try now</button></main>
+<script>
+(function(){var n=5,el=document.getElementById("n");
+function back(){fetch("/manifest.webmanifest",{cache:"no-store"}).then(function(r){if(r.ok)location.reload()}).catch(function(){})}
+setInterval(function(){n--;if(n<=0){n=5;back()}el.textContent=n},1000);
+addEventListener("online",function(){location.reload()});
+})();
+</script></body></html>`;
   return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
 }
