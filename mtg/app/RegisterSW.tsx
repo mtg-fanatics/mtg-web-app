@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import "@/lib/install"; // (starts listening for the browser's install offer on every page, so it is never missed before the Install button is on screen)
 
 /**
  * Starts the service worker (public/sw.js) that keeps card pictures and the card catalogue on this device, and tells the player when a new edition of the app is

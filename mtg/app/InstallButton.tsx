@@ -35,7 +35,9 @@ export default function InstallButton() {
       : "Open this page in Safari, tap Share, then “Add to Home Screen”."
     : device === "android"
       ? "Open the browser menu (⋮) and choose “Install app” or “Add to Home screen”."
-      : "Use the install icon at the right of the address bar, or the browser menu, then “Install Inkfall”.";
+      : (navigator as Navigator & { brave?: unknown }).brave
+        ? "In Brave: open the menu (☰), choose “Save and share”, then “Install Inkfall…”. If it is not there yet, wait a few seconds on this page and open the menu again."
+        : "Use the install icon at the right of the address bar, or the browser menu (Cast, save and share, then “Install Inkfall”).";
 
   return (
     <div className="flex flex-col items-center gap-2">
