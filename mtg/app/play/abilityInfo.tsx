@@ -95,6 +95,14 @@ export function abilityWarnings(state: GameState, actor: PlayerId): Record<strin
   const out: Record<string, string> = {};
   for (const perm of state.players[actor].battlefield) {
     parseCard(state.cards[perm.card.defId]).activated.forEach((ability, index) => {
+      // Case of the Uneaten Feast: the creatures can only be cast at sorcery timing, so the end step (when a Case is solved) is too late.
+      if (ability.effects.some((e) => e.type === "yardCastable")) {
+        const mine = state.players[actor];
+        const creatures = mine.graveyard.filter((c) => state.cards[c.defId].type === "creature");
+        const timing = state.active === actor && (state.phase === "main1" || state.phase === "main2") && state.stack.length === 0;
+        if (creatures.length === 0) out[`${perm.card.iid}-${index}`] = "there are no creature cards in your graveyard: this would change nothing";
+        else if (!timing) out[`${perm.card.iid}-${index}`] = "creatures can only be cast in your main phase, and this only lasts until end of turn: use it in your main phase instead";
+      }
       const grants = ability.effects.filter((e) => e.type === "grant" && e.what.t === "self");
       if (grants.length === 0 || grants.length !== ability.effects.length) return;
       const names = grants.map((e) => (e.type === "grant" ? e.keyword : "")).join(" and ");

@@ -400,6 +400,7 @@ export function readDiesReturnsToBattlefield(line: string, out: ParsedCard): boo
 
 // "Whenever another creature you control enters, you gain 1 life." / "...with power 2 or less enters..."
 export function readAllyEnters(line: string, out: ParsedCard): boolean {
+  line = line.replace(/^(whenever (?:~ or )?(?:another|an?)(?: nontoken)? creature)(?: enters(?: the battlefield)? under your control)/, "$1 you control enters"); // "a creature enters the battlefield under your control"
   const ally =/^whenever (~ or )?(another|a)( nontoken)? creature you control(?: with power (\d+) or (less|greater))? enters(?: the battlefield)?,? (.+)$/.exec(line);
   const allyTyped = /^when(?:ever)? (~ or )?(?:another|an?)( nontoken)? ([a-z]+(?:(?:, or | or |, )[a-z]+)*) you control enters(?: the battlefield)?,? (.+)$/.exec(line);
   const creatureOrArtifact = allyTyped?.[3] === "creature or artifact"; // "~ or another creature or artifact you control"

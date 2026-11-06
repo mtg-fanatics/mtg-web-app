@@ -1280,7 +1280,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
       )}
 
       {mine && <PickPanel state={state} onPick={(iid) => act({ type: "pick", iid })} onZoom={setZoomed} onPreview={showPreview} onUnpreview={() => setPreview(null)} />}
-      {viewingYard && <GraveyardDialog state={state} owner={viewingYard.owner} zone={viewingYard.zone} onClose={() => (setPreview(null), setViewingYard(null))} onZoom={setZoomed} onPreview={showPreview} onUnpreview={() => setPreview(null)} />}
+      {viewingYard && <GraveyardDialog state={state} owner={viewingYard.owner} zone={viewingYard.zone} actor={watching ? undefined : actor} onCast={advance} onClose={() => (setPreview(null), setViewingYard(null))} onZoom={setZoomed} onPreview={showPreview} onUnpreview={() => setPreview(null)} />}
 
       <HoverPreview hidden={!!zoomed || !!state.winner} />
 

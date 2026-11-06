@@ -108,6 +108,6 @@ export const tokenNames = (text: string) => text.replace(/\b(food|treasure|blood
 
 /** Rules text as the engine reads it ("~", lowercase) made readable: the card's name back in, first letter capital. */
 export function readable(text: string, cardName: string): string {
-  const t = tokenNames(text.replace(/~/g, cardName).replace(/\{([a-z0-9]+)\}/g, (_, x: string) => `{${x.toUpperCase()}}`));
+  const t = tokenNames(text.replace(/(gain "you may cast )~/gi, "$1this card").replace(/~/g, cardName).replace(/\{([a-z0-9]+)\}/g, (_, x: string) => `{${x.toUpperCase()}}`));
   return t.charAt(0).toUpperCase() + t.slice(1);
 }

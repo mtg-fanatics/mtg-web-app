@@ -1,7 +1,9 @@
 "use client";
 
 import { memo } from "react";
+import { getCastable } from "@mtg/engine";
 import type { CardDef, GameState, PlayerId } from "@mtg/engine";
+import type { CastPlan } from "./castInfo";
 import { cardImageUrl } from "@/lib/cards";
 import CardView from "./CardView";
 import { playerName } from "./log";
@@ -97,10 +99,12 @@ function PileInner({ state, owner, kind, compact, onOpen, deckName, sleeve }: { 
 }
 
 /** Everything in a graveyard, newest first. Closes with the X button only. */
-export function GraveyardDialog({ state, owner, zone = "graveyard", onClose, onZoom, onPreview, onUnpreview }: { state: GameState; owner: PlayerId; zone?: "graveyard" | "exile"; onClose: () => void; onZoom: (def: CardDef) => void; onPreview?: (def: CardDef, el: HTMLElement) => void; onUnpreview?: () => void }) {
+export function GraveyardDialog({ state, owner, zone = "graveyard", actor, onCast, onClose, onZoom, onPreview, onUnpreview }: { state: GameState; owner: PlayerId; zone?: "graveyard" | "exile"; /** The player looking, and what happens when they cast a card from here (Case of the Uneaten Feast, flashback). */ actor?: PlayerId; onCast?: (plan: CastPlan) => void; onClose: () => void; onZoom: (def: CardDef) => void; onPreview?: (def: CardDef, el: HTMLElement) => void; onUnpreview?: () => void }) {
   const cards = [...state.players[owner][zone]].reverse();
   const title = zone === "exile" ? "exile" : "graveyard";
   const paradigms = new Set(zone === "exile" ? (state.players[owner].paradigms ?? []) : []);
+  // The cards here that can be cast right now (only from your own graveyard or exile).
+  const castable = new Map(actor === owner && onCast ? getCastable(state, owner).filter((c) => c.zone === zone).map((c) => [c.iid, c] as const) : []);
   return (
     <div role="dialog" aria-modal="true" aria-label={title} className="sheet game-modal fixed inset-0 z-30 flex items-center justify-center bg-black/70 p-4">
       <div className="flex max-h-[85vh] w-full max-w-3xl flex-col gap-3 rounded-2xl border border-white/25 bg-slate-950/95 p-4 text-white shadow-2xl shadow-black/50 ring-1 ring-inset ring-white/10 [text-shadow:0_1px_3px_rgba(0,0,0,0.6)]">
@@ -116,6 +120,17 @@ export function GraveyardDialog({ state, owner, zone = "graveyard", onClose, onZ
           {cards.map((c) => (
             <div key={c.iid} className="flex shrink-0 flex-col items-center gap-1" onMouseEnter={(e) => onPreview?.(state.cards[c.defId], e.currentTarget)} onMouseLeave={() => onUnpreview?.()}>
               <CardView def={state.cards[c.defId]} onClick={() => onZoom(state.cards[c.defId])} />
+              {castable.has(c.iid) && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onCast!({ iid: c.iid, name: state.cards[c.defId].name.split(" // ")[0], from: zone, castable: castable.get(c.iid)! });
+                  }}
+                  className="rounded-full border border-emerald-300/70 bg-emerald-600/80 px-3 py-0.5 text-sm font-semibold text-white hover:bg-emerald-500"
+                >
+                  Cast
+                </button>
+              )}
               {paradigms.has(c.iid) && (
                 <span className="w-[calc(var(--card-h,168px)*0.716)] text-center text-[11px] leading-tight text-amber-200">
                   Paradigm: a free copy each turn, at the start of {playerName(owner)}&apos;s first main phase
