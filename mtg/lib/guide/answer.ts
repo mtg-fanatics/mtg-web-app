@@ -42,7 +42,18 @@ export interface Reply {
   chips?: string[];
   /** A page to open, as a button ("See them in the library"). */
   link?: { label: string; href: string };
+  /** Cards to show as pictures (when the player asked to see them). */
+  images?: GuideCard[];
+  /** The set (its code) this answer was about, so a follow-up ("those cards of that set") knows what "that" is. */
+  set?: string;
+  /** The cards this answer listed, so a follow-up ("show me their pictures") knows which ones. */
+  listed?: GuideCard[];
 }
+
+/** A card with only what a picture and a name need (kept small in the saved conversation). */
+export const lite = (c: GuideCard): GuideCard => ({ id: c.id, name: c.name, type: c.type, type_line: c.type_line, mana_cost: c.mana_cost, oracle_text: null, rarity: c.rarity, playable: c.playable, printings: null, standard_legal: c.standard_legal, image_path: c.image_path, scryfall_id: c.scryfall_id });
+
+const IMAGE_WORDS = /\b(image|images|picture|pictures|pic|pics|photo|photos|artwork|illustration|looks? like)\b/;
 
 export const STARTERS = ["Is Lightning Bolt Standard legal?", "Which sets are Standard legal?", "What does flashback mean?", "Is KLD Standard legal?"];
 
@@ -52,7 +63,7 @@ const FILLER = new Set(
     "tell me about explain info information show give please i you my we to for with on in at by and or if so then there here any some " +
     "mean means meaning work works working effect effects ability abilities rule rules text say says read reads use used " +
     "standard legal legality rotate rotated rotation format playable play played playing printed print reprint reprinted reprints " +
-    "set sets card cards game still currently now today anymore yet also really actually exactly interact interacts interaction combine combo synergy synergize happen happens").split(" "),
+    "set sets card cards game still currently now today anymore yet also really actually exactly ruling rulings image images picture pictures pic pics photo photos artwork illustration look looks like their theirs them those these each interact interacts interaction combine combo synergy synergize happen happens").split(" "),
 );
 const norm = (s: string) => s.toLowerCase().replace(/[’‘]/g, "'").replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim();
 const squash = (s: string) => norm(s).replace(/'/g, "");
@@ -88,7 +99,7 @@ function nameWords(question: string): string[] {
   let from = 0;
   let to = words.length;
   if (!quoted) {
-    while (from < to && FILLER.has(words[from])) from++;
+    while (from < to && (FILLER.has(words[from]) || words[from] === "of")) from++;
     while (to > from && FILLER.has(words[to - 1])) to--;
   }
   return words.slice(from, to);
@@ -144,7 +155,11 @@ async function findCard(words: string[], source: CardSource, fuzzy = true): Prom
   }
   // other words crept in: try shorter runs of the words (longest first), but never a single short word
   for (let len = words.length - 1; len >= 2 && found.length === 0; len--) {
-    for (let at = 0; at + len <= words.length && found.length === 0; at++) found = await tryWords(words.slice(at, at + len));
+    for (let at = 0; at + len <= words.length && found.length === 0; at++) {
+      found = await tryWords(words.slice(at, at + len));
+      const near = found.find((c) => same(c.name, words.slice(at, at + len).join(" ")) || same(frontOf(c.name), words.slice(at, at + len).join(" ")));
+      if (near) return { card: near, exact: true, maybe: [] }; // (the name was in the question with other words round it)
+    }
   }
   if (found.length === 0 && words.length > 1) {
     const longest = [...words].sort((a, b) => b.length - a.length)[0];
@@ -188,15 +203,47 @@ function describe(card: GuideCard): string {
 
 function setAnswer(set: CardSet): Reply {
   return set.standard
-    ? { text: `Yes, ${setName(set)}, from ${set.year}, is Standard legal right now.`, chips: ["Which sets are Standard legal?"] }
+    ? { text: `Yes, ${setName(set)}, from ${set.year}, is Standard legal right now.`, chips: ["Which sets are Standard legal?", `Legendary cards in ${set.name}`], set: set.code }
     : {
         text: `No, ${setName(set)}, from ${set.year}, is not Standard legal. A few of its cards can still be legal if they were reprinted in a Standard set: search the set in the library and turn on “Standard legal” to see which.`,
-        chips: ["Which sets are Standard legal?"],
+        chips: ["Which sets are Standard legal?", `Legendary cards in ${set.name}`],
+        set: set.code,
       };
 }
 
 // ───────── the one entry point ─────────
-export async function ask(question: string, source: CardSource): Promise<Reply> {
+/** What the conversation so far was about, so "and is it Standard legal?" can follow "what does Lightning Bolt do?". */
+export interface Context {
+  card?: GuideCard;
+  /** The set the conversation was last about (its code). */
+  set?: string;
+  /** The cards the last list showed. */
+  listed?: GuideCard[];
+  /** What the Scribe has already said in this conversation, so it never says the same thing twice. */
+  previous?: string[];
+  /** What the player has already asked (a suggestion that was already asked is not offered again). */
+  asked?: string[];
+}
+
+/** The answer, unless the Scribe has already said exactly that in this conversation: then it says so and offers something new instead. */
+export async function ask(question: string, source: CardSource, context?: Context): Promise<Reply> {
+  const reply = await answer(question, source, context);
+  const key = (s: string) => squash(s);
+  const said = new Set((context?.previous ?? []).map(key));
+  const askedBefore = new Set((context?.asked ?? []).map(key));
+  const fresh = (chips?: string[]) => chips?.filter((c) => !askedBefore.has(key(c)) && !said.has(key(c)));
+  if (!said.has(key(reply.text))) return { ...reply, chips: fresh(reply.chips) };
+  const card = reply.card ?? context?.card;
+  const front = card ? frontOf(card.name) : "";
+  const angles = card ? [`Is ${front} Standard legal?`, `Which sets is ${front} in?`, `How does ${front} work?`, `What does ${front} do?`] : (reply.chips ?? STARTERS);
+  const more = fresh(angles) ?? [];
+  return {
+    text: `I already answered that, a little way up. ${more.length ? (card ? `Something new about ${card.name}?` : "Try one of these instead?") : "Ask me about a different card, set or rule."}`,
+    chips: more.slice(0, 3),
+  };
+}
+
+async function answer(question: string, source: CardSource, context?: Context): Promise<Reply> {
   const q = question.trim();
   if (!q) return { text: "Ask me about a card, a set or a rule." };
   const lower = norm(q);
@@ -214,6 +261,14 @@ export async function ask(question: string, source: CardSource): Promise<Reply> 
   const set = findSet(q);
   const asksLegal = /\b(legal|standard|rotat\w*|allowed|banned)\b/.test(lower);
   const filters = parseFilters(q);
+  const wantsImage = IMAGE_WORDS.test(lower) || (/^(show|display)\b/.test(lower) && !wantsList(q));
+  const pointsBack = /\b(that|this|the same|those|these|it|its|them)\b/.test(lower);
+  // a follow-up about "that set" ("can you give me the legendary cards of that set?"): the set the talk was about
+  const contextSet = context?.set ? CARD_SETS.find((s) => s.code === context.set) : undefined;
+  if (!filters.set && contextSet && (pointsBack || /\bset\b/.test(lower)) && (wantsList(q) || filterCount(filters) >= 1)) {
+    filters.set = contextSet.code;
+    filters.named.push(`from ${contextSet.name}`);
+  }
   const listing = (wantsList(q) && filterCount(filters) >= 1) || (filterCount(filters) >= 2 && (filters.types.length > 0 || filters.text.length > 0));
 
   // two cards together ("how does Lightning Bolt work with Shock?")
@@ -222,10 +277,25 @@ export async function ask(question: string, source: CardSource): Promise<Reply> 
     if (pair) return interaction(pair[0], pair[1], q, source);
   }
 
-  const card = await findCard(words, source, !listing);
+  // "show me their pictures" right after a list: those cards
+  if (!listing && wantsImage && context?.listed?.length && /\b(them|those|these|the cards|their|each|all)\b/.test(lower)) {
+    return { text: `Here they are (${Math.min(6, context.listed.length)} of the ${context.listed.length} I listed).`, images: context.listed.slice(0, 6) };
+  }
+
+  let card = await findCard(words, source, !listing);
+  // a follow-up that points back at the card just talked about ("is it Standard legal?", "what are its rulings?")
+  if ((!card.card || !card.exact) && context?.card && (/\b(it|its|this|that|this card|that card|the card)\b/.test(lower) || wantsImage) && !listing) card = { card: context.card, exact: true, maybe: [] };
 
   // a list of cards ("white creatures with flying", "cheap removal", "legendary lands in Foundations")
-  if (listing && !card.exact) return listAnswer(filters, source);
+  if (listing && !card.exact) return listAnswer(filters, source, wantsImage, lower);
+
+  // "is it Standard legal?" right after a set was talked about: the set
+  if (!card.card && !set && contextSet && asksLegal && pointsBack) return setAnswer(contextSet);
+
+  // "show me their pictures" after a list
+  if (!card.card && wantsImage && context?.listed?.length && /\b(them|those|these|the cards|their|each|all)\b/.test(lower)) {
+    return { text: `Here they are (${Math.min(6, context.listed.length)} of the ${context.listed.length} I listed).`, images: context.listed.slice(0, 6) };
+  }
 
   // a set as a whole ("is KLD standard legal?"), unless a card has that exact name
   if (set && (!card.card || !card.exact) && (asksLegal || /\bset\b/.test(lower) || squash(words.join(" ")) === squash(set.name) || words.join(" ") === set.code)) return setAnswer(set);
@@ -238,6 +308,7 @@ export async function ask(question: string, source: CardSource): Promise<Reply> 
   if (card.card) {
     const c = card.card;
     const read = card.typo ? `I read that as ${c.name}.\n\n` : "";
+    if (wantsImage) return { images: [c], text: `${read}Here's ${c.name}.`, chips: [`What does ${frontOf(c.name)} do?`, `Is ${frontOf(c.name)} Standard legal?`] };
     const base = { card: c, chips: [`Is ${frontOf(c.name)} Standard legal?`, `Which sets is ${frontOf(c.name)} in?`, `How does ${frontOf(c.name)} work?`] };
     if (/\bplayable\b|\bin (this|the) game\b|\bimplemented\b|\bsupported\b|\bcan i (play|use)\b/.test(lower) && !asksLegal) return { ...base, text: read + (c.playable ? `Yes, the game can play ${c.name}.` : `Not yet: the game can't play ${c.name} yet, so it can't go in a deck.`) };
     if (asksLegal) return { ...base, text: read + legalityOf(c) };
@@ -312,22 +383,49 @@ function libraryLink(f: CardFilter): { label: string; href: string } | undefined
   return { label: "See them in the library", href: `/cards?${p.toString()}` };
 }
 
-async function listAnswer(f: ReturnType<typeof parseFilters>, source: CardSource): Promise<Reply> {
+const ALL_TYPES = ["creature", "artifact", "enchantment", "planeswalker", "land", "instant", "sorcery"];
+const TYPE_LABEL: Record<string, string> = { creature: "Creatures", artifact: "Artifacts", enchantment: "Enchantments", planeswalker: "Planeswalkers", land: "Lands", instant: "Instants", sorcery: "Sorceries" };
+
+async function listAnswer(f: ReturnType<typeof parseFilters>, source: CardSource, wantsImage = false, lower = ""): Promise<Reply> {
+  const name = (c: GuideCard) => `• ${c.name}${c.mana_cost ? `  ${c.mana_cost}` : ""}`;
+  const where = f.set ? CARD_SETS.find((s) => s.code === f.set) : undefined;
+
+  // legendary cards "of every kind" ("the legendary cards, artifacts, enchantments etc. of that set"): the cards of each type, one after the other
+  if (f.legendary && f.types.length !== 1) {
+    const everyType = f.types.length === 0 || /\betc\b|\band more\b|\bevery\b|\ball\b|\bany\b|\bother\b/.test(lower);
+    const types = everyType ? ALL_TYPES : f.types;
+    const found = await Promise.all(types.map(async (t) => ({ t, ...(await source.search({ ...f, types: [t] }, 6)) })));
+    const kinds = found.filter((x) => x.total > 0);
+    if (kinds.length === 0) return { text: `I couldn't find any ${describeFilter(f)}. Try fewer conditions.`, chips: STARTERS, ...(where ? { set: where.code } : {}) };
+    const all = kinds.reduce((n, x) => n + x.total, 0);
+    const sections = kinds.map((x) => `${TYPE_LABEL[x.t] ?? x.t} (${x.total.toLocaleString()}):\n${x.cards.map(name).join("\n")}${x.total > x.cards.length ? `\n…and ${x.total - x.cards.length} more` : ""}`);
+    const listed = kinds.flatMap((x) => x.cards);
+    return {
+      text: `${all.toLocaleString()} legendary cards${where ? ` in ${where.name} (${where.code.toUpperCase()})` : ""}${f.standard ? " that are Standard legal" : ""}, by kind:\n\n${sections.join("\n\n")}`,
+      chips: ["Show me their pictures", ...listed.slice(0, 2).map((c) => `What does ${frontOf(c.name)} do?`)],
+      link: libraryLink({ ...f, types: [] }),
+      listed: listed.map(lite),
+      ...(wantsImage ? { images: listed.slice(0, 6).map(lite) } : {}),
+      ...(where ? { set: where.code } : {}),
+    };
+  }
+
   const { cards, total } = await source.search(f, 10);
   const what = describeFilter(f);
-  if (total === 0) return { text: `I couldn't find any ${what}. Try fewer conditions.`, chips: STARTERS };
-  const names = cards.map((c) => `• ${c.name}${c.mana_cost ? `  ${c.mana_cost}` : ""}`).join("\n");
+  if (total === 0) return { text: `I couldn't find any ${what}. Try fewer conditions.`, chips: STARTERS, ...(where ? { set: where.code } : {}) };
   return {
-    text: `${total.toLocaleString()} ${what}${total > cards.length ? `. The first ${cards.length}, by name:` : ":"}\n${names}`,
-    chips: cards.slice(0, 3).map((c) => `What does ${frontOf(c.name)} do?`),
+    text: `${total.toLocaleString()} ${what}${total > cards.length ? `. The first ${cards.length}, by name:` : ":"}\n${cards.map(name).join("\n")}`,
+    chips: ["Show me their pictures", ...cards.slice(0, 2).map((c) => `What does ${frontOf(c.name)} do?`)],
     link: libraryLink(f),
+    listed: cards.map(lite),
+    ...(wantsImage ? { images: cards.slice(0, 6).map(lite) } : {}),
+    ...(where ? { set: where.code } : {}),
   };
 }
 
-
 // ───────── a picture sent with (or instead of) a question ─────────
 /** `ocr` is the text read from the picture. A card of the game is answered about as if it had been named; anything else is turned away. */
-export async function askWithPicture(question: string, ocr: string, source: CardSource): Promise<Reply> {
+export async function askWithPicture(question: string, ocr: string, source: CardSource, context?: Context): Promise<Reply> {
   const seen = await identify(ocr, source);
   if (!seen.game) return { text: NOT_GAME };
   if (seen.card) {
@@ -335,7 +433,7 @@ export async function askWithPicture(question: string, ocr: string, source: Card
     const subject = frontOf(c.name);
     const q = question.trim();
     const asked = q ? (/\b(this|that|it)\b/i.test(q) ? q.replace(/\b(this card|that card|this|that|it)\b/gi, subject) : `${q} ${subject}`) : `What does ${subject} do?`;
-    const reply = await ask(asked, source);
+    const reply = await ask(asked, source, { ...context, card: c });
     return { ...reply, text: `That's ${c.name}.\n\n${reply.text}`, card: reply.card ?? c };
   }
   const help = explainText(seen.rulesText ?? "");

@@ -103,7 +103,7 @@ export function filterCount(f: CardFilter): number {
 export function wantsList(question: string): boolean {
   const q = norm(question);
   const noun = /\b(cards?|creatures?|instants?|sorcer(y|ies)|spells|lands?|artifacts?|enchantments?|planeswalkers?|removal|counterspells?|flyers?|fliers?|legends?|tokens?)\b/.test(q);
-  const verb = /^(which|what|show|list|find|give|any|are there|name|suggest|recommend|search|i want|i need|looking for|top)\b|\b(cards?|creatures?) (that|which|with|in|from|for|of)\b|\bare there\b|\bdo you know\b/.test(q);
+  const verb = /^(which|what|show|list|find|give|any|are there|name|suggest|recommend|search|i want|i need|looking for|top)\b|\b(cards?|creatures?) (that|which|with|in|from|for|of)\b|\bare there\b|\bdo you know\b|\b(give|show|list|find|get) (me )?(the |all |some |every )?|\b(can|could|would) you (please )?(give|show|list|find|get)\b/.test(q);
   return noun && verb;
 }
 
