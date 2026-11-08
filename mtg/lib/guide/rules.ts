@@ -33,6 +33,26 @@ const BASICS: Entry[] = [
   { match: /\binstant speed\b/i, help: "Instant speed: any time you have priority, even on your opponent's turn or in response to something." },
 ];
 
+// Questions about how the game is played, answered when they are asked in that way (these words also appear on cards, so they are not matched on card text).
+const HOW_IT_WORKS: Entry[] = [
+  { match: /^(?!.*\b(water|dance|shoes?|beer|keg|phone|screen|pocket)\b).*\b(what does|what is|what s|whats|how does|explain)\b.*\b(tap|tapping|tapped)\b|\bwhat does tap mean\b/, help: "Tap: turn a card sideways. You tap a land to get mana, and a creature taps when it attacks (unless it has vigilance) or uses an ability with the {T} symbol. A tapped card stays tapped until it untaps in your untap step." },
+  { match: /\b(untap|untapping)\b/, help: "Untap: at the start of each of your turns all your tapped cards turn upright again (the untap step), so your lands and creatures are ready to use." },
+  { match: /\bland drop\b|\bplay (a|another|more than one) land\b|\bhow many lands?\b.*\b(turn|each|per|play)\b|\bcan i play (a|two|more)? ?lands?\b/, help: "You may play one land each turn, from your hand, in your main phase while the stack is empty. Only an effect that says so lets you play more." },
+  { match: /\bhow many cards\b.*\bdeck\b|\bdeck size\b|\bminimum deck\b|\bhow (big|large) .*\bdeck\b|\bdeck (has|must have)\b/, help: "A Standard deck has at least 60 cards, with no more than four copies of any card except basic lands, and may have a sideboard of up to 15 cards. A Commander deck has exactly 100." },
+  { match: /\b(turn structure|steps of (a|the) turn|phases of (a|the) turn|what happens (in|during) (a|my|the) turn|turn order|parts of a turn)\b/, help: "A turn goes: untap, upkeep, draw, first main phase (play a land, cast spells), combat (attackers, blockers, damage), second main phase, end step, cleanup." },
+  { match: /\bhow (does )?combat work\b|\bcombat (steps|phases)\b|\bhow (do i|to) attack\b|\bhow (does )?attacking work\b/, help: "Combat: in your combat phase you choose which creatures attack (they tap, unless they have vigilance). The defending player chooses which of their untapped creatures block. Then damage is dealt: an unblocked creature hurts the player, a blocked one fights its blocker." },
+  { match: /^(?!.*\b(insurance|expectancy|left|years|live|lives|age|span|coach|style|hack)\b).*(\bstarting life\b|\bhow much life\b|\blife total\b)/, help: "Each player starts with 20 life. A player at 0 life or less loses the game." },
+  { match: /^(?!.*\b(argument|arguments|lottery|bet|election|case|fight|war|race|contest|lawsuit|debate|prize|money|friends?|love)\b).*(\bhow (do i|to|can i) win\b|\bwin(ning)? the game\b|\bwinning condition\b)/, help: "You win by reducing your opponent's life to 0 (usually by attacking with creatures), or when they have to draw from an empty library, or when a card says you win." },
+  { match: /^(?=.*\b(game|cards?|magic|mtg|turn|discard)\b).*(\bhand size\b|\bmaximum hand\b|\bhow many cards .*\bhand\b)/, help: "You start with seven cards. At the end of your turn, if you hold more than seven, you discard down to seven." },
+  { match: /^(?!.*\b(cost|costs|value|cmc|much)\b).*\b(what is|what s|whats|how does|explain)\b.*\bmana\b|\bgeneric mana\b/, help: "Mana pays for spells and abilities. Lands make it when you tap them: white {W}, blue {U}, black {B}, red {R}, green {G}, or colourless {C}. A number like {2} in a cost is generic: any mana can pay it." },
+  { match: /\b(best|good|strongest|top) (deck|decks)\b|\bwhat deck should\b|\bwhich deck\b.*\b(best|play|use)\b/, help: "I can't say which deck is best: it depends on how you like to play. I can help you build one, though: ask me for cards by colour, kind or effect, such as “green creatures with trample” or “cheap removal”." },
+];
+
+/** The answer to a question about how the game is played, when that is what was asked. */
+export function howItWorks(question: string): string | undefined {
+  return HOW_IT_WORKS.find((e) => e.match.test(question))?.help;
+}
+
 /** Plain-English help for the everyday rules words found in `text`. */
 export function basicHelp(text: string, max = 3): string[] {
   const out: string[] = [];

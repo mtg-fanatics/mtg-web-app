@@ -1,8 +1,8 @@
 import { CARD_SETS } from "@/lib/sets";
 import type { CardSet } from "@/lib/sets";
 import { helpFor } from "@/app/play/glossary";
-import { basicHelp } from "./rules";
-import { describeFilter, filterCount, parseFilters, wantsList } from "./filters";
+import { basicHelp, howItWorks } from "./rules";
+import { COLOR_NAMES, describeFilter, EFFECT_NAMES, filterCount, fixTypos, fuzzySet, parseFilters, wantsList } from "./filters";
 import { explainText, identify, NOT_GAME } from "./image";
 import type { CardFilter } from "./filters";
 
@@ -27,7 +27,7 @@ export interface GuideCard {
 
 export interface CardSource {
   /** Cards whose name contains every one of these words (any case), shortest names first, at most `limit`. */
-  byWords(words: string[], limit: number): Promise<GuideCard[]>;
+  byWords(words: string[], limit: number, startsWith?: boolean): Promise<GuideCard[]>;
   /** The cards that fit the filters (the first `limit` by name) and how many there are in all. */
   search(filter: CardFilter, limit: number, offset?: number): Promise<{ cards: GuideCard[]; total: number }>;
   /** The official rulings written for a card (Scryfall), as plain sentences; empty when there are none or they can't be reached. */
@@ -46,6 +46,8 @@ export interface Reply {
   images?: GuideCard[];
   /** What was asked about a card (so "and what about Shock?" asks the same of Shock). */
   intent?: Intent;
+  /** A reply that is not an answer: a question the Scribe does not take ("decline"), or one it could not find ("miss"). Said again, it is shortened rather than repeated. */
+  kind?: "decline" | "miss" | "chat";
   /** The list this answer showed: what was asked and how far it got, so "more" and "only the red ones" can carry on from it. */
   list?: { filter: ListFilter; offset: number; total: number };
   /** The set (its code) this answer was about, so a follow-up ("those cards of that set") knows what "that" is. */
@@ -54,7 +56,7 @@ export interface Reply {
   listed?: GuideCard[];
 }
 
-export type Intent = "describe" | "legal" | "playable" | "printings" | "rulings" | "image";
+export type Intent = "describe" | "legal" | "playable" | "printings" | "rulings" | "image" | "cost";
 export type ListFilter = ReturnType<typeof parseFilters>;
 const PAGE = 10;
 
@@ -62,6 +64,17 @@ const PAGE = 10;
 export const lite = (c: GuideCard): GuideCard => ({ id: c.id, name: c.name, type: c.type, type_line: c.type_line, mana_cost: c.mana_cost, oracle_text: null, rarity: c.rarity, playable: c.playable, printings: null, standard_legal: c.standard_legal, image_path: c.image_path, scryfall_id: c.scryfall_id });
 
 const IMAGE_WORDS = /\b(image|images|picture|pictures|pic|pics|photo|photos|artwork|illustration|looks? like)\b/;
+
+// What the Scribe takes questions about. A question with none of these words, and no card or set in it, is not for the Scribe.
+const DOMAIN_RE = /\b(cards?|decks?|spells?|creatures?|mana|magic|mtg|inkfall|standard|legal|legality|sets?|rules?|rulings?|commander|formats?|lands?|instants?|sorcery|sorceries|artifacts?|enchantments?|planeswalkers?|graveyard|library|battlefield|combat|attack(?:s|ing|ers?)?|block(?:s|ers?)?|taps?|untaps?|cast|stack|priority|keywords?|abilit(?:y|ies)|legendary|tokens?|counters?|rarity|mythic|uncommon|printings?|printed|reprints?|oracle|power|toughness|opponent|mulligan|flashback|cycling|trample|flying|haste|vigilance|deathtouch|lifelink|first strike|double strike|menace|reach|hexproof|indestructible|flash|ward|prowess|scry|surveil|proliferate|equip|crew|landfall|kicker|convoke|delve|storm|cascade|adventure|saga|aura|vehicle|equipment|turn order|upkeep|main phase|end step)\b/;
+// Subjects that are not this game. A question about one of them is not answered, unless it also says plainly that it is about the game (magic, mana, a creature or a spell...).
+const NON_GAME_RE = /\b(what time|taste|tastes|drink|drinking|poker|blackjack|bridge|chess|golf|football|soccer|basketball|baseball|tennis|cricket|hockey|recipes?|cook|cooking|bake|baking|steak|pizza|rice|pasta|coffee|diet|calories|workout|exercise|argument|arguments|resume|cv|cover letter|interview|insurance|attorney|lawyer|lawsuit|court|jaywalk\w*|drinking age|tax(?:es)?|mortgage|loan|salary|stocks?|bitcoin|crypto|invest\w*|weather|forecast|temperature|flights?|hotel|vacation|travel|passport|visa|wasp|nest|garden|plants?|pets?|dog|dogs|puppy|medicine|doctor|symptoms?|cold|flu|fever|headache|pregnan\w*|dating|girlfriend|boyfriend|marriage|relationship|homework|essay|math|maths|mathematics|algebra|equation|deviation|calculus|physics|chemistry|biology|history|geography|capital of|president|election|politic\w*|religion|god's|bible|python|javascript|typescript|java|html|css|sql|code|coding|program|programming|function|algorithm|bug|error|overflow|computer|laptop|phone|iphone|android|windows|linux|wifi|hack|hacking|password|car|cars|engine|repair|fix my|joke|poem|poetry|song|lyrics|story|movie|film|tv show|netflix|music|recipe|lottery|horoscope|zodiac|astrology|translate|translation|spanish|french|german|japanese|chinese|time is it|what day|news|score|world cup|olympics|celebrity|famous|meaning of life|dinner|lunch|breakfast|restaurant|shopping|buy|price of|cheapest flight|how tall|how old is|how far|population|capital city)\b/;
+const STRONG_ANCHOR_RE = /\b(magic|mtg|inkfall|the gathering|mana|planeswalkers?|creature cards?|spells?|flashback|trample|lifelink|deathtouch|graveyard|battlefield|oracle text|standard[- ]legal|booster)\b/;
+
+// The game's own rule words: asked about alone, they are about the game. (Everyday words in the glossary, like "destroy" or "exile", need the game mentioned too.)
+const SPECIFIC_TERM_RE = /\b(cycling|crew|equip|flashback|prepared|raid|eerie|warp|offspring|blight|explores?|infusion|finality|solve|stun|buyback|echoes?|cumulative upkeep|shadow|horsemanship|wither|bushido|renown|extort|heroic|threshold|hellbent|metalcraft|morbid|amass|affinity|kicker|kicked|ward|landfall|exalted|convoke|delve|undying|persist|devotion|undergrowth|pack tactics|toxic|infect|proliferate|ferocious|delirium|plotted?|replicate|revolt|learn|channel|waterbend|firebending|paradigm|food|blood token|flurry|adventure|harmonize|opus|storm|emblem|prowess|regenerate|scry|surveil|mills?|protection|hexproof|shroud|aura|treasure|devoid|partner|changeling|landwalk|haste|flying|trample|vigilance|deathtouch|lifelink|first strike|double strike|menace|reach|indestructible|defender|flash|stack|priority|mulligan|legendary|summoning sickness|mana value|token|loyalty)\b/;
+
+const INJECTION_RE = /ignore (all |any |your |the )?(previous|prior|above|earlier)|system prompt|your instructions|you are now|pretend (to be|you are)|jailbreak|developer mode|act as (a|an)\b/;
 
 export const STARTERS = ["Is Lightning Bolt Standard legal?", "Which sets are Standard legal?", "What does flashback mean?", "Is KLD Standard legal?"];
 
@@ -71,7 +84,7 @@ const FILLER = new Set(
     "tell me about explain info information show give please i you my we to for with on in at by and or if so then there here any some " +
     "mean means meaning work works working effect effects ability abilities rule rules text say says read reads use used " +
     "standard legal legality rotate rotated rotation format playable play played playing printed print reprint reprinted reprints " +
-    "set sets card cards game still currently now today anymore yet also really actually exactly ruling rulings image images picture pictures pic pics photo photos artwork illustration look looks like their theirs them those these each interact interacts interaction combine combo synergy synergize happen happens").split(" "),
+    "set sets card cards game still currently now today anymore yet also really actually exactly compare compared comparison difference differences between versus better worse u ur rn lol pls plz wut omg haha thx btw tbh imo like just wanna gonna gotta hey hi hello yo bro dude um uh hmm okay ok please thanks ruling rulings image images picture pictures pic pics photo photos artwork illustration look looks like their theirs them those these each interact interacts interaction combine combo synergy synergize happen happens").split(" "),
 );
 const norm = (s: string) => s.toLowerCase().replace(/[’‘]/g, "'").replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim();
 const squash = (s: string) => norm(s).replace(/'/g, "");
@@ -93,6 +106,8 @@ function findSet(question: string): CardSet | undefined {
     if (q.includes(name) && (!best || s.name.length > best.name.length)) best = s;
   }
   if (best) return best;
+  const slip = fuzzySet(question);
+  if (slip) return slip;
   for (const word of question.split(/[^A-Za-z0-9]+/)) {
     const set = BY_CODE.get(word.toLowerCase());
     if (set && word.length >= 3 && !NOT_CODES.has(word.toLowerCase()) && (word === word.toUpperCase() || /\bset\b/i.test(question))) return set;
@@ -118,19 +133,17 @@ const frontOf = (name: string) => name.split(" // ")[0];
 
 /** The card a question names: an exact match, or the best match for the words (otherwise the likely ones to ask about). */
 /** How many letters apart two spellings are (a typo is one or two). */
-function distance(a: string, b: string): number {
-  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+const distance = (a: string, b: string): number => {
+  // letters apart, a swap of two neighbouring letters ("creatuers") counting as one slip
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
   for (let i = 1; i <= a.length; i++) {
-    let prev = row[0];
-    row[0] = i;
     for (let j = 1; j <= b.length; j++) {
-      const keep = row[j];
-      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
-      prev = keep;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
     }
   }
-  return row[b.length];
-}
+  return d[a.length][b.length];
+};
 
 /** A card named with a typo ("lightnig bolt"): the beginnings of the words find the candidates, the spelling picks the closest. */
 async function fuzzyCard(words: string[], source: CardSource): Promise<GuideCard | undefined> {
@@ -138,7 +151,7 @@ async function fuzzyCard(words: string[], source: CardSource): Promise<GuideCard
   if (phrase.length < 4) return undefined;
   const starts = words.filter((w) => w.length >= 3).map((w) => w.replace(/'/g, "").slice(0, 3));
   if (starts.length === 0) return undefined;
-  const near = await source.byWords(starts, 40);
+  const near = await source.byWords(starts, 80, true);
   let best: { card: GuideCard; d: number } | undefined;
   for (const c of near) {
     for (const name of [squash(c.name), squash(frontOf(c.name))]) {
@@ -146,15 +159,18 @@ async function fuzzyCard(words: string[], source: CardSource): Promise<GuideCard
       if (!best || d < best.d) best = { card: c, d };
     }
   }
-  return best && best.d <= Math.max(2, Math.floor(phrase.length * 0.2)) ? best.card : undefined;
+  // a short name allows one wrong letter, a longer one two (or a fifth of it): "shok" is Shock, "joke" is not a card
+  return best && best.d <= (phrase.length <= 5 ? 1 : Math.max(2, Math.floor(phrase.length * 0.2))) ? best.card : undefined;
 }
 
-async function findCard(words: string[], source: CardSource, fuzzy = true): Promise<{ card?: GuideCard; exact?: boolean; typo?: boolean; maybe: GuideCard[] }> {
+async function findCard(words: string[], source: CardSource, fuzzy = true, bare = false): Promise<{ card?: GuideCard; exact?: boolean; typo?: boolean; maybe: GuideCard[] }> {
   if (words.length === 0) return { maybe: [] };
   const phrase = words.join(" ");
-  const tryWords = async (w: string[]) => (w.length === 0 ? [] : source.byWords(w.map((x) => x.replace(/'/g, "")), 8));
+  // (a word with an apostrophe is searched by what comes before it: the name has "Kiora's", the question may say "kioras" or "kiora's")
+  const tryWords = async (w: string[]) => (w.length === 0 ? [] : source.byWords(w.map((x) => x.split("'")[0]).filter((x) => x.length > 0), 8));
   const exact = (cards: GuideCard[]) => cards.find((c) => same(c.name, phrase) || same(frontOf(c.name), phrase));
   let found = await tryWords(words);
+  let used = words; // the words that found these cards
   const hit = exact(found);
   if (hit) return { card: hit, exact: true, maybe: [] };
   if (found.length === 0 && fuzzy) {
@@ -165,15 +181,29 @@ async function findCard(words: string[], source: CardSource, fuzzy = true): Prom
   for (let len = words.length - 1; len >= 2 && found.length === 0; len--) {
     for (let at = 0; at + len <= words.length && found.length === 0; at++) {
       found = await tryWords(words.slice(at, at + len));
+      used = words.slice(at, at + len);
       const near = found.find((c) => same(c.name, words.slice(at, at + len).join(" ")) || same(frontOf(c.name), words.slice(at, at + len).join(" ")));
       if (near) return { card: near, exact: true, maybe: [] }; // (the name was in the question with other words round it)
     }
   }
   if (found.length === 0 && words.length > 1) {
     const longest = [...words].sort((a, b) => b.length - a.length)[0];
-    if (longest.length >= 6) found = await tryWords([longest]);
+    if (longest.length >= 6) {
+      found = await tryWords([longest]);
+      used = [longest];
+    }
   }
-  if (found.length === 1) return { card: found[0], maybe: [] };
+  // one card has the words in its name: it is the card only if the words are most of its name ("joke" is not "Impractical Joke")
+  if (found.length === 1) {
+    const little = /^(of|the|a|an|to|for|in|on|and|or)$/;
+    const share = squash(used.filter((w) => !little.test(w)).join(" ")).length / Math.max(1, squash(frontOf(found[0].name).split(" ").filter((w) => !little.test(w.toLowerCase())).join(" ")).length);
+    if (share >= 0.75 || (bare && share >= 0.6)) return { card: found[0], maybe: [] };
+    const typo = fuzzy ? await fuzzyCard(words, source) : undefined;
+    if (typo) return { card: typo, typo: true, maybe: [] };
+    return { maybe: found };
+  }
+  const spelled = fuzzy && found.length > 0 ? await fuzzyCard(words, source) : undefined; // (names that only contain the word, none of them the card: a spelling slip)
+  if (spelled) return { card: spelled, typo: true, maybe: [] };
   const ranked = [...found].sort((a, b) => Number(squash(b.name).startsWith(squash(phrase))) - Number(squash(a.name).startsWith(squash(phrase))) || a.name.length - b.name.length);
   return { maybe: ranked.slice(0, 4) };
 }
@@ -231,6 +261,8 @@ export interface Context {
   list?: Reply["list"];
   /** What was last asked about a card. */
   intent?: Intent;
+  /** The suggestions the Scribe's last reply ended with ("yes" takes the first). */
+  chips?: string[];
   /** What the Scribe has already said in this conversation, so it never says the same thing twice. */
   previous?: string[];
   /** What the player has already asked (a suggestion that was already asked is not offered again). */
@@ -244,7 +276,11 @@ export async function ask(question: string, source: CardSource, context?: Contex
   const said = new Set((context?.previous ?? []).map(key));
   const askedBefore = new Set((context?.asked ?? []).map(key));
   const fresh = (chips?: string[]) => chips?.filter((c) => !askedBefore.has(key(c)) && !said.has(key(c)));
-  if (!said.has(key(reply.text))) return { ...reply, chips: fresh(reply.chips) };
+  if (!said.has(key(reply.text)) || reply.kind === "chat") return { ...reply, chips: fresh(reply.chips) };
+  if (reply.kind) {
+    const times = (context?.previous ?? []).filter((t) => key(t) === key(reply.text)).length;
+    return { text: reply.kind === "decline" ? (times > 1 ? "Still outside what I know. Ask me about a card, a set or a rule." : "That is still outside what I can help with. I only know this game's cards, sets and rules.") : "I still can't find that. Try the card's exact name.", chips: STARTERS.slice(0, 3), kind: reply.kind };
+  }
   const card = reply.card ?? context?.card;
   const front = card ? frontOf(card.name) : "";
   const angles = card ? [`Is ${front} Standard legal?`, `Which sets is ${front} in?`, `How does ${front} work?`, `What does ${front} do?`] : (reply.chips ?? STARTERS);
@@ -258,9 +294,21 @@ export async function ask(question: string, source: CardSource, context?: Contex
 async function answer(question: string, source: CardSource, context?: Context): Promise<Reply> {
   const q = question.trim();
   if (!q) return { text: "Ask me about a card, a set or a rule." };
-  const lower = norm(q);
+  const lower = norm(fixTypos(q));
 
-  if (/^(hi|hello|hey|yo|help|what can you do|who are you)\b/.test(lower)) {
+  // not about the game, or an attempt to talk the Scribe out of its job
+  if (INJECTION_RE.test(lower)) return { text: "I can't share or change my instructions. I only answer questions about this game's cards, sets and rules.", chips: STARTERS.slice(0, 3), kind: "decline" };
+  const thanked = /^(thanks|thank you|thx|cheers|ty)\b[,.! ]*/.exec(lower);
+  if (thanked) {
+    // "thanks, what about white removal?": the thanks is taken, and the question after it is still answered
+    const rest = lower.slice(thanked[0].length).trim();
+    if (rest.split(" ").filter(Boolean).length < 2) return { text: "You're welcome! Ask me anything else about the cards.", kind: "chat" };
+    return answer(q.replace(/^(thanks|thank you|thx|cheers|ty)\b[,.! ]*/i, ""), source, context);
+  }
+  if (/^(how are you|how s it going|how are u|what s up|whats up|how do you do)\b/.test(lower)) return { text: "I'm well, thank you. I'm here for questions about this game's cards, sets and rules.", chips: STARTERS.slice(0, 3), kind: "chat" };
+  if (/^(bye|goodbye|see you|good night|cya|later)\b/.test(lower)) return { text: "Goodbye! The book is always open.", kind: "chat" };
+
+  if (/^(hi|hello|hey|yo|hiya|good (morning|evening|afternoon))( there| scribe| friend)?[!. ]*$|^(help|help me|what can you do|what do you do|who are you|what are you)[?!. ]*$/.test(lower)) {
     return { text: "I'm the Scribe. I know the cards, the sets and the rules of this game. Ask me what a card does, what a word like “flashback” means, whether a card or a set is Standard legal, or which sets are in Standard.", chips: STARTERS };
   }
 
@@ -271,6 +319,9 @@ async function answer(question: string, source: CardSource, context?: Context): 
 
   const followed = await followUp(q, lower, source, context);
   if (followed) return followed;
+
+  const played = NON_GAME_RE.test(lower) && !STRONG_ANCHOR_RE.test(lower) ? undefined : howItWorks(lower);
+  if (played) return { text: played, chips: ["What is the stack?", "What does trample mean?", "Which sets are Standard legal?"] };
 
   const words = nameWords(q);
   const set = findSet(q);
@@ -284,7 +335,8 @@ async function answer(question: string, source: CardSource, context?: Context): 
     filters.set = contextSet.code;
     filters.named.push(`from ${contextSet.name}`);
   }
-  const listing = (wantsList(q) && filterCount(filters) >= 1) || (filterCount(filters) >= 2 && (filters.types.length > 0 || filters.text.length > 0));
+  const defining = /^(what|whats|what s) (is|are) (a|an) /.test(lower) && termsIn(lower, 1).length > 0; // "what is a legendary creature?"
+  const listing = !defining && ((wantsList(q) && filterCount(filters) >= 1) || (filterCount(filters) >= 2 && (filters.types.length > 0 || filters.text.length > 0 || filters.subtypes.length > 0)));
 
   // two cards together ("how does Lightning Bolt work with Shock?")
   if (!listing) {
@@ -297,9 +349,19 @@ async function answer(question: string, source: CardSource, context?: Context): 
     return { text: `Here they are (${Math.min(6, context.listed.length)} of the ${context.listed.length} I listed).`, images: context.listed.slice(0, 6) };
   }
 
-  let card = await findCard(words, source, !listing);
+  let card = await findCard(words, source, !listing, squash(q) === squash(words.join(" ")));
   // a follow-up that points back at the card just talked about ("is it Standard legal?", "what are its rulings?")
   if ((!card.card || !card.exact) && context?.card && (/\b(it|its|this|that|this card|that card|the card)\b/.test(lower) || wantsImage) && !listing) card = { card: context.card, exact: true, maybe: [] };
+
+  // a one-word card name inside an ordinary sentence, with nothing of the game in it, is not a question about that card
+  const CARD_INTENT = /\b(do|does|cost|costs|work|works|mean|means|legal|printed|ruling|rulings|image|picture|playable|power|toughness|text|abilit(?:y|ies)|about|card|looks?|stats?)\b/;
+  if (card.card && !contextWas(card.card, context) && !squash(q).startsWith(squash(frontOf(card.card.name))) && !DOMAIN_RE.test(lower) && !CARD_INTENT.test(lower) && !wantsImage && !frontOf(card.card.name).includes(" ") && lower.split(" ").length >= 4) card = { maybe: [] };
+
+  // a subject that is plainly not this game is not answered, unless the question names a card exactly, names a set, or asks for a real list of cards
+  const aboutACard = card.card && card.exact && (same(card.card.name, words.join(" ")) || same(frontOf(card.card.name), words.join(" ")) || /\b(does|do|cost|costs|work|works|mean|means|printed|ruling|rulings|image|picture|playable|power|toughness|abilit(?:y|ies)|about|card|standard)\b/.test(lower));
+  if (NON_GAME_RE.test(lower) && !STRONG_ANCHOR_RE.test(lower) && !aboutACard && !set && !(listing && filterCount(filters) >= 2)) {
+    return { text: "I can only help with this game: what a card does, what a rule word means, which sets are Standard legal, and the like. I can't help with that one.", chips: STARTERS.slice(0, 3), kind: "decline" };
+  }
 
   // a list of cards ("white creatures with flying", "cheap removal", "legendary lands in Foundations")
   if (listing && !card.exact) return listAnswer(filters, source, wantsImage, lower);
@@ -312,11 +374,22 @@ async function answer(question: string, source: CardSource, context?: Context): 
     return { text: `Here they are (${Math.min(6, context.listed.length)} of the ${context.listed.length} I listed).`, images: context.listed.slice(0, 6) };
   }
 
+  // about a set ("tell me about Foundations", "when did Kaladesh come out?", "how many cards are in FDN?")
+  if (set && !card.exact && !listing && !asksLegal && /\b(tell me about|what s in|whats in|what is in|info|information|how many cards|how big|when did|when was|when is|release|released|come out|came out|about)\b/.test(lower)) {
+    const total = (await source.search({ ...parseFilters(""), set: set.code }, 1)).total;
+    const howMany = /\bhow many cards\b/.test(lower);
+    return {
+      text: howMany ? `${setName(set)} has ${total.toLocaleString()} cards in the game's card list.` : `${setName(set)} came out in ${set.year} and ${set.standard ? "is Standard legal" : "is not Standard legal"}. I know ${total.toLocaleString()} of its cards.`,
+      chips: [`Legendary cards in ${set.name}`, "Which sets are Standard legal?"],
+      set: set.code,
+    };
+  }
+
   // a set as a whole ("is KLD standard legal?"), unless a card has that exact name
   if (set && (!card.card || !card.exact) && (asksLegal || /\bset\b/.test(lower) || squash(words.join(" ")) === squash(set.name) || words.join(" ") === set.code)) return setAnswer(set);
 
-  // a rules word that is also a card's name ("what does flashback mean?"): the rule, unless the card was asked for
-  if (card.card && card.exact && !/\bcard\b/.test(lower) && termsIn(words.join(" "), 1).length > 0) {
+  // a rules word that is also a card's name ("what does flashback mean?", "does lifelink stack?"): the rule, unless the card was asked for
+  if (card.card && !/\bcard\b/.test(lower) && (termsIn(words.join(" "), 1).length > 0 || termsIn(frontOf(card.card.name), 1).length > 0) && !squash(frontOf(card.card.name)).includes(" ")) {
     return { text: termsIn(q, 3).join("\n\n"), chips: [`Show the card ${card.card.name}`] };
   }
 
@@ -334,13 +407,16 @@ async function answer(question: string, source: CardSource, context?: Context): 
             ? "printings"
             : RULINGS_WORDS.test(lower)
               ? "rulings"
-              : null;
+              : /\b(mana cost|costs?|how much mana|mana value|cmc)\b/.test(lower)
+                ? "cost"
+                : null;
     const bare = !detected && words.length > 0 && (/^(what|how) about\b|^and\b|^also\b|^same\b/.test(lower) || squash(q) === squash(words.join(" ")));
     const intent: Intent = detected ?? (bare ? context?.intent : undefined) ?? "describe";
     const front = frontOf(c.name);
     const chips = [`Is ${front} Standard legal?`, `Which sets is ${front} in?`, `How does ${front} work?`, `Show me ${front}`];
     const base = { card: c, intent, chips: chips.filter((x) => !(intent === "legal" && x.startsWith("Is ")) && !(intent === "printings" && x.startsWith("Which")) && !(intent === "rulings" && x.startsWith("How")) && !(intent === "image" && x.startsWith("Show"))).slice(0, 3) };
     if (intent === "image") return { images: [c], intent, text: `${read}Here's ${c.name}.`, chips: [`What does ${front} do?`, `Is ${front} Standard legal?`] };
+    if (intent === "cost") return { ...base, text: read + (c.mana_cost ? `${c.name} costs ${c.mana_cost.split(" // ")[0]}, a mana value of ${manaValue(c.mana_cost)}.` : `${c.name} has no mana cost.`) };
     if (intent === "playable") return { ...base, text: read + (c.playable ? `Yes, the game can play ${c.name}.` : `Not yet: the game can't play ${c.name} yet, so it can't go in a deck.`) };
     if (intent === "legal") return { ...base, text: read + legalityOf(c) };
     if (intent === "printings") return { ...base, text: read + printingsOf(c) };
@@ -351,14 +427,21 @@ async function answer(question: string, source: CardSource, context?: Context): 
     return { ...base, text: read + describe(c) };
   }
 
-  // a word or effect of the rules ("what does flashback mean?")
-  const help = termsIn(q, 4);
+  // a word or effect of the rules ("what does flashback mean?"): the game's own words, or an everyday one ("destroy", "exile") when the game is mentioned
+  const help = SPECIFIC_TERM_RE.test(lower) || STRONG_ANCHOR_RE.test(lower) || /\b(cards?|decks?|creatures?|spells?|mana)\b/.test(lower) ? termsIn(q, 4) : [];
   if (help.length) return { text: help.join("\n\n"), chips: ["What does ward mean?", "What does trample do?"] };
 
   if (set) return setAnswer(set);
 
-  if (card.maybe.length > 0) return { text: "I'm not sure which card you mean. Did you mean one of these?", chips: card.maybe.map((c) => c.name) };
-  return { text: "I couldn't find that. Try the card's name, a set code like FDN, or a rules word like “trample”. I can also list cards: “white creatures with flying”.", chips: STARTERS };
+  // a name that cards begin with ("Kiora") is a question about the game; so is anything with a game word in it
+  const bareName = squash(q) === squash(words.join(" ")); // the whole message is the name (or the start of it)
+  const startsLikeACard = bareName && card.maybe.some((c) => squash(c.name).startsWith(squash(words.join(" "))) && squash(words.join(" ")).length >= 4);
+  const aboutTheGame = DOMAIN_RE.test(lower) || startsLikeACard || Boolean(set) || filterCount(filters) - filters.subtypes.length - filters.text.length >= 1;
+  if (!aboutTheGame) {
+    return { text: "I can only help with this game: what a card does, what a rule word means, which sets are Standard legal, and the like. I can't help with that one.", chips: STARTERS.slice(0, 3), kind: "decline" };
+  }
+  if (card.maybe.length > 0) return { text: "I'm not sure which card you mean. Did you mean one of these?", chips: card.maybe.map((c) => c.name), listed: card.maybe.map(lite) };
+  return { text: "I couldn't find that. Try the card's name, a set code like FDN, or a rules word like “trample”. I can also list cards: “white creatures with flying”.", chips: STARTERS, kind: "miss" };
 }
 
 // ───────── lists, rulings and two cards together ─────────
@@ -404,7 +487,7 @@ async function interaction(a: GuideCard, b: GuideCard, question: string, source:
 
 /** The library page that shows the same cards, when the library can filter by everything that was asked. */
 function libraryLink(f: CardFilter): { label: string; href: string } | undefined {
-  if (f.colors.length || f.colorless || f.keywords.length || f.text.length || f.maxCost !== undefined || f.minCost !== undefined || f.rarity || f.types.length > 1) return undefined;
+  if (f.colors.length || f.colorless || f.keywords.length || f.text.length || f.maxCost !== undefined || f.minCost !== undefined || f.rarity || f.types.length > 1 || f.subtypes.length || f.order) return undefined;
   const p = new URLSearchParams();
   if (f.types[0]) p.set("type", f.types[0]);
   if (f.set) p.set("set", f.set);
@@ -417,12 +500,17 @@ function libraryLink(f: CardFilter): { label: string; href: string } | undefined
 const ALL_TYPES = ["creature", "artifact", "enchantment", "planeswalker", "land", "instant", "sorcery"];
 const TYPE_LABEL: Record<string, string> = { creature: "Creatures", artifact: "Artifacts", enchantment: "Enchantments", planeswalker: "Planeswalkers", land: "Lands", instant: "Instants", sorcery: "Sorceries" };
 
+/** The mana value of a printed cost: each number counts as itself, each coloured or hybrid symbol as 1, X as 0 (a two-part card: its first half). */
+function manaValue(cost: string): number {
+  return [...cost.split(" // ")[0].matchAll(/\{([^}]+)\}/g)].reduce((n, m) => n + (/^\d+$/.test(m[1]) ? Number(m[1]) : m[1] === "X" ? 0 : 1), 0);
+}
+
 async function listAnswer(f: ListFilter, source: CardSource, wantsImage = false, lower = "", offset = 0): Promise<Reply> {
   const name = (c: GuideCard) => `• ${c.name}${c.mana_cost ? `  ${c.mana_cost}` : ""}`;
   const where = f.set ? CARD_SETS.find((s) => s.code === f.set) : undefined;
 
   // legendary cards "of every kind" ("the legendary cards, artifacts, enchantments etc. of that set"): the cards of each type, one after the other
-  if (f.legendary && f.types.length !== 1 && offset === 0) {
+  if (f.legendary && f.types.length !== 1 && offset === 0 && f.subtypes.length === 0) {
     const everyType = f.types.length === 0 || /\betc\b|\band more\b|\bevery\b|\ball\b|\bany\b|\bother\b/.test(lower);
     const types = everyType ? ALL_TYPES : f.types;
     const found = await Promise.all(types.map(async (t) => ({ t, ...(await source.search({ ...f, types: [t] }, 6)) })));
@@ -446,7 +534,8 @@ async function listAnswer(f: ListFilter, source: CardSource, wantsImage = false,
   const what = describeFilter(f);
   if (total === 0) return { text: `I couldn't find any ${what}. Try fewer conditions.`, chips: STARTERS, ...(where ? { set: where.code } : {}) };
   if (cards.length === 0) return { text: `That was all of them: ${total.toLocaleString()} ${what}.`, chips: ["Show me their pictures"], set: where?.code, list: { filter: f, offset, total } };
-  const head = offset > 0 ? `The next ${cards.length} (${offset + 1}–${offset + cards.length} of ${total.toLocaleString()}) ${what}:` : `${total.toLocaleString()} ${what}${total > cards.length ? `. The first ${cards.length}, by name:` : ":"}`;
+  const counted = /\bhow many\b/.test(lower) && offset === 0 ? `There are ${total.toLocaleString()} ${what}.\n` : "";
+  const head = counted + (offset > 0 ? `The next ${cards.length} (${offset + 1}–${offset + cards.length} of ${total.toLocaleString()}) ${what}:` : `${total.toLocaleString()} ${what}${total > cards.length ? `. The first ${cards.length}, by name:` : ":"}`);
   const more = offset + cards.length < total;
   return {
     text: `${head}\n${cards.map(name).join("\n")}`,
@@ -462,8 +551,14 @@ async function listAnswer(f: ListFilter, source: CardSource, wantsImage = false,
 // ───────── follow-up questions ─────────
 const ORDINALS: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10 };
 const ORDINAL_RE = /\b(?:the |a )?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|last|\d+(?:st|nd|rd|th)|number \d+|no\.? ?\d+|#\d+)(?! (?:strike|main|turn|player|time|step|phase|mulligan))(?: one| card| creature| artifact| enchantment| land)?\b/i;
-const MORE_RE = /^(more|next|others?|another|what else|anything else|any more|show more|show me more|continue|keep going)\b|\b(more of them|the rest|the next (?:ones|ten|10|page))\b/;
-const REFINE_RE = /^(and|only|just|but|now|also|what about|how about|any|which of (?:them|those|these)|of (?:them|those|these)|among (?:them|those))\b|\b(of them|of those|among them|the ones|those ones|instead)\b/;
+const MORE_RE = /^(more|next|others?|another|what else|anything else|any more|show more|show me more|continue|keep going|go on|and more|more please|next page|next ones?)\b|\b(give me|show me|let me see|can i see|i want|i need|get me|list) (some |a few |a bit |even )?(more|others?|other ones|another|the rest|the next)\b|\b(more of them|more please|the rest|the next (?:ones|ten|10|page)|\d+ more|few more|some more)\b/;
+const REFINE_RE = /^(and|only|just|but|now|also|what about|how about|any|which of (?:them|those|these)|of (?:them|those|these)|among (?:them|those)|in|from|of|for|with|within|inside|that are|that have|which are|which have|those that|the ones)\b|\b(of them|of those|among them|the ones|those ones|instead)\b/;
+const YES_RE = /^(yes|yeah|yep|yup|sure|ok|okay|please|go ahead|do it|go on|of course|correct|right|exactly)[.! ]*$/;
+const NO_RE = /^(no|nope|nah|never mind|nevermind|no thanks|not really)[.! ]*$/;
+const AFFIRM_PREFIX = /^(yes|yeah|yep|yup|sure|ok|okay|please|right|correct|and)[,.! ]+/;
+
+/** The card the talk was already about (so a pronoun or a repeated name is not mistaken for a stray word). */
+const contextWas = (card: GuideCard, context?: Context) => Boolean(context?.card && context.card.id === card.id);
 
 /** Narrow a list: what was asked before, with the new conditions on top (a new colour or kind replaces the old one). */
 function mergeFilters(base: ListFilter, f: ListFilter): ListFilter {
@@ -472,9 +567,10 @@ function mergeFilters(base: ListFilter, f: ListFilter): ListFilter {
     ...base,
     colors: f.colors.length ? f.colors : base.colors,
     colorless: f.colors.length ? false : base.colorless || f.colorless,
-    types: f.types.length ? f.types : base.types,
+    // a new colour, kind or effect replaces the old one ("what about white removal?" after "red instants" is not red, and not only instants)
+    types: f.types.length || f.text.length ? f.types : base.types,
     keywords: union(base.keywords, f.keywords),
-    text: union(base.text, f.text),
+    text: f.text.length ? f.text : base.text,
     maxCost: f.maxCost ?? base.maxCost,
     minCost: f.minCost ?? base.minCost,
     rarity: f.rarity ?? base.rarity,
@@ -482,12 +578,22 @@ function mergeFilters(base: ListFilter, f: ListFilter): ListFilter {
     standard: base.standard || f.standard,
     legendary: base.legendary || f.legendary,
     playable: base.playable || f.playable,
-    named: union(base.named, f.named),
+    subtypes: union(base.subtypes, f.subtypes),
+    order: f.order ?? base.order,
+    named: union(base.named.filter((n) => !(f.colors.length && COLOR_NAMES.has(n)) && !(f.text.length && (EFFECT_NAMES.has(n) || n.startsWith("“")))), f.named),
   };
 }
 
 /** Questions that only make sense after the one before: "the second one", "more", "only the red ones". Null when the question stands on its own. */
-async function followUp(q: string, lower: string, source: CardSource, context?: Context): Promise<Reply | null> {
+async function followUp(q: string, lowerWhole: string, source: CardSource, context?: Context): Promise<Reply | null> {
+  // "yes" takes up what the Scribe just offered; "no" lets it go
+  if (YES_RE.test(lowerWhole) && context?.chips?.length) return answer(context.chips[0], source, { ...context, chips: undefined });
+  if (NO_RE.test(lowerWhole)) return { text: "Alright. Ask me anything else about the cards, sets or rules." };
+  // "yes in the FDN set": the "yes" only agrees; what follows is the request
+  const stripped = lowerWhole.replace(AFFIRM_PREFIX, "");
+  const lower = stripped.length >= 3 ? stripped : lowerWhole;
+  if (lower !== lowerWhole) q = q.replace(/^(yes|yeah|yep|yup|sure|ok|okay|please|right|correct|and)[,.! ]+/i, "");
+
   // "tell me about the second one", "is the last one Standard legal?"
   const ord = context?.listed?.length ? ORDINAL_RE.exec(q) : null;
   if (ord && context?.listed) {
@@ -510,9 +616,16 @@ async function followUp(q: string, lower: string, source: CardSource, context?: 
   }
 
   // "only the red ones", "and the cheap ones?", "which of them are creatures?": the last list, narrowed
-  if (context?.list && REFINE_RE.test(lower)) {
+  if (context?.list && (REFINE_RE.test(lower) || REFINE_RE.test(lowerWhole)) && lower.split(" ").length <= 12) {
     const f = parseFilters(q);
-    if (filterCount(f) >= 1) return listAnswer(mergeFilters(context.list.filter, f), source, false, lower);
+    if (filterCount(f) >= 1) {
+      const merged = mergeFilters(context.list.filter, f);
+      // nothing new in what was asked: say so, and offer ways to narrow it
+      if (JSON.stringify({ ...merged, named: [] }) === JSON.stringify({ ...context.list.filter, named: [] })) {
+        return { text: `That's what I already showed you: ${describeFilter(context.list.filter)}. Want it narrowed down, for example to one kind of card or one colour?`, chips: ["Only the creatures", "Only the red ones", "Show me their pictures"], list: context.list, ...(merged.set ? { set: merged.set } : {}) };
+      }
+      return listAnswer(merged, source, false, lower);
+    }
   }
   return null;
 }

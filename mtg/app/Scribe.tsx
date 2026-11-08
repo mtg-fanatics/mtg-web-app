@@ -47,10 +47,10 @@ const rulingsSeen = new Map<string, string[]>(); // a card's rulings are fetched
 
 /** The cards of the game's own database (and the official rulings, from Scryfall). */
 const source: CardSource = {
-  async byWords(words, limit) {
+  async byWords(words, limit, startsWith = false) {
     let q = createClient().from("cards").select(COLUMNS);
-    for (const w of words) q = q.ilike("name", `%${w.replace(/[%_\\]/g, "\\$&")}%`);
-    const { data, error } = await q.limit(40);
+    words.forEach((w, i) => (q = q.ilike("name", `${startsWith && i === 0 ? "" : "%"}${w.replace(/[%_\\]/g, "\\$&")}%`)));
+    const { data, error } = await q.limit(startsWith ? 250 : 40); // (a name's beginning matches a lot of cards: the closest spelling is picked from all of them)
     if (error) throw new Error(error.message);
     return (data as GuideCard[]).sort((a, b) => a.name.length - b.name.length).slice(0, limit);
   },
@@ -68,8 +68,10 @@ const source: CardSource = {
     if (f.set) q = q.contains("printings", [f.set]);
     if (f.standard) q = q.eq("standard_legal", true);
     if (f.legendary) q = q.ilike("type_line", "%Legendary%");
+    for (const k of f.subtypes ?? []) q = q.ilike("type_line", `%${k}%`);
     if (f.playable) q = q.eq("playable", true);
-    const { data, count, error } = await q.order("name").range(offset, offset + limit - 1);
+    const ordered = f.order === "cost_desc" ? q.order("cost", { ascending: false }).order("name") : f.order === "cost_asc" ? q.order("cost", { ascending: true }).order("name") : f.order === "power_desc" ? q.order("power", { ascending: false, nullsFirst: false }).order("name") : q.order("name");
+    const { data, count, error } = await ordered.range(offset, offset + limit - 1);
     if (error) throw new Error(error.message);
     return { cards: data as GuideCard[], total: count ?? (data as GuideCard[]).length };
   },
@@ -342,7 +344,12 @@ export default function Scribe() {
   function startNew() {
     const empty = convs.find((c) => asked(c) === 0);
     const fresh = empty ?? newConversation();
-    if (!empty) setConvs((list) => [fresh, ...list]);
+    if (!empty) {
+      // only the newest 50 are kept: the oldest goes (from the database too) to make room
+      const oldest = [...convs].sort((a, b) => b.updated - a.updated).slice(MAX_CONVERSATIONS - 1).map((c) => c.id);
+      forgetInDatabase(oldest);
+      setConvs((list) => [fresh, ...list.filter((c) => !oldest.includes(c.id))]);
+    }
     setCurrentId(fresh.id);
     setView("chat");
   }
@@ -352,7 +359,7 @@ export default function Scribe() {
   }
   function forgetInDatabase(ids: string[]) {
     for (const id of ids) savedAt.current.delete(id);
-    if (uid && uid !== "guest" && dbOk.current && ids.length > 0) void createClient().from("scribe_chats").delete().in("id", ids);
+    if (uid && uid !== "guest" && dbOk.current && ids.length > 0) createClient().from("scribe_chats").delete().in("id", ids).then(() => undefined); // (a database request only goes out once something reads its answer)
   }
   function remove(id: string) {
     forgetInDatabase([id]);
@@ -404,7 +411,7 @@ export default function Scribe() {
       }
     }
     const newest = <K extends "listed" | "list" | "intent">(key: K) => [...turns].reverse().find((t) => t.from === "scribe" && t[key] !== undefined)?.[key];
-    const context = { card: lastCard, set: lastSet, listed: newest("listed"), list: newest("list"), intent: newest("intent"), previous: turns.filter((t) => t.from === "scribe").map((t) => t.text), asked: turns.filter((t) => t.from === "me").map((t) => t.text) };
+    const context = { card: lastCard, set: lastSet, listed: newest("listed"), list: newest("list"), intent: newest("intent"), chips: [...turns].reverse().find((t) => t.from === "scribe")?.chips, previous: turns.filter((t) => t.from === "scribe").map((t) => t.text), asked: turns.filter((t) => t.from === "me").map((t) => t.text) };
     setText("");
     setPicture(null);
     patch(id, (c) => ({ ...c, updated: Date.now(), title: asked(c) === 0 ? (q || "A picture").slice(0, 48) : c.title, turns: [...c.turns, { from: "me", text: q, ...(sent ? { image: sent.url } : {}) }] }));
@@ -464,7 +471,9 @@ export default function Scribe() {
 
           {view === "history" ? (
             <div className="scribe-log" aria-label="Past conversations">
-              {sorted.length === 0 ? (
+              {!loaded ? (
+                <p className="scribe-note">Loading your conversations…</p>
+              ) : sorted.length === 0 ? (
                 <p className="scribe-note">Nothing here yet. Your conversations are kept under your account (only you can read them), so you can open them again later.</p>
               ) : (
                 <ul className="scribe-hist">
