@@ -9,7 +9,10 @@ import { ask, askWithPicture, STARTERS } from "@/lib/guide/answer";
 import { readPicture } from "@/lib/guide/ocr";
 import { ManaText } from "./play/ManaSymbols";
 import ScribeMark from "./ScribeMark";
-import type { CardSource, GuideCard, Reply } from "@/lib/guide/answer";
+import { Lightbox } from "./play/CardDetail";
+import { useHoverZoom } from "./play/HoverZoom";
+import type { CardDef } from "@mtg/engine";
+import type { CardSource, GuideCard, Intent, Reply } from "@/lib/guide/answer";
 
 interface Turn {
   from: "me" | "scribe";
@@ -21,6 +24,9 @@ interface Turn {
   images?: GuideCard[];
   set?: string;
   listed?: GuideCard[];
+  /** What was asked about a card, and the list that was shown (so a follow-up can carry on from them). */
+  intent?: Intent;
+  list?: Reply["list"];
   /** A picture the player sent (shown in this visit only). */
   image?: string;
 }
@@ -48,7 +54,7 @@ const source: CardSource = {
     if (error) throw new Error(error.message);
     return (data as GuideCard[]).sort((a, b) => a.name.length - b.name.length).slice(0, limit);
   },
-  async search(f, limit) {
+  async search(f, limit, offset = 0) {
     let q = createClient().from("cards").select(COLUMNS, { count: "exact" });
     if (f.types.length === 1) q = q.eq("type", f.types[0]);
     else if (f.types.length > 1) q = q.in("type", f.types);
@@ -63,7 +69,7 @@ const source: CardSource = {
     if (f.standard) q = q.eq("standard_legal", true);
     if (f.legendary) q = q.ilike("type_line", "%Legendary%");
     if (f.playable) q = q.eq("playable", true);
-    const { data, count, error } = await q.order("name").limit(limit);
+    const { data, count, error } = await q.order("name").range(offset, offset + limit - 1);
     if (error) throw new Error(error.message);
     return { cards: data as GuideCard[], total: count ?? (data as GuideCard[]).length };
   },
@@ -85,6 +91,20 @@ const source: CardSource = {
 };
 
 const HELLO: Turn = { from: "scribe", text: "I'm the Scribe. Ask me what a card does, what a rule word means, or whether a card or set is Standard legal. You can also send me a picture of a card.", chips: STARTERS };
+/** The game's own card description for the hover zoom and the large view. */
+const toDef = (c: GuideCard): CardDef => ({
+  id: c.id,
+  name: c.name,
+  type: c.type as CardDef["type"],
+  cost: 0,
+  ...(c.mana_cost ? { manaCost: c.mana_cost } : {}),
+  ...(c.type_line ? { typeLine: c.type_line } : {}),
+  ...(c.oracle_text ? { text: c.oracle_text } : {}),
+  ...(c.image_path ? { image: c.image_path } : {}),
+  ...(c.scryfall_id ? { scryfallId: c.scryfall_id } : {}),
+  ...(c.rarity ? { rarity: c.rarity } : {}),
+});
+
 /** A card's picture from Scryfall, "normal" (488 pixels wide) or "large" (672). */
 const sharp = (c: GuideCard, size: "normal" | "large") => (c.scryfall_id ? `https://cards.scryfall.io/${size}/front/${c.scryfall_id[0]}/${c.scryfall_id[1]}/${c.scryfall_id}.jpg` : c.image_path ? cardImageUrl(c.image_path) : "");
 const MAX_CONVERSATIONS = 50;
@@ -119,6 +139,8 @@ export default function Scribe() {
   const [picture, setPicture] = useState<{ file: File; url: string } | null>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null); // where the seal is (null: its usual corner)
   const [vp, setVp] = useState({ w: 1280, h: 800 });
+  const zoom = useHoverZoom(); // the big card while the mouse is over a card in the talk
+  const [look, setLook] = useState<{ cards: GuideCard[]; at: number } | null>(null); // a card (or a group of them) opened large
   const log = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const dbOk = useRef(true); // false when the database has no table for the history yet (then this device keeps a copy)
@@ -259,13 +281,13 @@ export default function Scribe() {
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => view === "chat" && input.current?.focus(), 60);
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !look && setOpen(false); // (with a card open large, Escape closes just that)
     window.addEventListener("keydown", onKey);
     return () => {
       clearTimeout(t);
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, view]);
+  }, [open, view, look]);
 
   useEffect(() => {
     log.current?.scrollTo({ top: log.current.scrollHeight });
@@ -381,7 +403,8 @@ export default function Scribe() {
         break;
       }
     }
-    const context = { card: lastCard, set: lastSet, listed: [...turns].reverse().find((t) => t.from === "scribe" && t.listed)?.listed, previous: turns.filter((t) => t.from === "scribe").map((t) => t.text), asked: turns.filter((t) => t.from === "me").map((t) => t.text) };
+    const newest = <K extends "listed" | "list" | "intent">(key: K) => [...turns].reverse().find((t) => t.from === "scribe" && t[key] !== undefined)?.[key];
+    const context = { card: lastCard, set: lastSet, listed: newest("listed"), list: newest("list"), intent: newest("intent"), previous: turns.filter((t) => t.from === "scribe").map((t) => t.text), asked: turns.filter((t) => t.from === "me").map((t) => t.text) };
     setText("");
     setPicture(null);
     patch(id, (c) => ({ ...c, updated: Date.now(), title: asked(c) === 0 ? (q || "A picture").slice(0, 48) : c.title, turns: [...c.turns, { from: "me", text: q, ...(sent ? { image: sent.url } : {}) }] }));
@@ -473,16 +496,18 @@ export default function Scribe() {
                 {turns.map((t, i) => (
                   <div key={i} className={t.from === "me" ? "scribe-me" : "scribe-bot"}>
                     {t.card?.image_path && t.from === "scribe" && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={cardImageUrl(t.card.image_path)} alt={t.card.name} className="scribe-card" />
+                      <button type="button" className="scribe-card" title={`${t.card.name}: open large`} {...zoom.on(toDef(t.card))} onClick={() => (zoom.hide(), setLook({ cards: [t.card!], at: 0 }))}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={cardImageUrl(t.card.image_path)} alt={t.card.name} />
+                      </button>
                     )}
                     {t.images && t.images.length > 0 && (
                       <div className="scribe-pics" data-many={t.images.length > 1}>
-                        {t.images.map((c) => (
-                          <a key={c.id} href={sharp(c, "large")} target="_blank" rel="noreferrer" title={`${c.name}: open the large picture`}>
+                        {t.images.map((c, at) => (
+                          <button key={c.id} type="button" title={`${c.name}: open large`} {...zoom.on(toDef(c))} onClick={() => (zoom.hide(), setLook({ cards: t.images!, at }))}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={sharp(c, "normal")} alt={c.name} loading="lazy" onError={(e) => c.image_path && (e.currentTarget.src = cardImageUrl(c.image_path))} />
-                          </a>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -553,6 +578,15 @@ export default function Scribe() {
           )}
         </section>
       )}
+      {look && (
+        <Lightbox
+          def={toDef(look.cards[look.at])}
+          onClose={() => setLook(null)}
+          {...(look.cards.length > 1 ? { onPrev: () => setLook({ ...look, at: (look.at + look.cards.length - 1) % look.cards.length }), onNext: () => setLook({ ...look, at: (look.at + 1) % look.cards.length }) } : {})}
+          caption={look.cards.length > 1 ? `Card ${look.at + 1} of ${look.cards.length}` : undefined}
+        />
+      )}
+      {!look && zoom.node}
       <button
         type="button"
         className="scribe-fab"

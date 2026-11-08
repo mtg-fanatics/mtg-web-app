@@ -29,7 +29,7 @@ export interface CardSource {
   /** Cards whose name contains every one of these words (any case), shortest names first, at most `limit`. */
   byWords(words: string[], limit: number): Promise<GuideCard[]>;
   /** The cards that fit the filters (the first `limit` by name) and how many there are in all. */
-  search(filter: CardFilter, limit: number): Promise<{ cards: GuideCard[]; total: number }>;
+  search(filter: CardFilter, limit: number, offset?: number): Promise<{ cards: GuideCard[]; total: number }>;
   /** The official rulings written for a card (Scryfall), as plain sentences; empty when there are none or they can't be reached. */
   rulings(card: GuideCard): Promise<string[]>;
 }
@@ -44,11 +44,19 @@ export interface Reply {
   link?: { label: string; href: string };
   /** Cards to show as pictures (when the player asked to see them). */
   images?: GuideCard[];
+  /** What was asked about a card (so "and what about Shock?" asks the same of Shock). */
+  intent?: Intent;
+  /** The list this answer showed: what was asked and how far it got, so "more" and "only the red ones" can carry on from it. */
+  list?: { filter: ListFilter; offset: number; total: number };
   /** The set (its code) this answer was about, so a follow-up ("those cards of that set") knows what "that" is. */
   set?: string;
   /** The cards this answer listed, so a follow-up ("show me their pictures") knows which ones. */
   listed?: GuideCard[];
 }
+
+export type Intent = "describe" | "legal" | "playable" | "printings" | "rulings" | "image";
+export type ListFilter = ReturnType<typeof parseFilters>;
+const PAGE = 10;
 
 /** A card with only what a picture and a name need (kept small in the saved conversation). */
 export const lite = (c: GuideCard): GuideCard => ({ id: c.id, name: c.name, type: c.type, type_line: c.type_line, mana_cost: c.mana_cost, oracle_text: null, rarity: c.rarity, playable: c.playable, printings: null, standard_legal: c.standard_legal, image_path: c.image_path, scryfall_id: c.scryfall_id });
@@ -219,6 +227,10 @@ export interface Context {
   set?: string;
   /** The cards the last list showed. */
   listed?: GuideCard[];
+  /** What the last list was (its filters and how far it got). */
+  list?: Reply["list"];
+  /** What was last asked about a card. */
+  intent?: Intent;
   /** What the Scribe has already said in this conversation, so it never says the same thing twice. */
   previous?: string[];
   /** What the player has already asked (a suggestion that was already asked is not offered again). */
@@ -256,6 +268,9 @@ async function answer(question: string, source: CardSource, context?: Context): 
   if (/\b(which|what|list|show|name)\b.*\bsets?\b.*\bstandard\b|\bstandard\b.*\b(sets|rotation)\b|\bwhat s in standard\b/.test(lower)) {
     return { text: `Standard right now has ${STANDARD_SETS.length} sets:\n${STANDARD_SETS.map((s) => `• ${s.name} (${s.code.toUpperCase()}), ${s.year}`).join("\n")}`, chips: ["Is Foundations Standard legal?"] };
   }
+
+  const followed = await followUp(q, lower, source, context);
+  if (followed) return followed;
 
   const words = nameWords(q);
   const set = findSet(q);
@@ -308,12 +323,28 @@ async function answer(question: string, source: CardSource, context?: Context): 
   if (card.card) {
     const c = card.card;
     const read = card.typo ? `I read that as ${c.name}.\n\n` : "";
-    if (wantsImage) return { images: [c], text: `${read}Here's ${c.name}.`, chips: [`What does ${frontOf(c.name)} do?`, `Is ${frontOf(c.name)} Standard legal?`] };
-    const base = { card: c, chips: [`Is ${frontOf(c.name)} Standard legal?`, `Which sets is ${frontOf(c.name)} in?`, `How does ${frontOf(c.name)} work?`] };
-    if (/\bplayable\b|\bin (this|the) game\b|\bimplemented\b|\bsupported\b|\bcan i (play|use)\b/.test(lower) && !asksLegal) return { ...base, text: read + (c.playable ? `Yes, the game can play ${c.name}.` : `Not yet: the game can't play ${c.name} yet, so it can't go in a deck.`) };
-    if (asksLegal) return { ...base, text: read + legalityOf(c) };
-    if (/\b(which|what|where)\b.*\b(sets?|printings?|printed|from)\b|\breprint/.test(lower)) return { ...base, text: read + printingsOf(c) };
-    if (RULINGS_WORDS.test(lower)) {
+    // what is being asked of the card; a bare follow-up ("and Shock?", "what about Shock?") asks what was asked before
+    const detected: Intent | null = wantsImage
+      ? "image"
+      : /\bplayable\b|\bin (this|the) game\b|\bimplemented\b|\bsupported\b|\bcan i (play|use)\b/.test(lower) && !asksLegal
+        ? "playable"
+        : asksLegal
+          ? "legal"
+          : /\b(which|what|where)\b.*\b(sets?|printings?|printed|from)\b|\breprint/.test(lower)
+            ? "printings"
+            : RULINGS_WORDS.test(lower)
+              ? "rulings"
+              : null;
+    const bare = !detected && words.length > 0 && (/^(what|how) about\b|^and\b|^also\b|^same\b/.test(lower) || squash(q) === squash(words.join(" ")));
+    const intent: Intent = detected ?? (bare ? context?.intent : undefined) ?? "describe";
+    const front = frontOf(c.name);
+    const chips = [`Is ${front} Standard legal?`, `Which sets is ${front} in?`, `How does ${front} work?`, `Show me ${front}`];
+    const base = { card: c, intent, chips: chips.filter((x) => !(intent === "legal" && x.startsWith("Is ")) && !(intent === "printings" && x.startsWith("Which")) && !(intent === "rulings" && x.startsWith("How")) && !(intent === "image" && x.startsWith("Show"))).slice(0, 3) };
+    if (intent === "image") return { images: [c], intent, text: `${read}Here's ${c.name}.`, chips: [`What does ${front} do?`, `Is ${front} Standard legal?`] };
+    if (intent === "playable") return { ...base, text: read + (c.playable ? `Yes, the game can play ${c.name}.` : `Not yet: the game can't play ${c.name} yet, so it can't go in a deck.`) };
+    if (intent === "legal") return { ...base, text: read + legalityOf(c) };
+    if (intent === "printings") return { ...base, text: read + printingsOf(c) };
+    if (intent === "rulings") {
       const rulings = rank(await source.rulings(c), q, 3);
       return { ...base, text: read + describe(c) + "\n\n" + (rulings.length ? `Official rulings:\n${rulings.map((r) => `• ${r}`).join("\n")}` : "There are no official rulings for this card.") };
     }
@@ -386,12 +417,12 @@ function libraryLink(f: CardFilter): { label: string; href: string } | undefined
 const ALL_TYPES = ["creature", "artifact", "enchantment", "planeswalker", "land", "instant", "sorcery"];
 const TYPE_LABEL: Record<string, string> = { creature: "Creatures", artifact: "Artifacts", enchantment: "Enchantments", planeswalker: "Planeswalkers", land: "Lands", instant: "Instants", sorcery: "Sorceries" };
 
-async function listAnswer(f: ReturnType<typeof parseFilters>, source: CardSource, wantsImage = false, lower = ""): Promise<Reply> {
+async function listAnswer(f: ListFilter, source: CardSource, wantsImage = false, lower = "", offset = 0): Promise<Reply> {
   const name = (c: GuideCard) => `• ${c.name}${c.mana_cost ? `  ${c.mana_cost}` : ""}`;
   const where = f.set ? CARD_SETS.find((s) => s.code === f.set) : undefined;
 
   // legendary cards "of every kind" ("the legendary cards, artifacts, enchantments etc. of that set"): the cards of each type, one after the other
-  if (f.legendary && f.types.length !== 1) {
+  if (f.legendary && f.types.length !== 1 && offset === 0) {
     const everyType = f.types.length === 0 || /\betc\b|\band more\b|\bevery\b|\ball\b|\bany\b|\bother\b/.test(lower);
     const types = everyType ? ALL_TYPES : f.types;
     const found = await Promise.all(types.map(async (t) => ({ t, ...(await source.search({ ...f, types: [t] }, 6)) })));
@@ -402,25 +433,88 @@ async function listAnswer(f: ReturnType<typeof parseFilters>, source: CardSource
     const listed = kinds.flatMap((x) => x.cards);
     return {
       text: `${all.toLocaleString()} legendary cards${where ? ` in ${where.name} (${where.code.toUpperCase()})` : ""}${f.standard ? " that are Standard legal" : ""}, by kind:\n\n${sections.join("\n\n")}`,
-      chips: ["Show me their pictures", ...listed.slice(0, 2).map((c) => `What does ${frontOf(c.name)} do?`)],
+      chips: ["Show me their pictures", `Only the ${kinds[0].t}s`, ...listed.slice(0, 1).map((c) => `What does ${frontOf(c.name)} do?`)],
       link: libraryLink({ ...f, types: [] }),
       listed: listed.map(lite),
+      list: { filter: f, offset: -1, total: all }, // (every kind at once: "more" asks for one kind)
       ...(wantsImage ? { images: listed.slice(0, 6).map(lite) } : {}),
       ...(where ? { set: where.code } : {}),
     };
   }
 
-  const { cards, total } = await source.search(f, 10);
+  const { cards, total } = await source.search(f, PAGE, Math.max(0, offset));
   const what = describeFilter(f);
   if (total === 0) return { text: `I couldn't find any ${what}. Try fewer conditions.`, chips: STARTERS, ...(where ? { set: where.code } : {}) };
+  if (cards.length === 0) return { text: `That was all of them: ${total.toLocaleString()} ${what}.`, chips: ["Show me their pictures"], set: where?.code, list: { filter: f, offset, total } };
+  const head = offset > 0 ? `The next ${cards.length} (${offset + 1}–${offset + cards.length} of ${total.toLocaleString()}) ${what}:` : `${total.toLocaleString()} ${what}${total > cards.length ? `. The first ${cards.length}, by name:` : ":"}`;
+  const more = offset + cards.length < total;
   return {
-    text: `${total.toLocaleString()} ${what}${total > cards.length ? `. The first ${cards.length}, by name:` : ":"}\n${cards.map(name).join("\n")}`,
-    chips: ["Show me their pictures", ...cards.slice(0, 2).map((c) => `What does ${frontOf(c.name)} do?`)],
+    text: `${head}\n${cards.map(name).join("\n")}`,
+    chips: [...(more ? ["Show me more"] : []), "Show me their pictures", ...cards.slice(0, 1).map((c) => `What does ${frontOf(c.name)} do?`)],
     link: libraryLink(f),
     listed: cards.map(lite),
+    list: { filter: f, offset, total },
     ...(wantsImage ? { images: cards.slice(0, 6).map(lite) } : {}),
     ...(where ? { set: where.code } : {}),
   };
+}
+
+// ───────── follow-up questions ─────────
+const ORDINALS: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10 };
+const ORDINAL_RE = /\b(?:the |a )?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|last|\d+(?:st|nd|rd|th)|number \d+|no\.? ?\d+|#\d+)(?! (?:strike|main|turn|player|time|step|phase|mulligan))(?: one| card| creature| artifact| enchantment| land)?\b/i;
+const MORE_RE = /^(more|next|others?|another|what else|anything else|any more|show more|show me more|continue|keep going)\b|\b(more of them|the rest|the next (?:ones|ten|10|page))\b/;
+const REFINE_RE = /^(and|only|just|but|now|also|what about|how about|any|which of (?:them|those|these)|of (?:them|those|these)|among (?:them|those))\b|\b(of them|of those|among them|the ones|those ones|instead)\b/;
+
+/** Narrow a list: what was asked before, with the new conditions on top (a new colour or kind replaces the old one). */
+function mergeFilters(base: ListFilter, f: ListFilter): ListFilter {
+  const union = <T,>(a: T[], b: T[]) => [...new Set([...a, ...b])];
+  return {
+    ...base,
+    colors: f.colors.length ? f.colors : base.colors,
+    colorless: f.colors.length ? false : base.colorless || f.colorless,
+    types: f.types.length ? f.types : base.types,
+    keywords: union(base.keywords, f.keywords),
+    text: union(base.text, f.text),
+    maxCost: f.maxCost ?? base.maxCost,
+    minCost: f.minCost ?? base.minCost,
+    rarity: f.rarity ?? base.rarity,
+    set: f.set ?? base.set,
+    standard: base.standard || f.standard,
+    legendary: base.legendary || f.legendary,
+    playable: base.playable || f.playable,
+    named: union(base.named, f.named),
+  };
+}
+
+/** Questions that only make sense after the one before: "the second one", "more", "only the red ones". Null when the question stands on its own. */
+async function followUp(q: string, lower: string, source: CardSource, context?: Context): Promise<Reply | null> {
+  // "tell me about the second one", "is the last one Standard legal?"
+  const ord = context?.listed?.length ? ORDINAL_RE.exec(q) : null;
+  if (ord && context?.listed) {
+    const word = ord[1].toLowerCase();
+    const n = word === "last" ? context.listed.length : (ORDINALS[word] ?? Number(/\d+/.exec(word)?.[0]));
+    const item = context.listed[n - 1];
+    if (item) {
+      const front = frontOf(item.name);
+      const rest = q.replace(ORDINAL_RE, front);
+      const asked = squash(rest) === squash(front) ? `What does ${front} do?` : rest;
+      return answer(asked, source, { ...context, listed: undefined, list: undefined });
+    }
+    return { text: `I only listed ${context.listed.length}, so there is no number ${n}.` };
+  }
+
+  // "more", "what else?": the next page of the last list
+  if (context?.list && MORE_RE.test(lower)) {
+    if (context.list.offset < 0) return { text: "That was every kind at once. Ask for one kind to see more of it, for example “only the creatures”.", chips: ["Only the creatures"], list: context.list };
+    return listAnswer(context.list.filter, source, false, lower, context.list.offset + PAGE);
+  }
+
+  // "only the red ones", "and the cheap ones?", "which of them are creatures?": the last list, narrowed
+  if (context?.list && REFINE_RE.test(lower)) {
+    const f = parseFilters(q);
+    if (filterCount(f) >= 1) return listAnswer(mergeFilters(context.list.filter, f), source, false, lower);
+  }
+  return null;
 }
 
 // ───────── a picture sent with (or instead of) a question ─────────
