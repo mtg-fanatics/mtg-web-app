@@ -81,20 +81,24 @@ export interface CardSearch {
   type: "all" | CardType;
   playableOnly: boolean;
   colors?: string[]; // only cards a deck of these colors can play: no other color (colorless cards fit any deck)
+  set?: string; // only cards printed in this set (its code, e.g. "fdn"); needs supabase/07-card-filters.sql
+  standardOnly?: boolean; // only cards legal in Standard today; needs supabase/07-card-filters.sql
   page: number; // 0-based
 }
 
 /** One page of search results plus the total number of matches. */
-export async function searchCards({ query, type, playableOnly, colors, page }: CardSearch): Promise<{ cards: CardDef[]; total: number }> {
+export async function searchCards({ query, type, playableOnly, colors, set, standardOnly, page }: CardSearch): Promise<{ cards: CardDef[]; total: number }> {
   let q = createClient().from("cards").select(COLUMNS, { count: "exact" });
   const text = query.trim().replace(/[%_\\]/g, "\\$&");
   if (text) q = q.ilike("name", `%${text}%`);
   if (type !== "all") q = q.eq("type", type);
   if (playableOnly) q = q.eq("playable", true);
+  if (set) q = q.contains("printings", [set]);
+  if (standardOnly) q = q.eq("standard_legal", true);
   if (colors?.length) q = q.or(`colors.cd.{${colors.join(",")}},colors.is.null`);
   const from = page * CARDS_PAGE_SIZE;
   const { data, count, error } = await q.order("name").range(from, from + CARDS_PAGE_SIZE - 1);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error((set || standardOnly) && /does not exist/.test(error.message) ? "The set and Standard filters need the database update first (supabase/07-card-filters.sql, then npm run import:cards)." : error.message);
   return { cards: (data as CardRow[]).map(rowToDef), total: count ?? 0 };
 }
 

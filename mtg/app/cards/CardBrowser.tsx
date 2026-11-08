@@ -15,18 +15,37 @@ import TypeButton from "./TypeButton";
 import { ALBUM_PAGE_CARDS, useAlbumPages } from "./useAlbumPages";
 import { Back, Lens } from "../Icons";
 import AddToDeck from "./AddToDeck";
+import { CARD_SETS } from "@/lib/sets";
 
 type Filter = "all" | CardType;
 const TYPES: Filter[] = ["all", "creature", "land", "instant", "sorcery", "enchantment", "artifact", "planeswalker"];
+
+/** The set to show cards of (any set when empty): newest first. */
+function SetSelect({ value, onChange, className = "" }: { value: string; onChange: (code: string) => void; className?: string }) {
+  return (
+    <label className={`tool-field ${className}`} title="Only cards printed in this set">
+      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label="Set" className="w-full min-w-0 cursor-pointer">
+        <option value="" style={{ color: "#111" }}>Any set</option>
+        {CARD_SETS.map((s) => (
+          <option key={s.code} value={s.code} style={{ color: "#111" }}>
+            {s.name} ({s.year})
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 /** The library: every card in the game, kept in an album. The search, the filters and the paging of the data are the same as ever; the album shows them nine cards to a page. */
 export default function CardBrowser() {
   const [query, setQuery] = useState("");
   const [type, setType] = useState<Filter>("all");
   const [playableOnly, setPlayableOnly] = useState(false);
+  const [set, setSet] = useState(""); // a set's code, or "" for every set
+  const [standardOnly, setStandardOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false); // phones: the filters are a sheet from the foot of the screen
   const [index, setIndex] = useState(0); // the album page at the left of the spread (the page itself on a narrow screen)
-  const filters = { query, type, playableOnly };
+  const filters = { query, type, playableOnly, set: set || undefined, standardOnly };
   const { cardsOf, ensure, total, loading, error, ready } = useAlbumPages(filters, index);
   const narrow = useMedia("(max-width: 1023px)");
   const zoom = useHoverZoom(); // the big card shown while the mouse is over a card
@@ -107,7 +126,7 @@ export default function CardBrowser() {
             />
           </label>
           <button type="button" className="btn-ghost lib-filter-btn" aria-haspopup="dialog" onClick={() => setFiltersOpen(true)}>
-            Filters{type !== "all" || playableOnly ? " •" : ""}
+            Filters{type !== "all" || playableOnly || set || standardOnly ? " •" : ""}
           </button>
           <label className="switch max-md:hidden" title="Cards the game engine can play today">
             <input
@@ -120,6 +139,26 @@ export default function CardBrowser() {
             />
             <i />
             Playable only
+          </label>
+          <SetSelect
+            value={set}
+            onChange={(code) => {
+              setSet(code);
+              setIndex(0);
+            }}
+            className="max-md:hidden w-[15rem]"
+          />
+          <label className="switch max-md:hidden" title="Cards legal in Standard today">
+            <input
+              type="checkbox"
+              checked={standardOnly}
+              onChange={(e) => {
+                setStandardOnly(e.target.checked);
+                setIndex(0);
+              }}
+            />
+            <i />
+            Standard legal
           </label>
           <span className="count-chip ml-auto max-md:hidden">{loading && total === 0 ? "Loading…" : `${total.toLocaleString()} cards`}</span>
         </div>
@@ -162,6 +201,25 @@ export default function CardBrowser() {
               <i />
               Playable only
             </label>
+            <label className="switch" title="Cards legal in Standard today">
+              <input
+                type="checkbox"
+                checked={standardOnly}
+                onChange={(e) => {
+                  setStandardOnly(e.target.checked);
+                  setIndex(0);
+                }}
+              />
+              <i />
+              Standard legal
+            </label>
+            <SetSelect
+              value={set}
+              onChange={(code) => {
+                setSet(code);
+                setIndex(0);
+              }}
+            />
             <div className="icon-seg flex-wrap" role="group" aria-label="Card type">
               {TYPES.map((t) => (
                 <TypeButton

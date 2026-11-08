@@ -116,6 +116,7 @@ async function loadOracle() {
       text: c.oracle_text ?? (c.card_faces ? c.card_faces.map((f) => f.oracle_text ?? "").join("\n//\n") : ""),
       rarity: c.rarity,
       set: c.set,
+      standard: c.legalities?.standard === "legal",
       keywords: c.keywords ?? [],
       power: c.power ?? front?.power ?? null,
       toughness: c.toughness ?? front?.toughness ?? null,
@@ -204,6 +205,8 @@ function buildRows(oracle, existing = new Map()) {
       oracle_text: c.text,
       rarity: c.rarity,
       set_code: c.set,
+      standard_legal: c.standard,
+      printings: [],
       keywords: c.keywords,
       oracle_id: c.oracle_id,
       scryfall_id: c.scryfall_id,
@@ -216,9 +219,33 @@ function buildRows(oracle, existing = new Map()) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const stripPrivate = ({ _small, ...row }) => row;
 
+/**
+ * Every set each card was printed in (lowercase codes), from MTGJSON's AtomicCards file (about 45 MB, cached): the Scryfall file has
+ * one printing per card, so "the Foundations cards" would miss the ones reprinted since. Names are the key; a failure leaves the lists empty.
+ */
+async function loadPrintings() {
+  const file = path.join(CACHE, "AtomicCards.json.gz");
+  try {
+    if (!fs.existsSync(file)) {
+      console.log("Downloading MTGJSON AtomicCards (the sets of every card)...");
+      const res = await get("https://mtgjson.com/api/v5/AtomicCards.json.gz", "*/*", 600_000);
+      fs.writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+    }
+    const { data } = JSON.parse(zlib.gunzipSync(fs.readFileSync(file)).toString("utf8"));
+    const out = new Map();
+    for (const [name, faces] of Object.entries(data)) out.set(name, [...new Set(faces.flatMap((f) => f.printings ?? []).map((x) => x.toLowerCase()))]);
+    return out;
+  } catch (e) {
+    console.warn(`Could not read the sets of each card (${e.message}): the Set filter will only see each card's newest set.`);
+    return new Map();
+  }
+}
+
 // ───────── phases ─────────
 async function importCards() {
   const rows = buildRows(await loadOracle(), dryRun ? new Map() : await loadExistingIds()).slice(0, limit);
+  const printings = await loadPrintings();
+  for (const r of rows) r.printings = printings.get(r.name) ?? [r.set_code];
   const playable = rows.filter((r) => r.playable);
   console.log(`${rows.length} cards, ${playable.length} playable by the engine.`);
   if (dryRun) {
