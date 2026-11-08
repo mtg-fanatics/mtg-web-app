@@ -120,7 +120,7 @@ export default function CardBrowser() {
                 setQuery(e.target.value);
                 setIndex(0);
               }}
-              placeholder="Search by name"
+              placeholder="Search by name, or a set like FDN"
               aria-label="Search cards by name"
               className="w-full"
             />

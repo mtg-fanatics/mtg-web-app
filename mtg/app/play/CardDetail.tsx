@@ -158,7 +158,6 @@ export function Lightbox({
     >
       <div className="relative flex flex-col items-center gap-2">
         <CardImage
-          key={def.id}
           def={def}
           size="large"
           className={`${actions ? "max-h-[68vh]" : caption ? "max-h-[84vh]" : "max-h-[90vh]"} w-auto max-w-[90vw] rounded-2xl shadow-2xl`}
@@ -243,7 +242,10 @@ export function CardImage({
 }) {
   const tokenArt = useTokenArt(def);
   const sources = [cardDetailImageUrl(def, size), tokenArt?.large ?? null, def.image ? cardImageUrl(def.image) : null].filter((s): s is string => Boolean(s));
-  const [step, setStep] = useState(0);
+  // Which source is being tried, for this card: a different card starts again from the first one (the same <img> is kept and given the new picture).
+  const [tried, setTried] = useState({ id: def.id, step: 0 });
+  const step = tried.id === def.id ? tried.step : 0;
+  const setStep = (n: number) => setTried({ id: def.id, step: n });
 
   if (step >= sources.length) {
     // a token with no picture anywhere: draw the token card (it keeps the card's shape at any size)

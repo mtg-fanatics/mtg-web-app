@@ -1,5 +1,6 @@
 import type { CardDef, CardType } from "@mtg/engine";
 import { createClient } from "@/lib/supabase/client";
+import { CARD_SETS } from "@/lib/sets";
 
 interface CardRow {
   id: string;
@@ -86,11 +87,37 @@ export interface CardSearch {
   page: number; // 0-based
 }
 
+const SET_CODES = new Set(CARD_SETS.map((s) => s.code));
+
+/**
+ * What the search box means: words are a name; `set:fdn` (or `s:fdn`, `e:fdn`) is a set's code and `legal:standard` (or `f:standard`) is
+ * Standard-legal only, as on Scryfall; and a lone set code (the letters at the foot of a card, "FDN") finds the cards of that set as well as any name with those letters.
+ */
+export function parseQuery(query: string): { text: string; set?: string; standardOnly?: boolean; codeOrName?: string } {
+  let set: string | undefined;
+  let standardOnly: boolean | undefined;
+  const words: string[] = [];
+  for (const word of query.trim().split(/\s+/).filter(Boolean)) {
+    const m = /^(set|s|e|legal|f|format):(\S+)$/i.exec(word);
+    if (!m) words.push(word);
+    else if (/^(set|s|e)$/i.test(m[1])) set = m[2].toLowerCase();
+    else if (m[2].toLowerCase() === "standard") standardOnly = true;
+  }
+  const text = words.join(" ");
+  const code = text.toLowerCase();
+  const codeOrName = !set && words.length === 1 && SET_CODES.has(code) ? code : undefined;
+  return { text, set, standardOnly, codeOrName };
+}
+
 /** One page of search results plus the total number of matches. */
 export async function searchCards({ query, type, playableOnly, colors, set, standardOnly, page }: CardSearch): Promise<{ cards: CardDef[]; total: number }> {
   let q = createClient().from("cards").select(COLUMNS, { count: "exact" });
-  const text = query.trim().replace(/[%_\\]/g, "\\$&");
-  if (text) q = q.ilike("name", `%${text}%`);
+  const parsed = parseQuery(query);
+  set = parsed.set ?? set;
+  standardOnly = parsed.standardOnly || standardOnly;
+  const text = parsed.text.replace(/[%_\\]/g, "\\$&");
+  if (parsed.codeOrName) q = q.or(`name.ilike.%${text}%,printings.cs.{${parsed.codeOrName}}`);
+  else if (text) q = q.ilike("name", `%${text}%`);
   if (type !== "all") q = q.eq("type", type);
   if (playableOnly) q = q.eq("playable", true);
   if (set) q = q.contains("printings", [set]);
@@ -98,7 +125,7 @@ export async function searchCards({ query, type, playableOnly, colors, set, stan
   if (colors?.length) q = q.or(`colors.cd.{${colors.join(",")}},colors.is.null`);
   const from = page * CARDS_PAGE_SIZE;
   const { data, count, error } = await q.order("name").range(from, from + CARDS_PAGE_SIZE - 1);
-  if (error) throw new Error((set || standardOnly) && /does not exist/.test(error.message) ? "The set and Standard filters need the database update first (supabase/07-card-filters.sql, then npm run import:cards)." : error.message);
+  if (error) throw new Error((set || standardOnly || parsed.codeOrName) && /does not exist/.test(error.message) ? "The set and Standard filters need the database update first (supabase/07-card-filters.sql, then npm run import:cards)." : error.message);
   return { cards: (data as CardRow[]).map(rowToDef), total: count ?? 0 };
 }
 
