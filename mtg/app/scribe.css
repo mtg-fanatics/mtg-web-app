@@ -1,0 +1,67 @@
+/* The Scribe: the floating helper (Scribe.tsx). A round seal in the corner that opens a small leather-and-parchment panel. */
+.scribe-fab {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 45;
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 233, 168, 0.7);
+  background: radial-gradient(circle at 30% 25%, #d45a43, #8e2a1f 70%);
+  color: #fff4d6;
+  font: 700 1.55rem/1 var(--font-fell), serif;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.scribe-fab:hover { transform: scale(1.06); }
+.scribe-fab:focus-visible { outline: 2px solid #ffe58f; outline-offset: 3px; }
+
+.scribe-panel {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 3.7rem);
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  width: min(24rem, calc(100vw - 2rem));
+  height: min(34rem, calc(100dvh - 8rem));
+  border: 1px solid rgba(201, 161, 90, 0.45);
+  border-radius: 1rem;
+  background: rgba(22, 17, 12, 0.96);
+  color: #e8dcc0;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.scribe-head { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 0.8rem; border-bottom: 1px solid rgba(201, 161, 90, 0.3); }
+.scribe-head > span { flex: 1; }
+.scribe-x { width: 2rem; height: 2rem; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.08); color: inherit; font-size: 1.15rem; line-height: 1; cursor: pointer; }
+.scribe-x:hover { background: rgba(255, 255, 255, 0.18); }
+.scribe-log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; padding: 0.8rem; font-size: 0.95rem; line-height: 1.35; }
+.scribe-me { align-self: flex-end; max-width: 85%; padding: 0.45rem 0.7rem; border-radius: 0.8rem 0.8rem 0.2rem 0.8rem; background: #8e2a1f; color: #fff4d6; }
+.scribe-bot { align-self: flex-start; max-width: 95%; padding: 0.5rem 0.7rem; border-radius: 0.8rem 0.8rem 0.8rem 0.2rem; background: #efe3c3; color: #2a1f12; }
+.scribe-busy { font-style: italic; opacity: 0.7; }
+.scribe-note { padding: 0.4rem 0.6rem; border-radius: 0.6rem; background: rgba(244, 180, 61, 0.15); color: #f4d28a; font-size: 0.85rem; }
+.scribe-card { float: right; width: 5.2rem; margin: 0 0 0.3rem 0.6rem; border-radius: 0.4rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); }
+.scribe-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0 0.8rem 0.6rem; }
+.scribe-chip { padding: 0.25rem 0.65rem; border-radius: 999px; border: 1px solid rgba(201, 161, 90, 0.55); background: rgba(201, 161, 90, 0.12); color: #f1dfb2; font-size: 0.82rem; text-align: left; cursor: pointer; }
+.scribe-chip:hover { background: rgba(201, 161, 90, 0.28); }
+.scribe-form { display: flex; gap: 0.5rem; padding: 0.6rem 0.8rem; border-top: 1px solid rgba(201, 161, 90, 0.3); }
+.scribe-form input { flex: 1; min-width: 0; padding: 0.5rem 0.7rem; border-radius: 0.6rem; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.08); color: inherit; font-size: 16px; outline: none; }
+.scribe-form input:focus { border-color: #f4b43d; }
+.scribe-form button { padding: 0 0.9rem; border-radius: 0.6rem; border: 1px solid #ffe9a8; background: linear-gradient(180deg, #ffe58f, #f1ae38); color: #2a1f12; font-weight: 700; cursor: pointer; }
+.scribe-form button:disabled { opacity: 0.45; cursor: default; }
+
+@media (max-width: 640px) {
+  .scribe-panel { right: 0.5rem; width: calc(100vw - 1rem); height: min(34rem, calc(100dvh - 7rem)); }
+}
+
+/* pictures sent to the Scribe */
+.scribe-attach { display: grid; place-items: center; width: 2.2rem; flex: none; border-radius: 0.6rem; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.08); cursor: pointer; font-size: 1.05rem; }
+.scribe-attach:hover { background: rgba(255, 255, 255, 0.18); }
+.scribe-thumb { position: relative; flex: none; width: 2.2rem; }
+.scribe-thumb img { width: 2.2rem; height: 2.2rem; object-fit: cover; border-radius: 0.5rem; border: 1px solid #f4b43d; }
+.scribe-thumb button { position: absolute; top: -0.4rem; right: -0.4rem; width: 1.1rem; height: 1.1rem; padding: 0; border-radius: 999px; border: none; background: #e8dcc0; color: #2a1f12; font-size: 0.8rem; line-height: 1; cursor: pointer; }
+.scribe-sent { display: block; max-width: 9rem; max-height: 9rem; margin-bottom: 0.3rem; border-radius: 0.5rem; }
+.scribe-bot .ms { font-size: 0.95em; }

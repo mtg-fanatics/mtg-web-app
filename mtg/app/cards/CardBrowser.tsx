@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CardDef } from "@mtg/engine";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { CardType } from "@mtg/engine";
 import { cardDetailImageUrl, notStandardSet } from "@/lib/cards";
 import { onIntent, preloadImage } from "@/lib/prefetch";
@@ -47,6 +48,22 @@ export default function CardBrowser() {
   const [set, setSet] = useState(""); // a set's code, or "" for every set
   const [standardOnly, setStandardOnly] = useState(false);
   const [legendary, setLegendary] = useState(false);
+  // a link from the Scribe ("See them in the library") arrives with its filters in the address: /cards?type=creature&set=fdn&standard=1
+  const address = useSearchParams();
+  const addressKey = address.toString();
+  useEffect(() => {
+    const p = new URLSearchParams(addressKey);
+    if (addressKey === "") return;
+    setIndex(0);
+    (setType("all"), setSet(""), setStandardOnly(false), setLegendary(false), setPlayableOnly(false), setQuery("")); // (a new link starts from nothing)
+    const wanted = p.get("type");
+    if (wanted && (TYPES as string[]).includes(wanted)) setType(wanted as Filter);
+    if (p.get("set")) setSet(p.get("set")!.toLowerCase());
+    if (p.get("standard") === "1") setStandardOnly(true);
+    if (p.get("legendary") === "1") setLegendary(true);
+    if (p.get("playable") === "1") setPlayableOnly(true);
+    if (p.get("q")) setQuery(p.get("q")!);
+  }, [addressKey]);
   const [filtersOpen, setFiltersOpen] = useState(false); // phones: the filters are a sheet from the foot of the screen
   const [index, setIndex] = useState(0); // the album page at the left of the spread (the page itself on a narrow screen)
   const filters = { query, type, playableOnly, set: set || undefined, standardOnly, legendary };

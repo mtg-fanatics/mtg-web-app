@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Alegreya_Sans, IM_Fell_English, IM_Fell_English_SC, Geist_Mono } from "next/font/google";
 import "mana-font/css/mana.css";
@@ -5,6 +6,7 @@ import "./globals.css";
 import "./inkfall.css";
 import "./mobile.css";
 import "./duel-mobile.css";
+import "./scribe.css";
 import UserBar from "./UserBar";
 import RegisterSW from "./RegisterSW";
 import AutoFullscreen from "./AutoFullscreen";
@@ -12,6 +14,7 @@ import Music from "./Music";
 import FontWarm from "./FontWarm";
 import BackGuard from "./BackGuard";
 import PhoneTier from "./PhoneTier";
+import Scribe from "./Scribe";
 import { InkFilters } from "./Icons";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
@@ -101,6 +104,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <FontWarm />
         <BackGuard />
         <PhoneTier />
+        <Suspense>
+          <Scribe />
+        </Suspense>
         {children}
       </body>
     </html>
