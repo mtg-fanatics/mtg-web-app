@@ -6,3 +6,6 @@ alter table public.cards
 
 create index if not exists cards_printings_idx on public.cards using gin (printings);
 create index if not exists cards_standard_idx on public.cards (id) where standard_legal;
+
+-- Make the API see the new columns right away (otherwise the import says "Could not find the printings column ... in the schema cache").
+notify pgrst, 'reload schema';
