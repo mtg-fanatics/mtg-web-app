@@ -241,7 +241,8 @@ export function CardImage({
   fallback: React.ReactNode;
 }) {
   const tokenArt = useTokenArt(def);
-  const sources = [cardDetailImageUrl(def, size), tokenArt?.large ?? null, def.image ? cardImageUrl(def.image) : null].filter((s): s is string => Boolean(s));
+  // (a card shown as printed in a set falls back to its newest printing, then to the stored art)
+  const sources = [cardDetailImageUrl(def, size), def.printSet ? cardDetailImageUrl({ ...def, printSet: undefined }, size) : null, tokenArt?.large ?? null, def.image ? cardImageUrl(def.image) : null].filter((s): s is string => Boolean(s));
   // Which source is being tried, for this card: a different card starts again from the first one (the same <img> is kept and given the new picture).
   const [tried, setTried] = useState({ id: def.id, step: 0 });
   const step = tried.id === def.id ? tried.step : 0;

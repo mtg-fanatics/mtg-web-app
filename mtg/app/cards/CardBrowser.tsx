@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { CardDef } from "@mtg/engine";
 import Link from "next/link";
 import type { CardType } from "@mtg/engine";
-import { cardDetailImageUrl } from "@/lib/cards";
+import { cardDetailImageUrl, notStandardSet } from "@/lib/cards";
 import { onIntent, preloadImage } from "@/lib/prefetch";
 import { Lightbox } from "../play/CardDetail";
 import CardView from "../play/CardView";
@@ -21,12 +22,14 @@ type Filter = "all" | CardType;
 const TYPES: Filter[] = ["all", "creature", "land", "instant", "sorcery", "enchantment", "artifact", "planeswalker"];
 
 /** The set to show cards of (any set when empty): newest first. */
-function SetSelect({ value, onChange, className = "" }: { value: string; onChange: (code: string) => void; className?: string }) {
+function SetSelect({ value, onChange, standardOnly = false, className = "" }: { value: string; onChange: (code: string) => void; standardOnly?: boolean; className?: string }) {
+  // with Standard legal on, only the sets that are in Standard (and the one already chosen, so the page can say it is not)
+  const sets = standardOnly ? CARD_SETS.filter((s) => s.standard || s.code === value) : CARD_SETS;
   return (
     <label className={`tool-field ${className}`} title="Only cards printed in this set">
       <select value={value} onChange={(e) => onChange(e.target.value)} aria-label="Set" className="w-full min-w-0 cursor-pointer">
-        <option value="" style={{ color: "#111" }}>Any set</option>
-        {CARD_SETS.map((s) => (
+        <option value="" style={{ color: "#111" }}>{standardOnly ? "Any Standard set" : "Any set"}</option>
+        {sets.map((s) => (
           <option key={s.code} value={s.code} style={{ color: "#111" }}>
             {s.name} ({s.year})
           </option>
@@ -43,9 +46,10 @@ export default function CardBrowser() {
   const [playableOnly, setPlayableOnly] = useState(false);
   const [set, setSet] = useState(""); // a set's code, or "" for every set
   const [standardOnly, setStandardOnly] = useState(false);
+  const [legendary, setLegendary] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false); // phones: the filters are a sheet from the foot of the screen
   const [index, setIndex] = useState(0); // the album page at the left of the spread (the page itself on a narrow screen)
-  const filters = { query, type, playableOnly, set: set || undefined, standardOnly };
+  const filters = { query, type, playableOnly, set: set || undefined, standardOnly, legendary };
   const { cardsOf, ensure, total, loading, error, ready } = useAlbumPages(filters, index);
   const narrow = useMedia("(max-width: 1023px)");
   const zoom = useHoverZoom(); // the big card shown while the mouse is over a card
@@ -53,9 +57,33 @@ export default function CardBrowser() {
 
   const pages = ready ? Math.max(1, Math.ceil(total / ALBUM_PAGE_CARDS)) : 2; // (until the first answer, a spread of placeholders)
   const shown = [...(cardsOf(index) ?? []), ...(narrow ? [] : cardsOf(index + 1) ?? [])];
+  const [crossing, setCrossing] = useState<"first" | "last" | null>(null); // the large card is going on to the next (or back to the previous) pages: which card of them it lands on
+  const held = useRef<CardDef | undefined>(undefined); // the card on show while the next pages are fetched
   const zoomed = zoomedIdx === null ? undefined : shown[zoomedIdx];
-  const step = (by: number) => setZoomedIdx((i) => (i === null || shown.length === 0 ? null : (i + by + shown.length) % shown.length));
+  if (zoomed) held.current = zoomed;
+  const shownLarge = zoomed ?? (crossing ? held.current : undefined);
+  // Next/previous on the large card: through the cards on show, then on to the neighbouring pages (and round the whole library at its ends).
+  const step = (by: number) => {
+    if (zoomedIdx === null || shown.length === 0) return;
+    const next = zoomedIdx + by;
+    if (next >= 0 && next < shown.length) return setZoomedIdx(next);
+    const per = narrow ? 1 : 2;
+    const lastPage = narrow ? pages - 1 : pages - 1 - ((pages - 1) % 2);
+    const to = by > 0 ? (index + per > lastPage ? 0 : index + per) : index - per < 0 ? lastPage : index - per;
+    if (to === index) return setZoomedIdx((next + shown.length) % shown.length); // a library of one spread
+    setZoomedIdx(null);
+    setCrossing(by > 0 ? "first" : "last");
+    setIndex(to);
+  };
+  useEffect(() => {
+    if (!crossing) return;
+    const cards = [...(cardsOf(index) ?? []), ...(narrow ? [] : cardsOf(index + 1) ?? [])];
+    if (cards.length === 0) return; // not here yet: this runs again when they arrive
+    setZoomedIdx(crossing === "first" ? 0 : cards.length - 1);
+    setCrossing(null);
+  }, [crossing, index, narrow, cardsOf]);
   const resetKey = JSON.stringify(filters);
+  const outOfStandard = notStandardSet(query, set || undefined, standardOnly); // a set that is not Standard legal, asked for with Standard legal on
   // the pages are drawn once and left alone while their cards do not change: what they call on a click or a hover is read from here, so it is always current
   const ctl = useRef({ zoom, index, pick: (_n: number) => {} });
   ctl.current = { zoom, index, pick: (n: number) => setZoomedIdx(n) };
@@ -126,7 +154,7 @@ export default function CardBrowser() {
             />
           </label>
           <button type="button" className="btn-ghost lib-filter-btn" aria-haspopup="dialog" onClick={() => setFiltersOpen(true)}>
-            Filters{type !== "all" || playableOnly || set || standardOnly ? " •" : ""}
+            Filters{type !== "all" || playableOnly || set || standardOnly || legendary ? " •" : ""}
           </button>
           <label className="switch max-md:hidden" title="Cards the game engine can play today">
             <input
@@ -142,6 +170,7 @@ export default function CardBrowser() {
           </label>
           <SetSelect
             value={set}
+            standardOnly={standardOnly}
             onChange={(code) => {
               setSet(code);
               setIndex(0);
@@ -159,6 +188,18 @@ export default function CardBrowser() {
             />
             <i />
             Standard legal
+          </label>
+          <label className="switch max-md:hidden" title="Legendary cards only (with the creature button: legendary creatures)">
+            <input
+              type="checkbox"
+              checked={legendary}
+              onChange={(e) => {
+                setLegendary(e.target.checked);
+                setIndex(0);
+              }}
+            />
+            <i />
+            Legendary
           </label>
           <span className="count-chip ml-auto max-md:hidden">{loading && total === 0 ? "Loading…" : `${total.toLocaleString()} cards`}</span>
         </div>
@@ -213,8 +254,21 @@ export default function CardBrowser() {
               <i />
               Standard legal
             </label>
+            <label className="switch" title="Legendary cards only (with the creature button: legendary creatures)">
+              <input
+                type="checkbox"
+                checked={legendary}
+                onChange={(e) => {
+                  setLegendary(e.target.checked);
+                  setIndex(0);
+                }}
+              />
+              <i />
+              Legendary
+            </label>
             <SetSelect
               value={set}
+              standardOnly={standardOnly}
               onChange={(code) => {
                 setSet(code);
                 setIndex(0);
@@ -242,7 +296,12 @@ export default function CardBrowser() {
       )}
 
       {error && <p className="rounded-xl border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-[#f0bfb0]">Could not load cards: {error}</p>}
-      {ready && !error && !loading && total === 0 && (
+      {outOfStandard && (
+        <p role="status" className="empty-note">
+          This set is not Standard legal: {outOfStandard.name} ({outOfStandard.code.toUpperCase()}). Turn off “Standard legal” to see its cards.
+        </p>
+      )}
+      {ready && !error && !loading && total === 0 && !outOfStandard && (
         <p className="empty-note">Nothing by that name on these shelves. If the whole library is empty, the card import has not been run yet (see the project notes).</p>
       )}
 
@@ -256,19 +315,19 @@ export default function CardBrowser() {
         onTurnStart={() => zoom.hide()}
         busy={loading}
         resetKey={resetKey}
-        keysEnabled={zoomedIdx === null}
+        keysEnabled={zoomedIdx === null && !crossing}
         label="The card library"
       />
 
-      {zoomedIdx === null && zoom.node}
+      {zoomedIdx === null && !crossing && zoom.node}
 
-      {zoomed && (
+      {shownLarge && (
         <Lightbox
-          def={zoomed}
-          onClose={() => setZoomedIdx(null)}
+          def={shownLarge}
+          onClose={() => (setCrossing(null), setZoomedIdx(null))}
           {...(shown.length > 1 ? { onPrev: () => step(-1), onNext: () => step(1) } : {})}
-          caption={`Card ${zoomedIdx! + 1} of ${shown.length} on show`}
-          actions={<AddToDeck key={zoomed.id} def={zoomed} />}
+          caption={zoomedIdx === null ? "Loading the next cards…" : `Card ${zoomedIdx + 1} of ${shown.length} on show`}
+          actions={<AddToDeck key={shownLarge.id} def={shownLarge} />}
         />
       )}
     </main>

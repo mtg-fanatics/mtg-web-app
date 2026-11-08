@@ -35,7 +35,7 @@ export function useAlbumPages(filters: Filters, index: number) {
   const serverPage = Math.floor(index / PER_SERVER);
   const { result, loading } = useCardSearch({ ...filters, page: serverPage });
   const colors = filters.colors?.join("") ?? "";
-  const fk = JSON.stringify({ q: filters.query, t: filters.type, p: filters.playableOnly, c: colors, s: filters.set, st: filters.standardOnly });
+  const fk = JSON.stringify({ q: filters.query, t: filters.type, p: filters.playableOnly, c: colors, s: filters.set, st: filters.standardOnly, l: filters.legendary });
   const cache = useRef(new Map<string, CardDef[]>());
   const fkRef = useRef(fk);
   const [version, setVersion] = useState(0);

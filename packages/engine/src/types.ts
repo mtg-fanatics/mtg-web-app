@@ -56,6 +56,8 @@ export interface CardDef {
   rarity?: string;
   /** Scryfall printing id, used to load a high-resolution image for the card detail view. */
   scryfallId?: string;
+  /** Library only: the set (its code) a search asked for, so the card is shown as printed there. */
+  printSet?: string;
   /** Keyword abilities printed on the card, lowercase, e.g. ["flying", "first strike"]. */
   keywords?: string[];
 }

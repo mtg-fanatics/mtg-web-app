@@ -84,6 +84,7 @@ export interface CardSearch {
   colors?: string[]; // only cards a deck of these colors can play: no other color (colorless cards fit any deck)
   set?: string; // only cards printed in this set (its code, e.g. "fdn"); needs supabase/07-card-filters.sql
   standardOnly?: boolean; // only cards legal in Standard today; needs supabase/07-card-filters.sql
+  legendary?: boolean; // only legendary cards (with the Creature type: legendary creatures)
   page: number; // 0-based
 }
 
@@ -109,8 +110,18 @@ export function parseQuery(query: string): { text: string; set?: string; standar
   return { text, set, standardOnly, codeOrName };
 }
 
+/** The set this search is about (from the Set menu, `set:fdn` or a lone code) when Standard-legal cards were asked for and that set is not Standard legal. */
+export function notStandardSet(query: string, set: string | undefined, standardOnly: boolean): (typeof CARD_SETS)[number] | undefined {
+  const parsed = parseQuery(query);
+  if (!(standardOnly || parsed.standardOnly)) return undefined;
+  const code = parsed.set ?? parsed.codeOrName ?? set;
+  const info = code ? CARD_SETS.find((s) => s.code === code) : undefined;
+  return info && !info.standard ? info : undefined;
+}
+
 /** One page of search results plus the total number of matches. */
-export async function searchCards({ query, type, playableOnly, colors, set, standardOnly, page }: CardSearch): Promise<{ cards: CardDef[]; total: number }> {
+export async function searchCards({ query, type, playableOnly, colors, set, standardOnly, legendary, page }: CardSearch): Promise<{ cards: CardDef[]; total: number }> {
+  if (notStandardSet(query, set, Boolean(standardOnly))) return { cards: [], total: 0 }; // (the page says so)
   let q = createClient().from("cards").select(COLUMNS, { count: "exact" });
   const parsed = parseQuery(query);
   set = parsed.set ?? set;
@@ -120,13 +131,15 @@ export async function searchCards({ query, type, playableOnly, colors, set, stan
   else if (text) q = q.ilike("name", `%${text}%`);
   if (type !== "all") q = q.eq("type", type);
   if (playableOnly) q = q.eq("playable", true);
+  if (legendary) q = q.ilike("type_line", "%Legendary%");
   if (set) q = q.contains("printings", [set]);
   if (standardOnly) q = q.eq("standard_legal", true);
   if (colors?.length) q = q.or(`colors.cd.{${colors.join(",")}},colors.is.null`);
   const from = page * CARDS_PAGE_SIZE;
   const { data, count, error } = await q.order("name").range(from, from + CARDS_PAGE_SIZE - 1);
   if (error) throw new Error((set || standardOnly || parsed.codeOrName) && /does not exist/.test(error.message) ? "The set and Standard filters need the database update first (supabase/07-card-filters.sql, then npm run import:cards)." : error.message);
-  return { cards: (data as CardRow[]).map(rowToDef), total: count ?? 0 };
+  const printSet = parsed.set ?? parsed.codeOrName ?? set;
+  return { cards: (data as CardRow[]).map((row) => (printSet ? { ...rowToDef(row), printSet } : rowToDef(row))), total: count ?? 0 };
 }
 
 /** Public URL of a card's art in the "card-art" storage bucket. */
@@ -139,6 +152,8 @@ export function cardImageUrl(path: string): string {
  * "normal" is 488x680, "large" is 672x936. Null for hand-made cards.
  */
 export function cardDetailImageUrl(def: CardDef, size: "normal" | "large" = "normal"): string | null {
+  // a card shown for a set search: the printing from that set (Scryfall finds it by name and set, and sends the picture)
+  if (def.printSet) return `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(def.name)}&set=${def.printSet}&format=image&version=${size}`;
   const id = def.scryfallId;
   return id ? `https://cards.scryfall.io/${size}/front/${id[0]}/${id[1]}/${id}.jpg` : null;
 }

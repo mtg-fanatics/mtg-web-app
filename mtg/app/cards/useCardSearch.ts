@@ -29,10 +29,10 @@ export function prefetchCardPage(search: CardSearch): Promise<void> {
 
 /** Debounced, paged card search against the database. `loading` is true while results are stale. */
 export function useCardSearch(search: CardSearch) {
-  const { query, type, playableOnly, set, standardOnly, page } = search;
+  const { query, type, playableOnly, set, standardOnly, legendary, page } = search;
   const colors = search.colors?.join("") ?? ""; // a string, so a new array with the same colors doesn't search again
   const [result, setResult] = useState<CardSearchResult | null>(null);
-  const key = JSON.stringify({ query, type, playableOnly, colors, set, standardOnly, page });
+  const key = JSON.stringify({ query, type, playableOnly, colors, set, standardOnly, legendary, page });
   const lastQuery = useRef(query);
 
   useEffect(() => {
@@ -41,11 +41,11 @@ export function useCardSearch(search: CardSearch) {
     const typing = lastQuery.current !== query;
     lastQuery.current = query;
     const timer = setTimeout(() => {
-      cachedSearch({ query, type, playableOnly, colors: [...colors], set, standardOnly, page })
+      cachedSearch({ query, type, playableOnly, colors: [...colors], set, standardOnly, legendary, page })
         .then((r) => {
           if (cancelled) return;
           setResult({ key, ...r });
-          if ((page + 1) * CARDS_PAGE_SIZE < r.total) void prefetchCardPage({ query, type, playableOnly, colors: [...colors], set, standardOnly, page: page + 1 }); // the likely next click
+          if ((page + 1) * CARDS_PAGE_SIZE < r.total) void prefetchCardPage({ query, type, playableOnly, colors: [...colors], set, standardOnly, legendary, page: page + 1 }); // the likely next click
         })
         .catch((e: Error) => !cancelled && setResult({ key, cards: [], total: 0, error: e.message }));
     }, typing ? 250 : 0);
@@ -53,7 +53,7 @@ export function useCardSearch(search: CardSearch) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [key, query, type, playableOnly, colors, set, standardOnly, page]);
+  }, [key, query, type, playableOnly, colors, set, standardOnly, legendary, page]);
 
   return { result, loading: result?.key !== key };
 }
