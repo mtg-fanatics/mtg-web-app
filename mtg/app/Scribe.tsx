@@ -111,7 +111,6 @@ const toDef = (c: GuideCard): CardDef => ({
 const sharp = (c: GuideCard, size: "normal" | "large") => (c.scryfall_id ? `https://cards.scryfall.io/${size}/front/${c.scryfall_id[0]}/${c.scryfall_id[1]}/${c.scryfall_id}.jpg` : c.image_path ? cardImageUrl(c.image_path) : "");
 const MAX_CONVERSATIONS = 50;
 const MAX_TURNS = 80;
-const FAB = 56; // the seal's size in pixels
 const POS_KEY = "scribe-pos";
 
 const uuid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => ((Math.random() * 16) | 0).toString(16)));
@@ -141,6 +140,7 @@ export default function Scribe() {
   const [picture, setPicture] = useState<{ file: File; url: string } | null>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null); // where the seal is (null: its usual corner)
   const [vp, setVp] = useState({ w: 1280, h: 800 });
+  const fab = vp.w <= 767 ? 48 : 56; // the seal's size in pixels (smaller on a phone)
   const zoom = useHoverZoom(); // the big card while the mouse is over a card in the talk
   const [look, setLook] = useState<{ cards: GuideCard[]; at: number } | null>(null); // a card (or a group of them) opened large
   const log = useRef<HTMLDivElement>(null);
@@ -153,7 +153,7 @@ export default function Scribe() {
   const current = convs.find((c) => c.id === currentId) ?? null;
   const turns = current?.turns ?? [HELLO];
 
-  const clampPos = (x: number, y: number, w = vp.w, h = vp.h) => ({ x: Math.min(Math.max(8, x), Math.max(8, w - FAB - 8)), y: Math.min(Math.max(8, y), Math.max(8, h - FAB - 8)) });
+  const clampPos = (x: number, y: number, w = vp.w, h = vp.h) => ({ x: Math.min(Math.max(8, x), Math.max(8, w - fab - 8)), y: Math.min(Math.max(8, y), Math.max(8, h - fab - 8)) });
 
   // Who is asking: the history belongs to that player alone. It is kept in the database under their account (see supabase/08-scribe-history.sql:
   // only its owner can read it), and when they sign out, or another player signs in, everything of theirs leaves the screen.
@@ -299,7 +299,7 @@ export default function Scribe() {
   if (path.startsWith("/play") || path.startsWith("/login")) return null;
 
   // ── moving it: drag the seal, or the title bar of the open panel ──
-  const here = pos ?? clampPos(vp.w - FAB - 16, vp.h - FAB - 16);
+  const here = pos ?? clampPos(vp.w - fab - 16, vp.h - fab - 16);
   function dragStart(e: ReactPointerEvent<HTMLElement>, fab: boolean) {
     if (e.button !== 0) return;
     if (!fab && (e.target as HTMLElement).closest("button, a, input, label")) return; // (a press on a button in the title bar is that button's)
@@ -334,10 +334,10 @@ export default function Scribe() {
   const narrow = vp.w <= 640;
   const panelW = narrow ? vp.w - 16 : Math.min(384, vp.w - 32);
   const panelH = Math.min(544, vp.h - 96);
-  const cx = here.x + FAB / 2;
-  const cy = here.y + FAB / 2;
-  const panelLeft = narrow ? 8 : Math.min(Math.max(8, cx > vp.w / 2 ? here.x + FAB - panelW : here.x), vp.w - panelW - 8);
-  const panelTop = Math.min(Math.max(8, cy > vp.h / 2 ? here.y - 8 - panelH : here.y + FAB + 8), vp.h - panelH - 8);
+  const cx = here.x + fab / 2;
+  const cy = here.y + fab / 2;
+  const panelLeft = narrow ? 8 : Math.min(Math.max(8, cx > vp.w / 2 ? here.x + fab - panelW : here.x), vp.w - panelW - 8);
+  const panelTop = Math.min(Math.max(8, cy > vp.h / 2 ? here.y - 8 - panelH : here.y + fab + 8), vp.h - panelH - 8);
 
   // ── the conversations ──
   const patch = (id: string, change: (c: Conversation) => Conversation) => setConvs((list) => list.map((c) => (c.id === id ? change(c) : c)));
@@ -608,7 +608,7 @@ export default function Scribe() {
         onPointerCancel={dragEnd}
         onClick={(e) => e.detail === 0 && setOpen((o) => !o)} // (the keyboard: a mouse or a finger is handled when the pointer lifts)
       >
-        <ScribeMark size={FAB} />
+        <ScribeMark size={fab} />
       </button>
     </>
   );

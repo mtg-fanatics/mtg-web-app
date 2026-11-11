@@ -30,7 +30,7 @@ export default function TypeButton({ type, active, onClick, glass = false }: { t
         className={
           glass
             ? undefined // styled by the surrounding .icon-seg
-            : `flex h-9 w-9 items-center justify-center rounded text-xl ${active ? "bg-amber-500 text-black" : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300"}`
+            : `flex h-9 w-9 max-md:h-11 max-md:w-11 items-center justify-center rounded text-xl ${active ? "bg-amber-500 text-black" : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300"}`
         }
       >
         <i className={`ms ms-${ICON[type]}`} aria-hidden="true" />

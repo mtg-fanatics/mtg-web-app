@@ -42,6 +42,7 @@ export default function Lobby() {
   const [username, setUsername] = useState<string | null>(null);
   const shown = useShownName(); // the nickname (or the login name): what the room is called after
   const [creating, setCreating] = useState(false); // the "Create room" window is open
+  const [opening, setOpening] = useState(false); // "Return to your match" was pressed and the match screen is on its way
   const room = online.snapshot;
 
   // Who am I? Then listen to the lobby for as long as this page is open.
@@ -64,6 +65,9 @@ export default function Lobby() {
   // The Create room button on the home page: open the window (or, with a match going on, go back to it).
   const inMatch = room?.stage === "playing" || room?.stage === "over";
   const hasRoom = room !== null;
+  useEffect(() => {
+    if (inMatch) router.prefetch("/play/online"); // (the match screen is fetched while the button waits, so pressing it is quick)
+  }, [inMatch, router]);
   useEffect(() => {
     const open = () => (inMatch ? router.push("/play/online") : hasRoom ? undefined : setCreating(true));
     window.addEventListener("mtg-create-room", open);
@@ -98,10 +102,16 @@ export default function Lobby() {
 
         {inMatch ? (
           <button
-            onClick={() => router.push("/play/online")}
+            onClick={() => {
+              setOpening(true);
+              router.push("/play/online");
+              setTimeout(() => setOpening(false), 8000); // (if it has not opened by then, it can be pressed again)
+            }}
+            disabled={opening}
+            aria-busy={opening}
             className="btn-live"
           >
-            ▶ {room?.spectating ? "Return to the match you are watching" : "Return to your match"}
+            {opening ? "Opening the match…" : `▶ ${room?.spectating ? "Return to the match you are watching" : "Return to your match"}`}
           </button>
         ) : null}
 

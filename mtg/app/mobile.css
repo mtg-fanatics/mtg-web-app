@@ -297,3 +297,78 @@ html[data-hidden] *, html[data-hidden] *::before, html[data-hidden] *::after { a
   .deck-scroll { overflow: visible; padding-right: 0; }
   .deck-scroll .deck-filters { position: static; }
 }
+
+
+/* ═════════ Round 2 of the phone polish (found by testing on 360, 375 and 390 wide, and sideways at 667 and 844) ═════════ */
+
+/* The top bar is 3.1rem on a phone: its 44px buttons used to be taller than the bar, so their top edge was cut off. */
+@media (max-width: 767px), (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  :root { --bar-h: calc(3.1rem + env(safe-area-inset-top, 0px)); }
+  .topbar > a { display: inline-flex; align-items: center; min-height: 44px; }
+  .topbar .bar-btn, .topbar .bar-menu-btn { box-shadow: 1px 2px 0 rgba(8, 5, 3, 0.6), inset 0 0 0 2px var(--ink-3); }
+}
+
+/* Small print and small targets on a phone */
+@media (max-width: 767px) {
+  .paper-ledger .count-chip, .paper-slip .count-chip { white-space: nowrap; padding: 0.3rem 0.95rem; font-size: 0.8rem; line-height: 1.2; }
+  .alb-pager, .alb-no, .alb [class*="pageno"] { font-size: 12px; }
+  .alb-corner { width: 44px !important; height: 44px !important; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .icon-seg button { width: 44px !important; height: 44px !important; }
+  .lib-bar .tool-field { min-height: 44px; }
+}
+
+/* The front room upright: the three buttons sit above the Scribe's seal (the seal is 48px in the corner), so it never covers the big one */
+@media (max-width: 767px) and (orientation: portrait) {
+  .book-page .hero-page { padding-bottom: calc(max(0.5rem, env(safe-area-inset-bottom, 0px)) + 3.6rem); }
+}
+
+/* The front room sideways on a phone: the hero (seal and title) gave all the room to itself and the three buttons were a screen away.
+   Now two columns: you and your company on the left, the tables on the right, the three buttons in a row along the foot. */
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) {
+  main.book-page {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: auto auto minmax(0, 1fr) auto;
+    align-items: start; justify-items: stretch; gap: 0.5rem 0.9rem;
+    padding: 0.5rem max(0.9rem, env(safe-area-inset-right, 0px)) 0.5rem max(0.9rem, env(safe-area-inset-left, 0px));
+    height: calc(100dvh - var(--bar-h)); min-height: 0; overflow: hidden;
+  }
+  main.book-page > .install-hint, main.book-page > [role="note"] { display: none; } /* (the install note is for an upright phone) */
+  main.book-page > [class*="book-tip"] { grid-column: 1; grid-row: 1; align-self: start; }
+  main.book-page > .paper-ledger { grid-column: 1; grid-row: 2; width: 100%; max-width: none; }
+  main.book-page > aside { grid-column: 2; grid-row: 1 / span 3; width: 100%; max-width: none; position: static; }
+  /* the page is exactly the screen: the tables list scrolls inside its own column, and the three buttons stay in view along the foot */
+  main.book-page > .hero-page { grid-column: 1 / -1; grid-row: 4; align-self: end; margin: 0; width: 100%; padding-bottom: 0.1rem; position: relative; z-index: 12; /* above the friends' sheet, whose torn paper reaches past its box */ }
+  main.book-page > aside { min-height: 0; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+  main.book-page .hero-page > div:first-child { display: none; }
+  main.book-page .hero-actions { margin: 0; flex-direction: row; flex-wrap: nowrap; }
+  main.book-page .hero-actions { align-items: stretch; }
+  main.book-page .hero-actions > * { flex: 1 1 0; min-width: 0; height: 48px; min-height: 48px; white-space: nowrap; font-size: 0.95rem; padding-inline: 0.6rem; }
+}
+
+/* sideways, the seal sits above the foot of the page, where the big buttons are */
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) {
+  body .scribe-fab { bottom: calc(max(0.75rem, env(safe-area-inset-bottom, 0px)) + 3.8rem); }
+}
+
+/* The Scribe's seal is a little smaller on a phone */
+@media (max-width: 767px) {
+  body .scribe-fab { width: 3rem; height: 3rem; right: max(0.75rem, env(safe-area-inset-right, 0px)); }
+}
+@media (max-width: 767px) and (orientation: portrait) {
+  body .scribe-fab { bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)); }
+}
+
+/* The deck editor sideways on a phone: the way back, the name and the count share the first row, the tabs the second, so the cards get the screen. */
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1023px) {
+  main.cards-glass:has(.deck-progress) {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; align-content: start; gap: 0.35rem 0.7rem; padding: 0.4rem max(0.9rem, env(safe-area-inset-right, 0px)) 0.5rem max(0.9rem, env(safe-area-inset-left, 0px));
+  }
+  main.cards-glass:has(.deck-progress) > a.btn-ghost { grid-column: 1; grid-row: 1; }
+  main.cards-glass:has(.deck-progress) > div:nth-of-type(2) { grid-column: 2; grid-row: 1; min-width: 0; }
+  main.cards-glass:has(.deck-progress) > div:nth-of-type(2) input { min-width: 0; width: 100%; }
+  main.cards-glass:has(.deck-progress) > .deck-progress { grid-column: 3; grid-row: 1; position: static; margin: 0; padding: 0; background: none; border: 0; }
+  main.cards-glass:has(.deck-progress) .deck-progress-bar { display: none; }
+  main.cards-glass:has(.deck-progress) > [role="tablist"] { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+  main.cards-glass:has(.deck-progress) > div:nth-of-type(n+5) { grid-column: 1 / -1; }
+}

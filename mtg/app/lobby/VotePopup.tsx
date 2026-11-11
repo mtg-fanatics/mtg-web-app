@@ -43,7 +43,7 @@ export default function VotePopup({ room }: { room: RoomSnapshot }) {
           <ol className="flex flex-1 items-center gap-2" aria-label="Steps">
             {STEPS.map((s, i) => (
               <li key={s.stage} className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1 text-[15px] font-bold max-sm:px-2.5 ${i === at ? "paper !border-[1.5px] !shadow-none" : i < at ? "bg-[#6b9a7f]/20 text-[#a9d4b9]" : "bg-white/10 text-slate-300"}`}>
-                {i < at ? "✓" : `${i + 1}.`} <span className={i === at ? "" : "max-sm:hidden"}>{s.label}</span>
+                {i < at ? "✓" : `${i + 1}.`} <span className={i === at ? "" : "max-[420px]:hidden"}>{s.label}</span>
               </li>
             ))}
           </ol>

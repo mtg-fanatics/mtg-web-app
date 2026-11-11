@@ -38,7 +38,7 @@ export default function RoomPopup({ room }: { room: RoomSnapshot }) {
         <header className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <p className="caps text-slate-300">The table</p>
-            <h2 className="truncate text-4xl text-[#e8dcc0]">{room.name}</h2>
+            <h2 className="line-clamp-2 break-words text-3xl leading-tight text-[#e8dcc0] sm:text-4xl">{room.name}</h2>
             <p className="mt-1 text-[16px] text-slate-200">
               Set by <span className="font-bold text-[#e8d9b5]">{host?.name ?? "…"}</span>
               {iAmHost && <span className="ml-1 text-slate-300">(that&apos;s you)</span>}

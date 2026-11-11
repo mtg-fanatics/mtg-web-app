@@ -72,6 +72,14 @@ export default function AudioMenu() {
     };
   }, []);
 
+  // the hint goes at the first touch anywhere
+  useEffect(() => {
+    if (!hint) return;
+    const gone = () => setHint(false);
+    window.addEventListener("pointerdown", gone, { once: true });
+    return () => window.removeEventListener("pointerdown", gone);
+  }, [hint]);
+
   useEffect(() => {
     if (!open) return;
     const away = (e: PointerEvent) => !root.current?.contains(e.target as Node) && setOpen(false);
@@ -106,10 +114,10 @@ export default function AudioMenu() {
       </button>
 
       {hint && !open && (
-        <div role="status" className="absolute right-0 top-full z-50 mt-2 w-64 max-md:fixed max-md:inset-x-3 max-md:top-[3rem] max-md:mt-0 max-md:w-auto paper p-3 text-[15px]">
+        <div role="status" className="absolute right-0 top-full z-50 mt-2 w-64 max-md:fixed max-md:inset-x-3 max-md:top-[3.4rem] max-md:mt-0 max-md:w-auto paper p-2.5 text-[14px] max-md:py-2">
           <div className="absolute -top-2 right-6 h-3 w-3 rotate-45 border-l-2 border-t-2 border-[#2a1d12] bg-[#e8dcc0]" aria-hidden="true" />
           <p>
-            Playing <span className="font-semibold">{track.name}</span>. Tap here to change the tune or turn it up or down.
+            Playing <span className="font-semibold">{track.name}</span>. Tap here to change the tune or the volume.
           </p>
         </div>
       )}

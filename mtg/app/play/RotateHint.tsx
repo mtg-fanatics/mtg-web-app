@@ -19,6 +19,12 @@ export default function RotateHint() {
       setGone(false);
     }
   }, []);
+  // it goes by itself after a few seconds (it sat over the other player's name until it was closed)
+  useEffect(() => {
+    if (!upright || gone) return;
+    const t = setTimeout(() => setGone(true), 7000);
+    return () => clearTimeout(t);
+  }, [upright, gone]);
   if (!upright || gone) return null;
   const close = () => {
     setGone(true);
@@ -31,7 +37,7 @@ export default function RotateHint() {
   return (
     <div role="status" className="landscape-hint">
       <span aria-hidden="true">📱</span>
-      <span className="min-w-0 flex-1">Landscape is roomier: turn the phone sideways.</span>
+      <span className="min-w-0 flex-1">Tip: landscape is roomier.</span>
       <button type="button" onClick={close} aria-label="Close this hint" className="landscape-hint-x">
         ×
       </button>
