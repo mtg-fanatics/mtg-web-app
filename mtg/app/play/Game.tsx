@@ -249,8 +249,18 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   // a new panel in the sheet (a different question) always opens it
   const watchSheet = useCallback((el: HTMLDivElement | null) => {
     if (!el) return;
-    const watch = new MutationObserver(() => setPeek(false));
-    watch.observe(el, { childList: true });
+    // (blocking, and choosing a target on the board, is done by tapping the cards on the board, so on a small screen those panels start tucked away and the board is free to
+    // tap; the panel comes back by itself once there is something to confirm. Any other question opens the sheet.)
+    let was = "";
+    const check = (records: MutationRecord[]) => {
+      const kind = el.querySelector("[data-block-panel]") ? "block" : el.querySelector("[data-pick-board]") ? "pick" : "";
+      const swapped = records.some((r) => r.type === "childList" && r.target === el); // a different panel in the sheet
+      if (kind === was && !(swapped && kind === "")) return;
+      was = kind;
+      setPeek(kind !== "" && window.matchMedia("(max-width: 1023px)").matches);
+    };
+    const watch = new MutationObserver(check);
+    watch.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-pick-board"] });
     return () => watch.disconnect();
   }, []);
   const stacked = useStacked();

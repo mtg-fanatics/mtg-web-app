@@ -60,7 +60,7 @@ export default function BlockPanel({
         : "Click one of your creatures, then the attacker it should block. Click a blocker again to take it back.";
 
   return (
-    <section className="flex flex-col gap-1.5 rounded-xl border border-sky-400/60 bg-sky-50 px-3 py-2 shadow-sm">
+    <section data-block-panel className="flex flex-col gap-1.5 rounded-xl border border-sky-400/60 bg-sky-50 px-3 py-2 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
         <h2 className="font-bold text-sky-900">🛡️ {playerName(attackerPlayer)} is attacking</h2>
         <span className="flex items-center gap-2">
@@ -83,7 +83,7 @@ export default function BlockPanel({
           </button>
         </p>
       ) : (
-        <p className="text-sm text-sky-900">👆 {step}</p>
+        <p className="text-sm text-sky-900 max-lg:text-xs">👆 {step}</p>
       )}
 
       <ul className="grid gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(17rem,1fr))]">

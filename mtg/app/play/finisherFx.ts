@@ -535,7 +535,7 @@ function strokePath(pts: Pt[], widths: number[], alphas: number[], col: string, 
 function flashRect(a: number, col = "255,255,255"): void {
   if (a <= 0.003) return;
   ctx.fillStyle = `rgba(${col},${a})`;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(offX, offY, regW, regH);
 }
 
 /** A ring lying flat on the table (a circle squashed to `sy` tall). */
@@ -840,7 +840,7 @@ function judgment(): Fx {
       // the sky goes dark and cold, and the storm clouds roll in
       const sky = sm(0, 800, t) * (1 - sm(3200, 4800, t));
       ctx.fillStyle = `rgba(5,4,24,${0.62 * sky})`;
-      ctx.fillRect(0, 0, W, H);
+      ctx.fillRect(offX, offY, regW, regH);
       if (sky > 0.01) clouds(0.85 * sky, st.lit, t);
       const ox = T.x;
       // power gathers: sparks fly in to a turning ball of plasma above the target
@@ -1015,7 +1015,7 @@ function voidCollapse(): Fx {
         g.addColorStop(0, `rgba(10,0,20,${0.15 * dk})`);
         g.addColorStop(1, `rgba(2,0,8,${0.78 * dk})`);
         ctx.fillStyle = g;
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(offX, offY, regW, regH);
       }
       // the hole's size: born small, swells, then is crushed down just before it blows
       const R = t < 3600 ? lerp(2, 78, sm(300, 3000, t)) * (1 + 0.03 * Math.sin(t * 0.03)) : lerp(78, 3, Math.pow(sm(3600, 4300, t), 2.2));
@@ -1049,8 +1049,8 @@ function voidCollapse(): Fx {
         const S = R * 5;
         ctx.save();
         ctx.beginPath();
-        if (back) ctx.rect(0, 0, W, T.y);
-        else ctx.rect(0, T.y, W, H - T.y);
+        if (back) ctx.rect(offX, offY, regW, T.y - offY);
+        else ctx.rect(offX, T.y, regW, offY + regH - T.y);
         ctx.clip();
         ctx.globalCompositeOperation = "lighter";
         ctx.globalAlpha = 0.95 * vis;
@@ -1257,7 +1257,7 @@ function meteor(): Fx {
       const t2 = tex as Tex;
       const sky = sm(0, 700, t) * (1 - sm(2600, 5000, t));
       ctx.fillStyle = `rgba(40,6,4,${0.42 * sky})`;
-      ctx.fillRect(0, 0, W, H);
+      ctx.fillRect(offX, offY, regW, regH);
       // the target marker
       if (t < 1330) {
         const a = sm(0, 300, t);
@@ -1574,7 +1574,7 @@ function zero(): Fx {
       const t2 = tex as Tex;
       const cold = sm(0, 700, t) * (1 - sm(4600, 6000, t));
       ctx.fillStyle = `rgba(10,40,80,${0.3 * cold})`;
-      ctx.fillRect(0, 0, W, H);
+      ctx.fillRect(offX, offY, regW, regH);
       if (!st.shattered) {
         // the mat is covered with ice: the ice texture over it (fading in), and frost crystals growing across it
         const ice = sm(700, 2700, t);
@@ -1851,7 +1851,19 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
   const floorRes = res * 0.8; // (when the computer can't keep up, it is drawn smaller, but never much: the cards have a layer of their own and stay sharp)
   curRes = res;
   cardRes = lite ? 1 : Math.min(1.5, Math.max(1, window.devicePixelRatio || 1));
-  const reg = o.region ?? { x: 0, y: 0, w: W, h: H };
+  const reg0 = o.region ?? { x: 0, y: 0, w: W, h: H };
+  // A phone: the shows were made for a big screen (a black hole 400 px across, a meteor, a beam), so on a small one they filled it and ran off its edges. They are drawn as before,
+  // about the middle of the loser's mat, on a canvas larger than the screen, and the canvas is shrunk by `scale` about that point: the picture is smaller, whole, and the
+  // cards (which have their own layer and real sizes) are unchanged.
+  let scale = 1;
+  let pivot = { x: W / 2, y: H / 2 };
+  if (!o.region && !o.parent && kind !== "reaper") {
+    scale = Math.min(1, Math.max(0.35, (Math.min(W, H) / 640) * (kind === "void" ? 0.7 : 1)));
+    const lm = loser ? document.querySelector<HTMLElement>(`[data-mat="${loser}"]`) : null;
+    const lr = lm?.getBoundingClientRect();
+    pivot = lr && lr.width > 40 && lr.height > 40 ? { x: lr.left + lr.width / 2, y: lr.top + lr.height * 0.52 } : { x: W * 0.5, y: H * 0.1 + H * 0.3 * 0.52 };
+  }
+  const reg = scale < 1 ? { x: pivot.x - pivot.x / scale, y: pivot.y - pivot.y / scale, w: W / scale, h: H / scale } : reg0;
   offX = reg.x;
   offY = reg.y;
   regW = reg.w;
@@ -1859,7 +1871,14 @@ export async function prepareFx(kind: FxKind | "reaper", loser: string | null, o
   const cv = document.createElement("canvas");
   cv.width = Math.round(regW * res);
   cv.height = Math.round(regH * res);
-  Object.assign(cv.style, o.parent ? { position: "absolute", left: `${reg.x}px`, top: `${reg.y}px`, width: `${reg.w}px`, height: `${reg.h}px`, pointerEvents: "none" } : { position: "fixed", inset: "0", width: "100vw", height: "100vh", pointerEvents: "none", zIndex: "9990" });
+  Object.assign(
+    cv.style,
+    o.parent
+      ? { position: "absolute", left: `${reg.x}px`, top: `${reg.y}px`, width: `${reg.w}px`, height: `${reg.h}px`, pointerEvents: "none" }
+      : scale < 1
+        ? { position: "fixed", left: `${reg.x}px`, top: `${reg.y}px`, width: `${reg.w}px`, height: `${reg.h}px`, transformOrigin: `${pivot.x - reg.x}px ${pivot.y - reg.y}px`, transform: `scale(${scale})`, pointerEvents: "none", zIndex: "9990" }
+        : { position: "fixed", inset: "0", width: "100vw", height: "100vh", pointerEvents: "none", zIndex: "9990" },
+  );
   const c2 = cv.getContext("2d", { alpha: true });
   if (!c2) return null;
   ctx = c2;

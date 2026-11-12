@@ -44,8 +44,8 @@ export function TargetPanel({
   const cardsToClick = options.some(onBoard);
   const listed = options.filter((t) => !onBoard(t));
   return (
-    <section className="panel-in flex flex-col gap-2 rounded-lg border border-sky-500/50 bg-sky-50 p-3">
-      <h2 className="text-base font-semibold text-sky-800">
+    <section data-pick-board={cardsToClick && !aim ? "" : undefined} className="panel-in flex flex-col gap-2 rounded-lg border border-sky-500/50 bg-sky-50 p-3 max-lg:gap-1 max-lg:p-2">
+      <h2 className="text-base font-semibold text-sky-800 max-lg:text-sm">
         {title}
         <span className="font-normal text-sky-700">
           {" "}
@@ -59,13 +59,13 @@ export function TargetPanel({
         </p>
       )}
       {detail && (
-        <div className="max-h-[7.5rem] overflow-y-auto rounded bg-white px-3 py-2 text-[15px] leading-relaxed text-zinc-800">
+        <div className="max-h-[7.5rem] overflow-y-auto rounded max-lg:hidden bg-white px-3 py-2 text-[15px] leading-relaxed text-zinc-800">
           <div className="mb-0.5 text-xs font-bold uppercase font-display tracking-wider text-sky-700">What it does</div>
           <p className="whitespace-pre-line">{detail}</p>
           <Help text={detail} max={3} large />
         </div>
       )}
-      {cardsToClick && <p className="text-sm font-medium text-sky-800">👆 Click one of the glowing cards on the battlefield, then confirm it here.</p>}
+      {cardsToClick && <p className="text-sm font-medium text-sky-800 max-lg:text-xs">👆 Click one of the glowing cards on the battlefield, then confirm it here.</p>}
       {aim && (
         <div className="flex flex-wrap items-center gap-2 rounded bg-white px-3 py-2">
           <span className="text-sm text-zinc-800">

@@ -111,7 +111,7 @@ export function PassReminder({ state, after, opponent, onEndTurn }: { state: Gam
   }, [state, after]);
   if (shownFor !== state) return null;
   return (
-    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[14dvh] z-30 flex justify-center px-4">
+    <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[14dvh] z-30 flex justify-center px-4 max-lg:hidden">
       <div
         className={`${animationsEnabled() ? "pass-reminder" : ""} pointer-events-auto flex flex-wrap items-center justify-center gap-3 rounded-2xl border-2 border-amber-300/80 bg-slate-950/85 px-5 py-3 text-[15px] font-semibold text-amber-100 shadow-2xl shadow-black/50`}
       >

@@ -28,7 +28,9 @@
   .duel-opp .pl-card, .duel-me .pl-card { min-height: 44px; }
 
   /* the sheet of questions ends just above the turn strip (measured by the game), so the strip and its big button are never under it */
-  .action-box { bottom: var(--sheet-bottom, 6.4rem); }
+  .action-box { bottom: calc(var(--sheet-bottom, 6.4rem) + 2.5rem); max-height: 34dvh; }
+  /* the button that tucks the sheet away is fixed just under it, so it is never hidden behind the sheet */
+  .peek-btn { position: fixed; z-index: 36; inset-inline: 6px; bottom: var(--sheet-bottom, 6.4rem); min-height: 2.3rem; padding-block: 4px !important; }
 
   .duel-menu-backdrop { position: fixed; inset: 0; z-index: 39; background: rgba(0, 0, 0, 0.5); }
   .duel-badge { position: absolute; top: -7px; right: -12px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #a8322a; color: #fff; font-size: 11px; font-weight: 800; line-height: 17px; text-align: center; font-family: var(--font-alegreya), sans-serif; }
@@ -76,7 +78,7 @@
   /* (sideways the big buttons are at the lower right: the sheet stops above them) */
   .action-box { inset-inline: auto; right: max(4px, env(safe-area-inset-right, 0px)); top: 40px; bottom: calc(max(6px, env(safe-area-inset-bottom, 0px)) + 66px); width: min(24rem, 46vw); max-height: none; }
   main[data-peek="1"] .action-box { transform: translateX(calc(100% + 2rem)); }
-  .peek-btn { position: fixed; z-index: 36; right: max(4px, env(safe-area-inset-right, 0px)); top: 4px; width: auto; padding: 5px 12px !important; font-size: 12.5px !important; min-height: 32px; }
+  .peek-btn { position: fixed; z-index: 36; left: auto; bottom: auto; right: max(4px, env(safe-area-inset-right, 0px)); top: 4px; width: auto; padding: 5px 12px !important; font-size: 12.5px !important; min-height: 32px; }
 
   /* the two players: slim cards in the rail */
   .duel-opp .pl-card > div:first-child, .duel-me .pl-card > div:first-child { flex-wrap: wrap; row-gap: 2px; }
