@@ -13,6 +13,7 @@ import {
   getPossibleAttackers,
   getForcedBlocks,
   getPossibleBlockers,
+  gainedKeywords,
   OPPONENT,
   parseCard,
   playerToAct,
@@ -109,6 +110,15 @@ const WELCOME_MS = 2300; // how long "Welcome to the Battle Field, Now Duel!" st
 const REMIND_IDLE_MS = 20000;
 const REMIND_DONE_MS = 6000;
 
+/** A creature that could attack this turn: untapped, not "just arrived" (unless it has haste), no defender. Used to see whether the first main phase has anything left to decide. */
+function canAttackSoon(state: GameState, p: Permanent): boolean {
+  const def = state.cards[p.card.defId];
+  if (def?.type !== "creature" || p.tapped) return false;
+  const kws = [...(def.keywords ?? []), ...gainedKeywords(state, p), ...(p.tempKeywords ?? [])];
+  if (kws.includes("defender")) return false;
+  return !p.summoningSick || kws.includes("haste");
+}
+
 /**
  * The online play screen, one per match. Next.js keeps a page alive after leaving it (cacheComponents),
  * so without the key a new match would open on the last match's board and end popup.
@@ -127,7 +137,7 @@ export function OnlineGame() {
   }
   useEffect(() => {
     if (!left) return;
-    const t = setTimeout(() => router.replace("/"), 400);
+    const t = setTimeout(() => (window.dispatchEvent(new Event("ink:navigating")), router.replace("/")), 400);
     return () => clearTimeout(t);
   }, [left, router]);
   const gameNo = snapshot?.series?.game ?? 1; // (each game of a best of 3 or 5 starts on a fresh board)
@@ -437,7 +447,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
     if (online && playerToAct(game) !== who) return "";
     if (game.phase === "mulligan" || game.phase === "damage" || game.phase === "cleanup" || game.phase === "blockers") return "";
     const priority = !!game.priority && game.priority.holder === who;
-    const step = !game.priority && game.active === who && (game.phase === "main2" || game.phase === "end" || (game.phase === "attackers" && getPossibleAttackers(game).length === 0) || (game.phase === "main1" && !game.players[who].battlefield.some((p) => !p.tapped && game.cards[p.card.defId]?.type === "creature")));
+    const step = !game.priority && game.active === who && (game.phase === "main2" || game.phase === "end" || (game.phase === "attackers" && getPossibleAttackers(game).length === 0) || (game.phase === "main1" && !game.players[who].battlefield.some((p) => canAttackSoon(game, p))));
     if (!priority && !step) return "";
     if (getCastable(game, who).length > 0 || countAbilities(abilityList(game, who)) > 0) return "";
     if (priority) return "priority";
@@ -488,7 +498,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
         <button
           onClick={() => {
             leaveRoom();
-            router.push("/");
+            (window.dispatchEvent(new Event("ink:navigating")), router.push("/"));
           }}
           className="btn-ghost"
         >
@@ -1350,7 +1360,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
               <button
                 onClick={() => {
                   leaveRoom();
-                  router.push("/");
+                  (window.dispatchEvent(new Event("ink:navigating")), router.push("/"));
                 }}
                 className="btn-ghost !py-1"
               >
@@ -1442,7 +1452,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
             online
               ? () => {
                   leaveRoom();
-                  router.push("/");
+                  (window.dispatchEvent(new Event("ink:navigating")), router.push("/"));
                 }
               : undefined
           }

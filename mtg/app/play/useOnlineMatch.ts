@@ -52,7 +52,7 @@ export function useOnlineMatch(online: boolean, game: GameState | null, seat: Pl
   // No match (the page was opened directly, or the room closed): back to the lobby.
   useEffect(() => {
     if (!online || net.snapshot || net.game) return;
-    const timer = setTimeout(() => router.replace("/"), 2500);
+    const timer = setTimeout(() => (window.dispatchEvent(new Event("ink:navigating")), router.replace("/")), 2500);
     return () => clearTimeout(timer);
   }, [online, net.snapshot, net.game, router]);
 }
