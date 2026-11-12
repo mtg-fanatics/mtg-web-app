@@ -431,7 +431,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   const noBlockers = !!game && !watching && !game.winner && game.phase === "blockers" && !game.priority && !game.pendingChoice && !game.pendingPick && (!online || playerToAct(game) === seat) && getForcedBlocks(game).length === 0 && !getPossibleBlockers(game).some((b) => (game.combat?.attackers ?? []).some((at) => canBlock(game, playerToAct(game), b, at.attacker).ok)); // (none of them can block any of the attackers: no flyer-catcher for a flyer, say)
   useEffect(() => {
     if (!noBlockers) return;
-    const t = setTimeout(() => void act({ type: "declareBlockers", blocks: [] }), 1100);
+    const t = setTimeout(() => void act({ type: "declareBlockers", blocks: [] }), 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noBlockers, game]);
@@ -445,7 +445,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
     if (!game || watching || game.winner || game.pendingChoice || game.pendingPick) return "";
     const who = seat ?? playerToAct(game);
     if (online && playerToAct(game) !== who) return "";
-    if (game.phase === "mulligan" || game.phase === "damage" || game.phase === "cleanup" || game.phase === "blockers") return "";
+    if (!game.priority && (game.phase === "mulligan" || game.phase === "damage" || game.phase === "cleanup" || game.phase === "blockers")) return ""; // (a round of responses is passed in any step)
     const priority = !!game.priority && game.priority.holder === who;
     const step = !game.priority && game.active === who && (game.phase === "main2" || game.phase === "end" || (game.phase === "attackers" && getPossibleAttackers(game).length === 0) || (game.phase === "main1" && !game.players[who].battlefield.some((p) => canAttackSoon(game, p))));
     if (!priority && !step) return "";
@@ -456,7 +456,7 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   })();
   useEffect(() => {
     if (!autoKind) return;
-    const t = setTimeout(() => void act(autoKind === "priority" ? { type: "passPriority" } : { type: "passPhase" }), autoKind === "priority" ? 900 : 800);
+    const t = setTimeout(() => void act(autoKind === "priority" ? { type: "passPriority" } : { type: "passPhase" }), autoKind === "priority" ? 350 : 120);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoKind, game]);
