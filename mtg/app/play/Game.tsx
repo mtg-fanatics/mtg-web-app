@@ -430,14 +430,14 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   //  - the opponent's spell or ability (or my own) is on the chain and I have no spell or ability to answer it: it resolves, no Pass to press
   //  - the chain is empty and I hold priority ("Continue"), or the attack was declared and the "before damage" round starts: the same
   //  - no creature can attack (or none is left to decide), and nothing to play: the attack step is skipped
-  //  - my second main phase or end step, with no land left to play, nothing to cast and no ability to use: the turn is passed
+  //  - my first main phase with no creature that could attack, my second main phase or the end step, with no land left to play, nothing to cast and no ability to use: the turn is passed
   const autoKind = (() => {
     if (!game || watching || game.winner || game.pendingChoice || game.pendingPick) return "";
     const who = seat ?? playerToAct(game);
     if (online && playerToAct(game) !== who) return "";
     if (game.phase === "mulligan" || game.phase === "damage" || game.phase === "cleanup" || game.phase === "blockers") return "";
     const priority = !!game.priority && game.priority.holder === who;
-    const step = !game.priority && game.active === who && (game.phase === "main2" || game.phase === "end" || (game.phase === "attackers" && getPossibleAttackers(game).length === 0));
+    const step = !game.priority && game.active === who && (game.phase === "main2" || game.phase === "end" || (game.phase === "attackers" && getPossibleAttackers(game).length === 0) || (game.phase === "main1" && !game.players[who].battlefield.some((p) => !p.tapped && game.cards[p.card.defId]?.type === "creature")));
     if (!priority && !step) return "";
     if (getCastable(game, who).length > 0 || countAbilities(abilityList(game, who)) > 0) return "";
     if (priority) return "priority";
