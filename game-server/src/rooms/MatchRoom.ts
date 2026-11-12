@@ -1,6 +1,6 @@
 import { Room, Client, CloseCode, ServerError, matchMaker } from "colyseus";
 import type { Delayed } from "colyseus";
-import { applyAction, createGame, HIDDEN_CARD_ID, playerToAct, spectatorView, unplayableCards, viewFor } from "@mtg/engine";
+import { applyAction, createGame, getForcedBlocks, getPossibleBlockers, HIDDEN_CARD_ID, playerToAct, spectatorView, unplayableCards, viewFor } from "@mtg/engine";
 import type { Action, CardDef, GameEvent, GameState, PlayerId } from "@mtg/engine";
 import { accountFromToken, dropLive, friendIdsOf, loadCards, loadLive, saveLive, saveMatch, saveReplay } from "../supabase.js";
 import type { Account } from "../supabase.js";
@@ -913,7 +913,27 @@ export class MatchRoom extends Room<{ metadata: RoomMeta }> {
       this.busy = false;
     }
     this.continueEndTurn();
+    this.autoBlock();
     this.scheduleBot();
+  }
+
+  /**
+   * Being attacked when nothing could block any attacker (no creatures, or only ones that can't reach a flyer, say): there is nothing to choose, so
+   * "no blocks" is declared at once and the game goes on to damage without a stop at the blockers step. (A human player only: the bot answers for itself.)
+   */
+  private autoBlock() {
+    const g = this.game;
+    if (!g || this.stage !== "playing" || g.winner || g.phase !== "blockers" || g.priority || g.pendingChoice || g.pendingPick) return;
+    const seat = playerToAct(g);
+    const m = this.members.find((x) => x.seat === seat);
+    if (!m || m.isBot || !g.combat) return;
+    if (getForcedBlocks(g).length > 0) return;
+    const able = getPossibleBlockers(g).some((blocker) => g.combat!.attackers.some((a) => {
+      const r = applyAction(g, seat, { type: "declareBlockers", blocks: [{ blocker, attacker: a.attacker }] });
+      return r.ok || /two or more|more than one/i.test(r.error); // (menace: a second blocker can join)
+    }));
+    if (able) return;
+    this.play(m, () => this.applyFor(seat, { type: "declareBlockers", blocks: [] }));
   }
 
   /** The bot's turn to act: it thinks (it is quick), waits a moment so the screen can follow, then plays. */
