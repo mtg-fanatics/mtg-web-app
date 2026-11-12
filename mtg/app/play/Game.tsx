@@ -417,6 +417,39 @@ export default function Game({ online = false }: { online?: boolean } = {}) {
   }
 
   useWakeLock(!!game && !game.winner); // (before the early returns below: a hook must run on every render)
+  // Being attacked with nothing that can block (no creatures, or none able to block any attacker, like a flyer nobody can reach): there is no choice to make, so "No blocks" is declared by itself, a moment after the attack shows.
+  const noBlockers = !!game && !watching && !game.winner && game.phase === "blockers" && !game.priority && !game.pendingChoice && !game.pendingPick && (!online || playerToAct(game) === seat) && getForcedBlocks(game).length === 0 && !getPossibleBlockers(game).some((b) => (game.combat?.attackers ?? []).some((at) => canBlock(game, playerToAct(game), b, at.attacker).ok)); // (none of them can block any of the attackers: no flyer-catcher for a flyer, say)
+  useEffect(() => {
+    if (!noBlockers) return;
+    const t = setTimeout(() => void act({ type: "declareBlockers", blocks: [] }), 1100);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noBlockers, game]);
+
+  // Nothing to decide, nothing to answer with: the game goes on by itself, a moment after the board shows what happened.
+  //  - the opponent's spell or ability (or my own) is on the chain and I have no spell or ability to answer it: it resolves, no Pass to press
+  //  - the chain is empty and I hold priority ("Continue"), or the attack was declared and the "before damage" round starts: the same
+  //  - no creature can attack (or none is left to decide), and nothing to play: the attack step is skipped
+  //  - my second main phase or end step, with no land left to play, nothing to cast and no ability to use: the turn is passed
+  const autoKind = (() => {
+    if (!game || watching || game.winner || game.pendingChoice || game.pendingPick) return "";
+    const who = seat ?? playerToAct(game);
+    if (online && playerToAct(game) !== who) return "";
+    if (game.phase === "mulligan" || game.phase === "damage" || game.phase === "cleanup" || game.phase === "blockers") return "";
+    const priority = !!game.priority && game.priority.holder === who;
+    const step = !game.priority && game.active === who && (game.phase === "main2" || game.phase === "end" || (game.phase === "attackers" && getPossibleAttackers(game).length === 0));
+    if (!priority && !step) return "";
+    if (getCastable(game, who).length > 0 || countAbilities(abilityList(game, who)) > 0) return "";
+    if (priority) return "priority";
+    if (getLegalActions(game, who).some((x) => x.type !== "passPhase")) return "";
+    return "phase";
+  })();
+  useEffect(() => {
+    if (!autoKind) return;
+    const t = setTimeout(() => void act(autoKind === "priority" ? { type: "passPriority" } : { type: "passPhase" }), autoKind === "priority" ? 900 : 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoKind, game]);
 
   // A phone: the sheet of questions (blocks, targets, the stack) sits just above the turn strip, never over it, because the strip holds the big button that answers the
   // question (Confirm the blocks, Pass). Where that is depends on the screen, so it is measured and handed to the stylesheet as --sheet-bottom.

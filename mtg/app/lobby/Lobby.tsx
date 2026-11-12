@@ -36,6 +36,12 @@ function LobbySkeleton() {
  * The online side of the home page: the live matches (top right), the Create room button under them, and the pop-ups
  * that walk two players from an open room to the first turn.
  */
+/** Off to the match screen. BackGuard is told first, so it does not undo the window's history entry while the screen is still on its way. */
+function toMatch(router: ReturnType<typeof useRouter>) {
+  window.dispatchEvent(new Event("ink:navigating"));
+  router.push("/play/online");
+}
+
 export default function Lobby() {
   const router = useRouter();
   const online = useOnline();
@@ -69,7 +75,7 @@ export default function Lobby() {
     if (inMatch) router.prefetch("/play/online"); // (the match screen is fetched while the button waits, so pressing it is quick)
   }, [inMatch, router]);
   useEffect(() => {
-    const open = () => (inMatch ? router.push("/play/online") : hasRoom ? undefined : setCreating(true));
+    const open = () => (inMatch ? toMatch(router) : hasRoom ? undefined : setCreating(true));
     window.addEventListener("mtg-create-room", open);
     return () => window.removeEventListener("mtg-create-room", open);
   }, [inMatch, hasRoom, router]);
@@ -89,7 +95,7 @@ export default function Lobby() {
     }
     if (online.game && !sent.current) {
       sent.current = true;
-      router.push("/play/online");
+      toMatch(router);
     }
   }, [room?.stage, online.game, router]);
 
@@ -104,7 +110,7 @@ export default function Lobby() {
           <button
             onClick={() => {
               setOpening(true);
-              router.push("/play/online");
+              toMatch(router);
               setTimeout(() => setOpening(false), 8000); // (if it has not opened by then, it can be pressed again)
             }}
             disabled={opening}

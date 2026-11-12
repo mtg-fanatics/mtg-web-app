@@ -25,7 +25,16 @@ export default function BackGuard() {
     const modals = () => [...document.querySelectorAll(MODAL)].filter(shown);
 
     let settle = 0;
+    // The page itself is moving on (the match began: the table's window closes as the match screen opens). The window's extra entry is left alone then: the
+    // navigation can take longer than the wait below on a phone, and undoing the entry before it lands would send the player straight back to the lobby.
+    let navUntil = 0;
+    const moving = () => {
+      navUntil = Date.now() + 20000;
+      window.clearTimeout(settle);
+      pushedAt = null;
+    };
     const sync = () => {
+      if (Date.now() < navUntil) return;
       const any = modals().length > 0;
       if (any) {
         window.clearTimeout(settle);
@@ -83,10 +92,12 @@ export default function BackGuard() {
     const observer = new MutationObserver(sync);
     observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("popstate", onPop);
+    window.addEventListener("ink:navigating", moving);
     return () => {
       observer.disconnect();
       window.clearTimeout(settle);
       window.removeEventListener("popstate", onPop);
+      window.removeEventListener("ink:navigating", moving);
     };
   }, []);
   return null;
